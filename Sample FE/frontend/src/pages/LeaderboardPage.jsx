@@ -40,19 +40,10 @@ export const LeaderboardPage = () => {
 
     try {
       const params = {};
-
-      if (selectedDomainId && selectedDomainId !== 'all') {
-        params.domain_id = selectedDomainId;
-      } else if (scope === 'domain') {
-        params.scope = 'domain';
-      } else {
-        params.scope = 'all';
-      }
-
-      if (searchRef.current.trim()) {
-        params.search = searchRef.current.trim();
-      }
-
+      if (selectedDomainId && selectedDomainId !== 'all') params.domain_id = selectedDomainId;
+      else if (scope === 'domain') params.scope = 'domain';
+      else params.scope = 'all';
+      if (searchRef.current.trim()) params.search = searchRef.current.trim();
       const res = await api.getLeaderboard(params);
       setData(res.data || {});
     } catch (err) {
@@ -62,9 +53,7 @@ export const LeaderboardPage = () => {
     }
   }, [scope, selectedDomainId]);
 
-  useEffect(() => {
-    fetchLeaderboard();
-  }, [fetchLeaderboard]);
+  useEffect(() => { fetchLeaderboard(); }, [fetchLeaderboard]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();

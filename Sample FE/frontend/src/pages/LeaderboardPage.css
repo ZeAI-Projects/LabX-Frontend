@@ -1,4 +1,4 @@
-/* =========================================================
+﻿/* =========================================================
    PODIUM & CURRENT RANKING SPOTLIGHT LEADERBOARD
    Clean, Focused, Premium Glassmorphic Design
    ========================================================= */
@@ -857,96 +857,5 @@
 .rankings-title { font-size: 1.4rem; font-weight: 850; color: #fff; margin-top: 3px; }
 .ranking-badge-label { display: none; }
 .leaderboard-search input, .domain-select-wrap select { min-width: 0; }
-.podium-card { min-width: 0; }
-.podium-card h3, .your-full-name, .founder-name strong { overflow-wrap: anywhere; }
 
-@media (max-width: 900px) {
-  .leaderboard-page { padding-bottom: 16px; background: transparent; overflow: visible; }
-  .leaderboard-bg { overflow: hidden; }
-  .leaderboard-content { padding: 8px 0 16px; }
-  .leaderboard-header-section { gap: 18px; margin-bottom: 18px; }
-  .leaderboard-main-title { font-size: 1.35rem; line-height: 1.25; font-weight: 800; }
-  .leaderboard-main-sub { margin-top: 8px; font-size: .8rem; line-height: 1.6; }
-  .leaderboard-controls-row { width: 100%; display: grid; gap: 10px; }
-  .leaderboard-tabs { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
-  .leaderboard-tab { min-height: 44px; height: auto; padding: 9px 12px; justify-content: center; font-size: .75rem; }
-  .leaderboard-tab svg { flex-shrink: 0; }
-  .domain-select-wrap { grid-column: 1 / -1; min-width: 0; height: 44px; }
-  .domain-select-wrap select { width: 100%; height: 100%; }
-  .leaderboard-search { min-width: 0; width: 100%; height: 46px; }
-  .leaderboard-search svg, .leaderboard-search button { flex-shrink: 0; }
-  .leaderboard-search button { padding: 0 16px; }
-  .your-standing-card-hero { padding: 16px; border-radius: 16px; gap: 16px; flex-direction: column; align-items: stretch; margin-bottom: 28px; box-shadow: none; }
-  .your-standing-left { gap: 10px; min-width: 0; }
-  .your-rank-badge { flex: 0 0 42px; width: 42px; height: 44px; padding-top: 11px; border-radius: 12px; box-shadow: none; }
-  .rank-num { font-size: 1.2rem; }
-  .your-avatar-wrap { flex: 0 0 36px; width: 36px; height: 36px; font-size: .9rem; }
-  .your-identity-col { min-width: 0; flex: 1; gap: 4px; }
-  .your-name-row { flex-wrap: wrap; gap: 4px 6px; }
-  .your-full-name { font-size: .85rem; line-height: 1.4; }
-  .your-handle { width: 100%; font-size: .7rem; overflow-wrap: anywhere; }
-  .you-pill-badge { padding: 2px 5px; font-size: .55rem; }
-  .your-meta-sub { flex-wrap: wrap; font-size: .65rem; gap: 4px; }
-  .your-standing-right { border-top: 1px solid rgba(148,163,184,.16); padding-top: 12px; justify-content: space-between; gap: 12px; }
-  .your-points-block { text-align: left; }
-  .points-number { font-size: 1.35rem; font-variant-numeric: tabular-nums; text-shadow: none; }
-  .points-label { font-size: .6rem; }
-  .btn-view-profile { height: 44px; padding: 0 12px; font-size: .72rem; }
-  .section-heading, .rankings-header { align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
-  .podium-section-kicker { font-size: .6rem; letter-spacing: .12em; }
-  .podium-section-title { font-size: 1.2rem; font-weight: 800; }
-  .live-indicator { font-size: .55rem; letter-spacing: .04em; gap: 5px; }
-  .podium-section { margin-bottom: 24px; }
-  .podium-container { min-height: 0; padding: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 10px; }
-  .podium-card { padding: 16px 10px 12px; border-radius: 16px; box-shadow: none; }
-  .podium-card:hover { transform: none; box-shadow: none; }
-  .podium-card.rank-first { grid-column: 1 / -1; order: -1; display: grid; grid-template-columns: 66px minmax(0, 1fr); column-gap: 16px; align-items: center; text-align: left; padding: 16px; box-shadow: none; }
-  .podium-medal { position: static; transform: none; font-size: .55rem; padding: 4px 8px; gap: 4px; letter-spacing: .04em; box-shadow: none; }
-  .podium-medal svg { width: 13px; height: 13px; }
-  .podium-avatar { width: 48px; height: 48px; font-size: 1.2rem; margin: 12px 0 10px; flex-shrink: 0; }
-  .podium-rank { width: 21px; height: 21px; font-size: .6rem; border-width: 1px; }
-  .podium-card h3 { font-size: .83rem; line-height: 1.4; }
-  .podium-username { font-size: .65rem; overflow-wrap: anywhere; margin-bottom: 8px; max-width: 100%; }
-  .podium-tags { gap: 4px; margin-bottom: 12px; }
-  .podium-tags span { padding: 3px 6px; font-size: .6rem; line-height: 1.4; overflow-wrap: anywhere; }
-  .podium-score { padding: 9px 6px; gap: 4px; border-radius: 10px; }
-  .podium-score strong { font-size: 1rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-  .podium-score span { font-size: .5rem; letter-spacing: .03em; }
-  .score-divider { height: 22px; flex-shrink: 0; }
-  .podium-view { font-size: .6rem; margin-top: 10px; min-height: 24px; }
-  .rank-first .podium-medal { grid-column: 2; justify-self: start; margin-bottom: 8px; }
-  .rank-first .podium-avatar { grid-column: 1; grid-row: 1 / 5; width: 62px; height: 62px; margin: 0; }
-  .rank-first h3, .rank-first .podium-username, .rank-first .podium-tags { grid-column: 2; }
-  .rank-first h3 { font-size: 1rem; }
-  .rank-first .podium-tags { justify-content: flex-start; }
-  .rank-first .podium-score { grid-column: 1 / -1; text-align: center; }
-  .rank-first .podium-view { grid-column: 1 / -1; justify-content: center; }
-  .rankings-section { padding: 16px 10px 8px; border-radius: 16px; box-shadow: none; }
-  .rankings-header { padding: 0 4px; }
-  .rankings-title { font-size: 1.05rem; }
-  .rankings-table { max-height: none; overflow: visible; padding: 0; scrollbar-gutter: auto; }
-  .rankings-table-head { display: none; }
-  .ranking-row { min-width: 0; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 8px; padding: 12px 10px; border-radius: 12px; }
-  .ranking-row:hover { transform: none; box-shadow: none; }
-  .ranking-row > * { min-width: 0; }
-  .ranking-position { grid-column: 1; grid-row: 1; font-size: .8rem; }
-  .ranking-founder { grid-column: 2; grid-row: 1; gap: 8px; }
-  .ranking-founder > div:last-child { min-width: 0; }
-  .small-avatar { flex: 0 0 28px; width: 28px; height: 28px; font-size: .75rem; }
-  .founder-name { flex-wrap: wrap; gap: 4px; }
-  .founder-name strong { font-size: .78rem; line-height: 1.4; }
-  .ranking-founder span { font-size: .62rem; overflow-wrap: anywhere; color: #94a3b8; }
-  .you-badge { padding: 1px 4px; }
-  .ranking-points { grid-column: 3; grid-row: 1; text-align: right; font-size: .85rem; }
-  .ranking-points span { display: block; font-size: .55rem; }
-  .ranking-domain { grid-column: 2 / -1; grid-row: 2; font-size: .7rem; color: #94a3b8; }
-  .leaderboard-page .ranking-row > .ranking-progress { display: flex; grid-column: 2; grid-row: 3; flex-direction: row; flex-wrap: wrap; gap: 4px 8px; }
-  .ranking-progress strong, .ranking-progress span { font-size: .65rem; }
-  .leaderboard-page .ranking-row > .ranking-badges { display: flex; grid-column: 3; grid-row: 3; justify-content: flex-end; font-size: .6rem; color: #94a3b8; }
-  .ranking-badges svg { width: 12px; height: 12px; }
-  .ranking-badge-label { display: inline; }
-}
 
-@media (prefers-reduced-motion: reduce) {
-  .leaderboard-page *, .leaderboard-page *::before, .leaderboard-page *::after { animation: none !important; transition: none !important; }
-}
