@@ -71,7 +71,7 @@ src/
   utils/                       # Registration/login destinations
 ```
 
-`Sample FE/` remains the unchanged reference, excluded from new-app lint. Browser storage contains mock profiles and salted password digests; it is not production identity or authorization. Clearing local storage resets this demo.
+The legacy `Sample FE/` reference is available in Git history. Browser storage contains mock profiles and salted password digests; it is not production identity or authorization. Clearing local storage resets this demo.
 
 ## Checks
 
