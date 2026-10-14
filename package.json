@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "node --test tests/*.test.mjs src/features/assessment/services/*.test.mjs",
-    "test:ui": "npm run build && node tests/auth-flow.mjs && node tests/navigation-events-achievements.mjs"
+    "test:ui": "npm run build && node tests/auth-flow.mjs && node tests/navigation-events-achievements.mjs && node tests/projects-flow.mjs"
   },
   "dependencies": {
     "@fontsource/inter": "^5.0.0",

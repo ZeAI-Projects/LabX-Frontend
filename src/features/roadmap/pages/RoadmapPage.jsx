@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Navigate } from 'react-router-dom';
-import { ArrowRight, ArrowUp, BookOpen, Lock, Play } from 'lucide-react';
-import { useAuth } from '../../../hooks/use_auth.js';
+import { Link } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, ArrowUp, BookOpen, Lock, Play } from 'lucide-react';
 import { TierRankBadge } from '../../../components/common/TierRankBadge.jsx';
 import { createMockRoadmap } from '../services/mock_roadmap.js';
 import { MilestonePreview } from '../components/MilestonePreview.jsx';
@@ -10,15 +9,11 @@ import '../components/RoadmapPage.css';
 const ROAD_FIRST_NODE_Y = 350;
 const ROAD_ROW_HEIGHT = 260;
 
-export function RoadmapPage() {
-  const { user, assessmentCompleted } = useAuth();
-  if (!user) return <Navigate to="/login" replace />;
-  if (user.role !== 'founder') return <Navigate to="/mentor/assessment" replace />;
-  if (!assessmentCompleted) return <Navigate to="/assessment" replace />;
-  return <RoadmapSession key={user.id} result={user.assessment_result} />;
+export function RoadmapPage({ project }) {
+  return <RoadmapSession key={project.id} project={project} result={project.assessment_result} />;
 }
 
-function RoadmapSession({ result }) {
+function RoadmapSession({ result, project }) {
   const roadmap = useMemo(() => createMockRoadmap(result), [result]);
   const [selectedStageIndex, setSelectedStageIndex] = useState(null);
   const [selectedMilestone, setSelectedMilestone] = useState(null);
@@ -48,10 +43,11 @@ function RoadmapSession({ result }) {
   return (
     <div className="pubg-roadmap-page">
       <div className="pubg-roadmap-bg" aria-hidden="true"><div className="pubg-radial-glow" /><div className="pubg-grid-lines" /></div>
+      <Link className="roadmap-project-back" to="/roadmap"><ArrowLeft size={16} aria-hidden="true" />All projects</Link>
       <header className="pubg-roadmap-header">
         <div className="pubg-header-title-col">
-          <span className="pubg-header-kicker">Domain Progression Highway</span>
-          <h1 className="pubg-header-title">Your Roadmap</h1>
+          <span className="pubg-header-kicker">Project roadmap</span>
+          <h1 className="pubg-header-title">{project.name}</h1>
           <p className="roadmap-domain-subtitle">{roadmap.domain}</p>
         </div>
         <div className="pubg-header-stats-pill">

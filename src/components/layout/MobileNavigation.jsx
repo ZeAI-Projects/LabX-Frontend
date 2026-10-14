@@ -8,7 +8,7 @@ const sharedLinks = [
   ['/profile', 'Profile', User], ['/notifications', 'Notifications', Bell],
 ]
 const founderLinks = [
-  ['/dashboard', 'Dashboard', Home], ['/roadmap', 'Roadmap', Map],
+  ['/dashboard', 'Dashboard', Home], ['/roadmap', 'Projects', Map],
   ['/leaderboard', 'Leaderboard', Trophy], ['/guild', 'Guilds', Bot],
   ['/social', 'Social', Users], ...sharedLinks,
 ]
@@ -23,7 +23,7 @@ export function MobileNavigation({ user, onSignOut }) {
   const links = isFounder ? founderLinks : mentorLinks
   const primaryPaths = isFounder ? ['/dashboard', '/roadmap', '/events'] : ['/dashboard', '/events', '/achievements']
   const primary = primaryPaths.map(path => links.find(([target]) => target === path))
-  const moreActive = !primaryPaths.includes(pathname)
+  const moreActive = !primaryPaths.some(path => pathname === path || pathname.startsWith(`${path}/`))
   const displayName = user.full_name || user.username || 'LabX Member'
   const displayHandle = `@${user.username || user.email?.split('@')[0] || user.role}`
 

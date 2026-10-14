@@ -1,6 +1,7 @@
 import { ArrowRight, Award, CheckCircle2, CircleDashed, Compass, Shield, Sparkles, UserRound, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../hooks/use_auth.js'
+import { useProjects } from '../../projects/hooks/use_projects.js'
 import { HeroCrystal } from '../components/HeroCrystal.jsx'
 import '../components/Dashboard.css'
 
@@ -14,17 +15,14 @@ const stages = [
 
 export function OnboardingComplete() {
   const { user } = useAuth()
+  const { projects } = useProjects()
   const isMentor = user?.role === 'mentor'
-  const completed = Boolean(user?.assessment_completed)
-  const result = completed ? user?.assessment_result : null
+  const readyCount = projects.filter(project => project.assessment_completed).length
+  const draftCount = projects.length - readyCount
   const name = user?.full_name?.trim() || 'LabX member'
   const firstName = name.split(/\s+/)[0]
   const roleLabel = isMentor ? 'Mentor' : 'Founder'
-  const assessmentPath = isMentor ? '/mentor/assessment' : '/assessment'
-  const assessmentStatus = completed ? 'Complete' : user?.assessment_skipped ? 'Skipped for now' : 'Not completed'
-  const startingPoint = result?.stage
-    ? `${result.stage}${result.level ? ` · Level ${result.level}` : ''}`
-    : 'Not assigned'
+  const assessmentPath = isMentor ? '/mentor/assessment' : '/roadmap/new'
 
   return (
     <div className="dashboard-hud dashboard-home">
@@ -44,24 +42,20 @@ export function OnboardingComplete() {
             <h2 id="dashboard-greeting">Welcome back, {firstName}.</h2>
             <p>{isMentor
               ? 'Your place to support founders and share your experience.'
-              : completed
-                ? 'Your starting point is ready. Take the next step on your founder journey.'
-                : 'Your founder journey starts here. Explore your dashboard and complete your assessment when you are ready.'}</p>
+              : 'Give every idea its own path. Create projects, complete their assessments, and explore each roadmap.'}</p>
           </div>
         </div>
         <div className="dashboard-home__status-card">
           <div className="dashboard-home__status-heading">
-            {completed ? <CheckCircle2 size={20} /> : <CircleDashed size={20} />}
-            <span>{isMentor ? 'Mentor Assessment' : 'Initial Assessment'}</span>
+            {readyCount ? <CheckCircle2 size={20} /> : <CircleDashed size={20} />}
+            <span>{isMentor ? 'Mentor Assessment' : 'Your projects'}</span>
           </div>
-          <strong>{assessmentStatus}</strong>
-          <p>{completed
-            ? 'Your responses are saved to your account.'
-            : isMentor
-              ? 'Continue to your separate mentor assessment.'
-              : 'Complete seven questions to unlock your personalized roadmap.'}</p>
-          <Link className="btn btn-primary" to={completed && !isMentor ? '/assessment/result' : assessmentPath}>
-            {isMentor ? 'Mentor Assessment' : completed ? 'View my results' : 'Start Assessment'}<ArrowRight size={16} />
+          <strong>{isMentor ? 'Not completed' : `${projects.length} ${projects.length === 1 ? 'project' : 'projects'}`}</strong>
+          <p>{isMentor
+            ? 'Continue to your separate mentor assessment.'
+            : 'Start with a project name, then answer seven questions to create its roadmap.'}</p>
+          <Link className="btn btn-primary" to={assessmentPath}>
+            {isMentor ? 'Mentor Assessment' : 'New project'}<ArrowRight size={16} />
           </Link>
         </div>
       </section>
@@ -69,36 +63,33 @@ export function OnboardingComplete() {
       <section className="dashboard-hud__stats" aria-label="Account overview">
         <div className="dashboard-home__stat">
           <span className="dashboard-home__stat-icon"><Compass size={22} /></span>
-          <div><p>{isMentor ? 'Account type' : 'Your domain'}</p><strong>{isMentor ? 'Mentor' : result?.domain || 'Choose in your assessment'}</strong></div>
+          <div><p>{isMentor ? 'Account type' : 'Projects'}</p><strong>{isMentor ? 'Mentor' : projects.length}</strong></div>
         </div>
         <div className="dashboard-home__stat">
           <span className="dashboard-home__stat-icon dashboard-home__stat-icon--gold"><Award size={22} /></span>
-          <div><p>{isMentor ? 'Assessment status' : 'Starting point'}</p><strong>{isMentor ? assessmentStatus : startingPoint}</strong></div>
+          <div><p>{isMentor ? 'Assessment status' : 'Roadmaps ready'}</p><strong>{isMentor ? 'Not completed' : readyCount}</strong></div>
         </div>
         <div className="dashboard-home__stat">
           <span className="dashboard-home__stat-icon dashboard-home__stat-icon--purple"><Users size={22} /></span>
-          <div><p>{isMentor ? 'Account status' : 'Assigned guild'}</p><strong>{isMentor ? 'Registered' : result?.guild || 'Assigned after assessment'}</strong></div>
+          <div><p>{isMentor ? 'Account status' : 'Assessments in progress'}</p><strong>{isMentor ? 'Registered' : draftCount}</strong></div>
         </div>
       </section>
 
       <section className={`dashboard-hud__middle ${isMentor ? 'dashboard-hud__middle--mentor' : ''}`}>
         {!isMentor && (
           <div className="dashboard-home__panel dashboard-home__roadmap">
-            <div className="dashboard-home__panel-heading"><Compass size={18} /><h2>Your Roadmap</h2></div>
-            <p>From discovering a problem to growing your venture, see the path ahead.</p>
+            <div className="dashboard-home__panel-heading"><Compass size={18} /><h2>Your project roadmaps</h2></div>
+            <p>From discovering a problem to growing a venture, every project has its own starting point.</p>
             <ol className="dashboard-home__stages" aria-label="Roadmap stages">
               {stages.map((stage) => (
                 <li key={stage.name} style={{ '--stage-color': stage.color, '--stage-shade': stage.shade }}>
-                  <span className={`dashboard-home__stage-node ${result?.stage === stage.name ? 'is-current' : ''}`} aria-hidden="true"><span /></span>
+                  <span className="dashboard-home__stage-node" aria-hidden="true"><span /></span>
                   <span>{stage.name}</span>
-                  {result?.stage === stage.name && <small>Current</small>}
                 </li>
               ))}
             </ol>
-            <p className="dashboard-home__roadmap-note">{completed
-              ? 'Your roadmap is ready to explore.'
-              : 'Your initial assessment unlocks your roadmap. You can start whenever you are ready.'}</p>
-            <Link className="btn btn-primary" to="/roadmap">Open Roadmap<ArrowRight size={17} /></Link>
+            <p className="dashboard-home__roadmap-note">Open your project grid to explore a roadmap or pick up an unfinished assessment.</p>
+            <Link className="btn btn-primary" to="/roadmap">View projects<ArrowRight size={17} /></Link>
           </div>
         )}
 

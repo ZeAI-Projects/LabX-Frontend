@@ -18,7 +18,7 @@ export function OnboardingLayout({ children }) {
         <div className="onboarding-brand" aria-label="LabX by ZeAI">Lab<span>X</span><small>by ZeAI</small></div>
         <nav className="onboarding-nav" aria-label="Main navigation">
           <NavLink to="/dashboard">Dashboard</NavLink>
-          {user.role === 'founder' && <NavLink to="/roadmap" data-roadmap-entry>Roadmap</NavLink>}
+          {user.role === 'founder' && <NavLink to="/roadmap" data-roadmap-entry>Projects</NavLink>}
         </nav>
         <div className="onboarding-account">
           <span className="onboarding-founder">{user.full_name}</span>

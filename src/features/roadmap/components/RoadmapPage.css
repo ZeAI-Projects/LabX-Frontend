@@ -14,6 +14,10 @@
   padding-bottom: 72px;
 }
 
+.roadmap-project-back { position:relative; z-index:1; display:inline-flex; align-items:center; gap:8px; margin:20px 24px 0; color:#a5f3fc; font-size:.85rem; }
+.pubg-roadmap-page .pubg-header-title { overflow-wrap:anywhere; }
+.pubg-roadmap-page .pubg-header-title-col { min-width:0; }
+
 /* Full-screen rank-up moment shown when progress advances to a new stage. */
 .stage-unlock-overlay {
   position: fixed;

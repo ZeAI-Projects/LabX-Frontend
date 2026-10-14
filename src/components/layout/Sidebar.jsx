@@ -21,7 +21,7 @@ export function Sidebar({ user, onSignOut }) {
       <nav className="labx-sidebar-nav" aria-label="Main navigation">
         <SidebarItem to="/dashboard" icon={<Home size={18} />} label="Dashboard" />
         {isFounder && <>
-          <SidebarItem to="/roadmap" icon={<Map size={18} />} label="Roadmap" />
+          <SidebarItem to="/roadmap" icon={<Map size={18} />} label="Projects" />
           <SidebarItem to="/leaderboard" icon={<Trophy size={18} />} label="Leaderboard" />
           <SidebarItem to="/guild" icon={<Bot size={18} />} label="Guilds" />
           <SidebarItem to="/social" icon={<Users size={18} />} label="Social" />

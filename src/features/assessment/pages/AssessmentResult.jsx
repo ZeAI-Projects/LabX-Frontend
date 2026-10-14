@@ -1,13 +1,14 @@
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Award, Compass, Shield, Users, ArrowRight } from 'lucide-react';
 import '../components/AssessmentResult.css';
 
-export const AssessmentResult = ({ result }) => {
+export const AssessmentResult = ({ result, project }) => {
   const navigate = useNavigate();
 
   return (
     <section className="assessment-result" aria-labelledby="assessment-result-title">
       <div className="glass-card assessment-result__card">
+        <p className="assessment-result__project-name">{project.name}</p>
         <div className="assessment-result__award" aria-hidden="true">
           <Award />
         </div>
@@ -16,7 +17,7 @@ export const AssessmentResult = ({ result }) => {
           Your LABX Starting Point
         </h1>
         <p className="assessment-result__subtitle">
-          Based on your diagnostic assessment, your founder progression path has been configured.
+          Your assessment is complete. Your project’s starting point is ready.
         </p>
 
         <div className="assessment-result__grid">
@@ -45,10 +46,11 @@ export const AssessmentResult = ({ result }) => {
         <button
           type="button"
           className="btn btn-primary assessment-result__continue"
-          onClick={() => navigate('/roadmap')}
+          onClick={() => navigate(`/roadmap/${project.id}`)}
         >
           Enter My Roadmap <ArrowRight aria-hidden="true" />
         </button>
+        <Link className="assessment-result__back" to="/roadmap">All projects</Link>
       </div>
       {result?.isMock && (
         <p className="assessment-result__demo-note">Demo placement &middot; Stage and level are illustrative.</p>

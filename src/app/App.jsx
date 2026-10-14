@@ -6,14 +6,14 @@ import AppRouter from './router.jsx'
 
 export default function App() {
   return (
-    <AppProviders>
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <AppProviders>
         <ErrorBoundary>
           <CipherScreen>
             <AppRouter />
           </CipherScreen>
         </ErrorBoundary>
-      </BrowserRouter>
-    </AppProviders>
+      </AppProviders>
+    </BrowserRouter>
   )
 }

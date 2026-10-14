@@ -1,11 +1,11 @@
 import { lazy, Suspense, useEffect } from 'react'
-import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, Outlet, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../hooks/use_auth.js'
 import { OnboardingLayout } from '../components/layout/OnboardingLayout.jsx'
 import { AppShell } from '../components/layout/AppShell.jsx'
 import { FeaturePlaceholder } from '../components/common/FeaturePlaceholder.jsx'
 import { OnboardingHandoff } from '../components/common/OnboardingHandoff.jsx'
-import { AssessmentGate } from '../features/assessment/components/AssessmentGate.jsx'
+import { useProjects } from '../features/projects/hooks/use_projects.js'
 import { getLoginDestination } from '../utils/onboarding.js'
 
 const lazyPage = (load, name) => lazy(() => load().then((module) => ({ default: module[name] })))
@@ -20,6 +20,8 @@ const OnboardingComplete = lazyPage(() => import('../features/dashboard/pages/On
 const RoadmapPage = lazyPage(() => import('../features/roadmap/pages/RoadmapPage.jsx'), 'RoadmapPage')
 const AchievementsPage = lazyPage(() => import('../features/achievements/pages/AchievementsPage.jsx'), 'AchievementsPage')
 const EventsPage = lazyPage(() => import('../features/events/pages/EventsPage.jsx'), 'EventsPage')
+const ProjectsPage = lazyPage(() => import('../features/projects/pages/ProjectsPage.jsx'), 'ProjectsPage')
+const NewProjectPage = lazyPage(() => import('../features/projects/pages/NewProjectPage.jsx'), 'NewProjectPage')
 
 function WelcomeRoute() {
   const { user, isAuthenticated } = useAuth()
@@ -29,15 +31,15 @@ function WelcomeRoute() {
 }
 
 function ProtectedLayout() {
-  const { isAuthenticated } = useAuth()
+  const { user, isAuthenticated } = useAuth()
   if (!isAuthenticated) return <Navigate to="/login" replace />
-  return <OnboardingLayout><Outlet /></OnboardingLayout>
+  return <OnboardingLayout key={user.id}><Outlet /></OnboardingLayout>
 }
 
 function ProtectedAppLayout() {
-  const { isAuthenticated } = useAuth()
+  const { user, isAuthenticated } = useAuth()
   if (!isAuthenticated) return <Navigate to="/login" replace />
-  return <AppShell><Outlet /></AppShell>
+  return <AppShell key={user.id}><Outlet /></AppShell>
 }
 
 function FounderFeature() {
@@ -45,57 +47,52 @@ function FounderFeature() {
   return user.role === 'founder' ? <FeaturePlaceholder /> : <Navigate to="/dashboard" replace />
 }
 
-function AssessmentRoute() {
-  const { user, assessmentCompleted } = useAuth()
-  if (user.role === 'mentor') return <Navigate to="/mentor/assessment" replace />
-  if (assessmentCompleted) {
-    return <Navigate to="/assessment/result" replace />
-  }
-  return <AssessmentWizard />
+function FounderOnly({ children }) {
+  const { user } = useAuth()
+  return user.role === 'founder' ? children : <Navigate to="/dashboard" replace />
 }
 
-function ResultRoute() {
-  const { user, assessmentCompleted } = useAuth()
+// Keep existing assessment bookmarks useful as assessments move under projects.
+function LegacyAssessmentRoute({ result = false }) {
+  const { user } = useAuth()
+  const { projects } = useProjects()
   if (user.role === 'mentor') return <Navigate to="/mentor/assessment" replace />
-  if (!assessmentCompleted || !user.assessment_result) return <Navigate to="/assessment" replace />
-  return <AssessmentResult result={user.assessment_result} />
+  const completed = projects.find(project => project.assessment_completed)
+  const destination = result
+    ? completed ? `/roadmap/${completed.id}/result` : '/roadmap'
+    : '/roadmap/new'
+  return <Navigate to={destination} replace />
 }
 
-function DashboardRoute() {
-  const { user, assessmentCompleted } = useAuth()
-  const location = useLocation()
-  const navigate = useNavigate()
-  const showReminder = user.role === 'founder' && !assessmentCompleted && location.state?.promptAssessment
-
-  function dismissReminder() {
-    navigate('/dashboard', { replace: true, state: null })
-    requestAnimationFrame(() => {
-      const visibleEntry = [...document.querySelectorAll('[data-roadmap-entry]')].find((entry) => entry.getClientRects().length > 0)
-      visibleEntry?.focus()
-    })
-  }
-
-  return (
-    <>
-      <OnboardingComplete />
-      {showReminder && <AssessmentGate onDismiss={dismissReminder} onStart={() => navigate('/assessment', { replace: true })} />}
-    </>
+function ProjectRoute({ view }) {
+  const { user } = useAuth()
+  const { projectId } = useParams()
+  const { projects } = useProjects()
+  if (user.role !== 'founder') return <Navigate to="/dashboard" replace />
+  const project = projects.find(entry => entry.id === projectId)
+  if (!project) return (
+    <section className="glass-card" style={{ maxWidth: 600, margin: '40px auto', padding: 24 }}>
+      <h1>Project not found</h1>
+      <p style={{ margin: '16px 0' }}>This project may have been deleted or belongs to another account.</p>
+      <Link to="/roadmap" className="btn btn-primary">All projects</Link>
+    </section>
   )
+  const base = `/roadmap/${project.id}`
+  if (view === 'assessment') {
+    return project.assessment_completed
+      ? <Navigate to={`${base}/result`} replace />
+      : <AssessmentWizard key={project.id} project={project} />
+  }
+  if (!project.assessment_completed) return <Navigate to={`${base}/assessment`} replace />
+  return view === 'result'
+    ? <AssessmentResult project={project} result={project.assessment_result} />
+    : <RoadmapPage key={project.id} project={project} />
 }
 
 function MentorRoute() {
   const { user } = useAuth()
   if (user.role !== 'mentor') return <Navigate to="/dashboard" replace />
   return <OnboardingHandoff />
-}
-
-function RoadmapRoute() {
-  const { user, assessmentCompleted } = useAuth()
-  if (user.role !== 'founder') return <Navigate to="/dashboard" replace />
-  if (!assessmentCompleted || !user.assessment_result) {
-    return <Navigate to="/dashboard" replace state={{ promptAssessment: true }} />
-  }
-  return <RoadmapPage />
 }
 
 export default function AppRouter() {
@@ -111,14 +108,18 @@ export default function AppRouter() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route element={<ProtectedLayout />}>
-          <Route path="/assessment" element={<AssessmentRoute />} />
-          <Route path="/assessment/result" element={<ResultRoute />} />
+          <Route path="/assessment" element={<LegacyAssessmentRoute />} />
+          <Route path="/assessment/result" element={<LegacyAssessmentRoute result />} />
+          <Route path="/roadmap/:projectId/assessment" element={<ProjectRoute view="assessment" />} />
+          <Route path="/roadmap/:projectId/result" element={<ProjectRoute view="result" />} />
           <Route path="/mentor/assessment" element={<MentorRoute />} />
         </Route>
         <Route element={<ProtectedAppLayout />}>
           <Route path="/q1" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/roadmap" element={<RoadmapRoute />} />
-          <Route path="/dashboard" element={<DashboardRoute />} />
+          <Route path="/roadmap" element={<FounderOnly><ProjectsPage /></FounderOnly>} />
+          <Route path="/roadmap/new" element={<FounderOnly><NewProjectPage /></FounderOnly>} />
+          <Route path="/roadmap/:projectId" element={<ProjectRoute view="roadmap" />} />
+          <Route path="/dashboard" element={<OnboardingComplete />} />
           <Route path="/achievements" element={<AchievementsPage />} />
           <Route path="/events" element={<EventsPage />} />
           <Route path="/profile" element={<FeaturePlaceholder />} />

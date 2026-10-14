@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../../hooks/use_auth.js';
-import { useAssessmentDraft } from '../hooks/use_assessment_draft.js';
+import { Link, useNavigate } from 'react-router-dom';
+import { useProjects } from '../../projects/hooks/use_projects.js';
 import {
   DOMAIN_OPTIONS, STAGE_OPTIONS, EVIDENCE_OPTIONS, EXECUTION_OPTIONS,
   VALIDATION_OPTIONS, MATURITY_OPTIONS, COMPLETED_OPTIONS,
-  evaluateAssessment, toggleEvidence, validateAssessmentStep,
+  toggleEvidence, validateAssessmentStep,
 } from '../services/mock_assessment.js';
 import {
   Bot, Box, Boxes, BrainCircuit, Building2, CheckCircle2, ChevronRight,
@@ -28,21 +27,22 @@ const VALIDATION_ICONS = [CircleSlash, MessageCircle, UserCheck, UsersRound, Cir
 const MATURITY_ICONS = [CircleSlash, Lightbulb, Box, Wrench, Boxes, ShieldCheck, Globe2];
 const COMPLETED_ICONS = [Target, Search, UserCheck, Box, Wrench, Rocket, UsersRound, CircleDollarSign, TrendingUp];
 
-export const AssessmentWizard = ({ onComplete }) => {
-  const { user } = useAuth();
-  return <AssessmentWizardSession key={user?.id || 'anonymous'} userId={user?.id} onComplete={onComplete} />;
-};
-
-const AssessmentWizardSession = ({ userId, onComplete }) => {
-  const { draft, setDraft, clearDraft } = useAssessmentDraft(userId);
-  const { step, answers } = draft;
+export const AssessmentWizard = ({ project }) => {
+  const { saveDraft, completeProject } = useProjects();
+  const { step, answers } = project.draft;
   const [submitting, setSubmitting] = useState(false);
-  const [skipping, setSkipping] = useState(false);
   const [error, setError] = useState('');
   const submittingRef = useRef(false);
   const headingRef = useRef(null);
-  const { completeAssessment, skipAssessment } = useAuth();
   const navigate = useNavigate();
+
+  function setDraft(update) {
+    try {
+      saveDraft(project.id, update(project.draft));
+    } catch (err) {
+      setError(err.message || 'Unable to save your answers. Please try again.');
+    }
+  }
 
   useEffect(() => {
     headingRef.current?.focus({ preventScroll: true });
@@ -50,27 +50,24 @@ const AssessmentWizardSession = ({ userId, onComplete }) => {
 
   const handleSingleSelect = (questionKey, value) => {
     if (submittingRef.current) return;
-    setDraft((prev) => ({ ...prev, answers: { ...prev.answers, [questionKey]: value } }));
     setError('');
+    setDraft((prev) => ({ ...prev, answers: { ...prev.answers, [questionKey]: value } }));
   };
 
   const handleMultiSelect = (key) => {
     if (submittingRef.current) return;
-    setDraft((prev) => ({ ...prev, answers: { ...prev.answers, q3: toggleEvidence(prev.answers.q3, key) } }));
     setError('');
+    setDraft((prev) => ({ ...prev, answers: { ...prev.answers, q3: toggleEvidence(prev.answers.q3, key) } }));
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (submittingRef.current) return;
     submittingRef.current = true;
     setSubmitting(true);
     setError('');
     try {
-      const result = evaluateAssessment(answers);
-      await completeAssessment(result, answers);
-      clearDraft();
-      if (onComplete) onComplete(result);
-      else navigate('/assessment/result', { replace: true });
+      completeProject(project.id, answers);
+      navigate(`/roadmap/${project.id}/result`, { replace: true });
     } catch (err) {
       setError(err.message || 'Unable to complete your assessment. Please try again.');
     } finally {
@@ -88,26 +85,12 @@ const AssessmentWizardSession = ({ userId, onComplete }) => {
     else handleSubmit();
   };
 
-  const handleSkip = async () => {
-    if (submittingRef.current) return;
-    submittingRef.current = true;
-    setSkipping(true);
-    setError('');
-    try {
-      await skipAssessment();
-      navigate('/dashboard', { replace: true });
-    } catch (err) {
-      setError(err.message || 'Unable to open the dashboard. Please try again.');
-    } finally {
-      submittingRef.current = false;
-      setSkipping(false);
-    }
-  };
-
   return (
     <div className="assessment-wizard">
+      <Link className="assessment-project-back" to="/roadmap">&larr; All projects</Link>
       {/* Step Header */}
       <div style={{ marginBottom: '24px', textAlign: 'center' }}>
+        <p className="assessment-project-name">{project.name}</p>
         <h1 ref={headingRef} tabIndex={-1} style={{ fontSize: '1.8rem', fontWeight: '800', marginBottom: '8px' }}>
           Founder Diagnostic Assessment
         </h1>
@@ -121,7 +104,7 @@ const AssessmentWizardSession = ({ userId, onComplete }) => {
         </div>
       </div>
 
-      <div className="glass-card assessment-card" key={step} aria-busy={submitting || skipping}>
+      <div className="glass-card assessment-card" key={step} aria-busy={submitting}>
         {error && (
           <div role="alert" style={{ padding: '12px 16px', backgroundColor: 'rgba(239, 68, 68, 0.15)', color: 'var(--accent-red)', borderRadius: '8px', marginBottom: '20px', fontSize: '0.9rem' }}>
             {error}
@@ -144,7 +127,7 @@ const AssessmentWizardSession = ({ userId, onComplete }) => {
                 label={opt}
                 icon={DOMAIN_ICONS[idx]}
                 index={idx}
-                disabled={submitting || skipping}
+                disabled={submitting}
               />
             ))}
           </QuestionStep>
@@ -166,7 +149,7 @@ const AssessmentWizardSession = ({ userId, onComplete }) => {
                 label={opt}
                 icon={STAGE_ICONS[idx]}
                 index={idx}
-                disabled={submitting || skipping}
+                disabled={submitting}
               />
             ))}
           </QuestionStep>
@@ -188,7 +171,7 @@ const AssessmentWizardSession = ({ userId, onComplete }) => {
                 label={opt.label}
                 icon={EVIDENCE_ICONS[opt.key]}
                 index={idx}
-                disabled={submitting || skipping}
+                disabled={submitting}
               />
             ))}
           </QuestionStep>
@@ -210,7 +193,7 @@ const AssessmentWizardSession = ({ userId, onComplete }) => {
                 label={`${idx + 1}. ${opt}`}
                 icon={EXECUTION_ICONS[idx]}
                 index={idx}
-                disabled={submitting || skipping}
+                disabled={submitting}
               />
             ))}
           </QuestionStep>
@@ -232,7 +215,7 @@ const AssessmentWizardSession = ({ userId, onComplete }) => {
                 label={opt}
                 icon={VALIDATION_ICONS[idx]}
                 index={idx}
-                disabled={submitting || skipping}
+                disabled={submitting}
               />
             ))}
           </QuestionStep>
@@ -254,7 +237,7 @@ const AssessmentWizardSession = ({ userId, onComplete }) => {
                 label={opt}
                 icon={MATURITY_ICONS[idx]}
                 index={idx}
-                disabled={submitting || skipping}
+                disabled={submitting}
               />
             ))}
           </QuestionStep>
@@ -276,7 +259,7 @@ const AssessmentWizardSession = ({ userId, onComplete }) => {
                 label={opt}
                 icon={COMPLETED_ICONS[idx]}
                 index={idx}
-                disabled={submitting || skipping}
+                disabled={submitting}
               />
             ))}
           </QuestionStep>
@@ -288,7 +271,7 @@ const AssessmentWizardSession = ({ userId, onComplete }) => {
             <button
               className="btn btn-secondary"
               onClick={() => { setError(''); setDraft((prev) => ({ ...prev, step: prev.step - 1 })); }}
-              disabled={submitting || skipping}
+              disabled={submitting}
             >
               Back
             </button>
@@ -297,16 +280,16 @@ const AssessmentWizardSession = ({ userId, onComplete }) => {
           <button
             className="btn btn-primary"
             onClick={handleNext}
-            disabled={submitting || skipping || Boolean(validateAssessmentStep(answers, step))}
+            disabled={submitting || Boolean(validateAssessmentStep(answers, step))}
           >
             {submitting ? 'Saving assessment...' : step === 7 ? 'Complete Assessment' : 'Next Step'}
             <ChevronRight size={18} />
           </button>
         </div>
         <div className="assessment-skip">
-          <p>Your answers save automatically. Completed answers cannot be changed.</p>
-          <button type="button" className="btn btn-secondary" onClick={handleSkip} disabled={submitting || skipping}>
-            {skipping ? 'Opening dashboard...' : 'Skip Initial Assessment'}
+          <p>Your answers save to this project automatically. You can return anytime. Completed answers cannot be changed.</p>
+          <button type="button" className="btn btn-secondary" onClick={() => navigate('/roadmap')} disabled={submitting}>
+            Save and exit
           </button>
         </div>
       </div>

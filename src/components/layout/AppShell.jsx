@@ -8,7 +8,7 @@ import './labxshell.css'
 
 const pageTitles = {
   dashboard: 'Dashboard',
-  roadmap: 'Roadmap',
+  roadmap: 'Projects',
   leaderboard: 'Leaderboard',
   guild: 'Guilds',
   social: 'Social',
