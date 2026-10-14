@@ -1,0 +1,31 @@
+﻿/* The Sample FE shell retains its own spacing and shared styles. */
+.main-content .lp-page {padding:0;max-width:none}
+.lp-page input,.lp-page textarea {font:inherit;caret-color:auto}
+.lp-page ul {padding-left:20px}
+.lp-page .lp-badges > div {background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:12px}
+.lp-page .lp-badges > div > span {font-size:1.8rem}
+
+/* Balance the long identity card with Passport, venture and badge cards. */
+.lp-page {container-type:inline-size}
+.lp-page .lp-grid--organized {grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:18px}
+.lp-grid--organized .lp-stack {gap:18px}
+.lp-grid--organized .lp-card {padding:22px}
+.lp-grid--organized .lp-card__heading {margin-bottom:18px}
+.lp-grid--organized .lp-detail {margin-top:15px;padding-top:15px}
+.lp-grid--organized .lp-card__heading + .lp-detail {margin-top:0;padding-top:0}
+.lp-grid--organized .lp-links {display:flex;flex-direction:row;flex-wrap:wrap;gap:10px 18px}
+.lp-profile-snapshot--compact {margin-top:18px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);column-gap:24px;padding:20px 22px}
+.lp-profile-snapshot--compact .lp-kicker {grid-column:1;grid-row:1}
+.lp-profile-snapshot--compact .lp-profile-snapshot__title {grid-column:1;grid-row:2}
+.lp-profile-snapshot--compact .lp-profile-snapshot__stats {grid-column:2;grid-row:1 / span 3;margin:0;align-self:center}
+.lp-profile-snapshot--compact > p {grid-column:1;grid-row:3;margin-top:8px}
+@container (max-width:760px) {
+ .lp-page .lp-grid--organized {grid-template-columns:minmax(0,1fr)}
+ .lp-profile-snapshot--compact {grid-template-columns:1fr;gap:8px}
+ .lp-profile-snapshot--compact .lp-profile-snapshot__stats {grid-column:1;grid-row:4;margin-top:8px}
+}
+@container (max-width:440px) {
+ .lp-grid--organized .lp-card {padding:18px}
+ .lp-profile-snapshot--compact {padding:18px}
+ .lp-grid--organized .lp-stack,.lp-page .lp-grid--organized {gap:14px}
+}

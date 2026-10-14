@@ -1,0 +1,105 @@
+﻿.floating-xp { display: inline-flex; align-items: center; gap: 12px; flex-shrink: 0; padding: 4px; }
+.floating-xp__projector { position: relative; width: 46px; height: 48px; flex: none; perspective: 240px; }
+.floating-xp__levitation { position: absolute; width: 30px; height: 30px; top: 3px; left: 8px; transform-style: preserve-3d; animation: xp-hover 4s ease-in-out infinite; }
+.floating-xp__coin { position: absolute; inset: 0; border-radius: 50%; transform-style: preserve-3d; transform: rotateY(-18deg) rotateZ(-8deg); animation: xp-burst 7s linear 7s infinite; }
+.floating-xp__face { position: absolute; inset: 0; display: grid; place-items: center; border-radius: 50%; backface-visibility: hidden; border: 1px solid #a5f3fc; background: conic-gradient(from 30deg, #23384c, #a5c8d9 8%, #0b1528 18%, #1a314a 43%, #59758f 51%, #0a1529 65%, #395266 88%, #23384c); box-shadow: inset 0 0 0 2px #0b1220, inset 0 0 0 3px #67e8f966, 0 0 10px #22d3ee24; }
+.floating-xp__face--front { transform: translateZ(2px); }
+.floating-xp__face--back { transform: rotateY(180deg) translateZ(2px); }
+.floating-xp__face::before { content: ''; position: absolute; inset: 5px; border: 1px solid #38bdf866; border-radius: 50%; background: linear-gradient(135deg, #0b172a, #18243d); }
+.floating-xp__face i { position: relative; width: 12px; height: 15px; background: linear-gradient(135deg, #e0faff, #67e8f9 48%, #a78bfa); clip-path: polygon(0 0, 34% 0, 50% 32%, 68% 0, 100% 0, 68% 50%, 100% 100%, 67% 100%, 50% 67%, 33% 100%, 0 100%, 33% 50%); }
+.floating-xp__beam { position: absolute; bottom: 8px; left: 5px; width: 36px; height: 30px; clip-path: polygon(8% 0, 92% 0, 60% 100%, 40% 100%); background: linear-gradient(transparent, #22d3ee0c 45%, #67e8f932); }
+.floating-xp__base { position: absolute; bottom: 2px; left: 5px; width: 36px; height: 8px; border-radius: 50%; background: radial-gradient(ellipse, #cffafe 0 4%, #22d3ee77 8% 18%, #0b1220 45%); border: 1px solid #52677e; box-shadow: 0 2px 0 #060b14, inset 0 1px #67e8f944; }
+.floating-xp__air { position: absolute; inset: -5px -9px; border: 1px solid transparent; border-top-color: #a5f3fcbb; border-bottom-color: #8b5cf655; border-radius: 50%; opacity: 0; pointer-events: none; filter: drop-shadow(0 0 3px #22d3ee); animation: xp-air 7s linear 7s infinite; }
+.floating-xp__air--two { inset: -9px -5px; border-top-color: #a78bfaaa; border-bottom-color: #67e8f955; animation-name: xp-air-reverse; }
+.floating-xp__readout { position: relative; padding: 4px 10px 5px; border-left: 1px solid #22d3ee44; background: linear-gradient(90deg, #22d3ee09, transparent); }
+.floating-xp__readout::before, .floating-xp__readout::after { content: ''; position: absolute; left: -1px; width: 5px; height: 1px; background: #67e8f9aa; }
+.floating-xp__readout::before { top: 0; } .floating-xp__readout::after { bottom: 0; }
+.floating-xp__label { display: block; color: #8297ae; font: 600 7px/1.3 'Consolas', monospace; letter-spacing: .13em; margin-bottom: 3px; white-space: nowrap; }
+.floating-xp__amount { display: flex; align-items: baseline; gap: 7px; white-space: nowrap; }
+.floating-xp__amount strong { font: 600 21px/1 'Consolas', 'SFMono-Regular', monospace; letter-spacing: -.04em; font-variant-numeric: tabular-nums; color: #dff8ff; text-shadow: 0 0 12px #22d3ee22; }
+.floating-xp__amount > span { font: 700 9px/1 'Consolas', monospace; color: #67e8f9; letter-spacing: .12em; }
+@keyframes xp-hover { 0%,100% { transform: translateY(1px); } 50% { transform: translateY(-3px); } }
+/* A gently accelerating spin and settling tilt every seven seconds. */
+@keyframes xp-burst {
+  0% { transform: rotateY(-18deg) rotateZ(-8deg); animation-timing-function: ease-out; }
+  3% { transform: rotateY(-38deg) rotateZ(-13deg); animation-timing-function: cubic-bezier(.45,0,.25,1); }
+  19% { transform: rotateY(1062deg) rotateZ(3deg); animation-timing-function: ease-in-out; }
+  23% { transform: rotateY(1062deg) rotateZ(-11deg); animation-timing-function: ease-out; }
+  27%,100% { transform: rotateY(1062deg) rotateZ(-8deg); }
+}
+@keyframes xp-air { 0% { opacity: 0; transform: rotate(-25deg) scale(.85); } 5% { opacity: .6; } 16% { opacity: .35; } 23%,100% { opacity: 0; transform: rotate(695deg) scale(1.18); } }
+@keyframes xp-air-reverse { 0% { opacity: 0; transform: rotate(35deg) scale(.9); } 5% { opacity: .45; } 16% { opacity: .25; } 23%,100% { opacity: 0; transform: rotate(-685deg) scale(1.25); } }
+@media (prefers-reduced-motion: reduce) { .floating-xp__levitation, .floating-xp__coin, .floating-xp__air { animation: none; } }
+/* Faceted alloy rim, etched circuitry and a signature off-axis orbit. */
+.floating-xp__face {
+  border-radius: 35%;
+  border-color: #b9eafa;
+  background: conic-gradient(from 20deg, #172a42, #e0f7ff 4%, #6489a1 9%, #14233c 18%, #203b54 38%, #a78bfa 44%, #1b2846 52%, #112237 72%, #67e8f9 82%, #172a42 94%);
+  box-shadow: inset 0 0 0 1px #0c162b, inset 0 0 0 2px #8baec177, 0 0 8px #22d3ee20;
+}
+.floating-xp__face::before {
+  inset: 4px; border-radius: 30%; border: 1px solid #67e8f950;
+  background: radial-gradient(ellipse at 30% 15%, #5a799944, transparent 60%), linear-gradient(145deg, #101f36, #060e1d 60%, #282044);
+}
+.floating-xp__face i {
+  width: 13px; height: 16px;
+  background: linear-gradient(115deg, #fff 0%, #c7f9ff 22%, #53cde9 23%, #a5f3fc 49%, #537aa9 50%, #c4b5fd 79%, #e9e5ff);
+  filter: drop-shadow(0 0 3px #67e8f955);
+}
+.floating-xp__engraving { position: absolute; inset: 2px; border-radius: 33%; border: 1px dashed #94e5f266; transform: rotate(15deg); }
+.floating-xp__engraving::before, .floating-xp__engraving::after { content: ''; position: absolute; width: 3px; height: 2px; background: #a5f3fc; box-shadow: 0 0 3px #22d3ee77; }
+.floating-xp__engraving::before { top: 1px; left: 5px; }
+.floating-xp__engraving::after { bottom: 1px; right: 5px; background: #c4b5fd; }
+.floating-xp__glint { position: absolute; width: 7px; height: 1px; top: 2px; left: 4px; transform: rotate(-30deg); background: linear-gradient(90deg, transparent, #fff, transparent); }
+.floating-xp__glint::after { content: ''; position: absolute; top: -2px; left: 3px; width: 1px; height: 5px; background: linear-gradient(transparent, #e0faff, transparent); }
+.floating-xp__orbit { position: absolute; inset: -3px -7px; border-radius: 50%; border: 1px solid transparent; border-left-color: #67e8f966; border-right-color: #a78bfa55; transform: rotate(-35deg) scaleY(.65); }
+.floating-xp__orbit::after { content: ''; position: absolute; left: 1px; top: 5px; width: 3px; height: 3px; border-radius: 50%; background: #b6f4ff; box-shadow: 0 0 4px #22d3ee88; }
+.floating-xp__base::after { content: ''; position: absolute; left: 7px; right: 7px; top: 1px; height: 3px; border-radius: 50%; border-bottom: 1px solid #67e8f977; }
+.floating-xp { position: relative; border: 0; background: transparent; cursor: pointer; overflow: visible; border-radius: 10px; }
+.labx-navbar:has(.floating-xp),
+.dashboard-hud > .dashboard-hud__bar:has(.floating-xp) {
+  position: relative;
+  z-index: 40;
+  overflow: visible;
+}
+.floating-xp:focus-visible { outline: 1px solid #67e8f9; outline-offset: 3px; }
+.floating-xp .floating-xp__readout {
+  position: absolute; z-index: 30; top: calc(100% + 6px); right: 0;
+  display: block; width: max-content; max-width: min(240px, 80vw); padding: 12px 16px;
+  border: 1px solid #67e8f944; border-radius: 4px 12px 4px 12px;
+  background: linear-gradient(125deg, #10283a, #0b1123 70%, #211b38);
+  box-shadow: 0 12px 28px #0008, inset 0 1px #a5f3fc15;
+  text-align: left; opacity: 0; visibility: hidden; transform: translateY(-5px) scale(.97);
+  transform-origin: top right; pointer-events: none;
+  transition: opacity .18s ease, transform .18s ease, visibility .18s;
+}
+.floating-xp--open .floating-xp__readout { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
+.floating-xp .floating-xp__label { font-size: 8px; letter-spacing: .18em; color: #7fadc1; margin-bottom: 6px; }
+.floating-xp .floating-xp__amount strong { font-size: 24px; font-style: normal; font-weight: 500; letter-spacing: .02em; }
+.floating-xp .floating-xp__amount > span { color: #a5f3fc; font-size: 10px; }
+@media (prefers-reduced-motion: reduce) { .floating-xp .floating-xp__readout { transition: none; } }
+/* Expand inward in the top bar, revealing the readout beside the coin. */
+.floating-xp:not(.floating-xp--open) .floating-xp__readout { display: none; }
+.floating-xp { width: 54px; height: 56px; gap: 0; justify-content: flex-start; transition: width .6s cubic-bezier(.22,1,.36,1); }
+.floating-xp--open { width: calc(54px + var(--xp-readout-width)); }
+.floating-xp__projector { transition: transform .6s cubic-bezier(.22,1,.36,1); }
+.floating-xp--open .floating-xp__projector { transform: translateX(-3px); }
+.floating-xp .floating-xp__readout {
+  top: 50%; left: 51px; right: auto; width: var(--xp-readout-width); max-width: none;
+  box-sizing: border-box; padding: 7px 10px; border-radius: 3px 10px 3px 10px;
+  transform: translate(-7px, -50%); transform-origin: left center;
+  transition: opacity .4s ease, transform .5s cubic-bezier(.22,1,.36,1), visibility .4s;
+}
+.floating-xp--open .floating-xp__readout { transform: translate(0, -50%); transition-delay: .28s; }
+@media (prefers-reduced-motion: reduce) {
+  .floating-xp, .floating-xp__projector, .floating-xp .floating-xp__readout { transition: none; }
+}
+
+/* A tap opens a readout below the coin without moving the mobile header. */
+@media (max-width: 900px) {
+  .floating-xp, .floating-xp--open { width: 44px; height: 44px; transition: none; }
+  .floating-xp__projector { transform: scale(.8); transform-origin: left center; }
+  .floating-xp--open .floating-xp__projector { transform: scale(.8); }
+  .floating-xp .floating-xp__readout { left: auto; right: 0; top: calc(100% + 8px); max-width: 80vw; transform: translateY(-4px); transform-origin: top right; }
+  .floating-xp--open .floating-xp__readout { transform: translateY(0); transition-delay: 0s; }
+}

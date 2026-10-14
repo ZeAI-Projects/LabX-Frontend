@@ -1,0 +1,7 @@
+.event-card { overflow: hidden; }
+.event-banner { position: relative; margin: -24px -24px -28px; overflow: hidden; }
+.event-banner::after { content: ''; position: absolute; inset: 25% 0 0; pointer-events: none; background: linear-gradient(transparent, rgba(12,19,36,.55) 60%, #0c1324); }
+.event-card--with-banner { background: #0c1324 !important; }
+.event-card--with-banner > div:first-child > :not(.event-banner) { position: relative; z-index: 1; }
+.event-banner--detail { margin: 0 0 18px; border-radius: 12px; }
+.event-banner--detail::after { display: none; }
