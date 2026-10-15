@@ -164,6 +164,7 @@ export const DashboardPage = () => {
   const navigate = useNavigate();
   const [cqCompleted, setCqCompleted] = useState(() => Number(localStorage.getItem('labx_demo_quests') || 3));
   const [pts, setPts] = useState(() => Number(localStorage.getItem('labx_demo_points') || 1280));
+  const [selectedAchievement, setSelectedAchievement] = useState(null);
   const current_stage = { name: 'Validate' };
   const current_level = { level_order: 2 };
   const current_milestone = { id: 'demo-milestone', name: 'Validate the Problem' };
@@ -334,7 +335,8 @@ export const DashboardPage = () => {
                 }}>{questDesc}</p>
               )}
             </div>
-            <button onClick={completeQuest}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <button onClick={() => navigate(`/roadmap/milestones/${current_milestone.id}`)}
               style={{
                 alignSelf: "flex-start", padding: "6px 14px", borderRadius: 8,
                 background: "linear-gradient(135deg,#0284c7,#38bdf8)",
@@ -343,8 +345,11 @@ export const DashboardPage = () => {
                 boxShadow: "0 0 16px rgba(56,189,248,0.55)",
                 display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", transition: "all 0.2s",
               }}>
-              {cqCompleted < cqTotal ? 'Complete Quest · +120 coins' : 'Milestone Complete'} <ArrowRight size={13} />
+              Continue Current Quest <ArrowRight size={13} />
             </button>
+            <button type="button" onClick={() => navigate(`/roadmap/milestones/${current_milestone.id}`)} className="hud-btn" style={{ padding: "6px 12px", borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.12)", color: "#cbd5e1", fontSize: ".82rem", fontWeight: 800, cursor: "pointer" }}>Choose Quest</button>
+            <button type="button" onClick={completeQuest} disabled={cqCompleted >= cqTotal} className="hud-btn" style={{ padding: "6px 12px", borderRadius: 8, background: "rgba(56,189,248,.1)", border: "1px solid rgba(56,189,248,.25)", color: "#7dd3fc", fontSize: ".82rem", fontWeight: 800, cursor: cqCompleted >= cqTotal ? "default" : "pointer" }}>Complete Quest</button>
+            </div>
           </div>
         </section>
 
@@ -572,18 +577,17 @@ export const DashboardPage = () => {
                 <Trophy size={13} color="#fbbf24" />
                 <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#fbbf24", textTransform: "uppercase", letterSpacing: "0.06em" }}>RECENT ACHIEVEMENTS</span>
               </div>
-              <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 700, cursor: "pointer" }}
-                onClick={() => navigate("/achievements")}>View All →</span>
+              <button type="button" onClick={() => navigate("/achievements")} style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 700, cursor: "pointer", background: "none", border: 0 }}>View All →</button>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 8 }}>
               {achievements.length === 0 && <p className="dashboard-hud__empty">Complete quests to earn your first achievement.</p>}
               {achievements.slice(0, 4).map((ach, i) => {
                 const vis = ACHIEVEMENT_ICONS[ach.name] || { icon: DEFAULT_ACH_ICONS[i % 6], color: DEFAULT_ACH_COLORS[i % 6] };
                 return (
-                  <div key={i} style={{
+                  <button type="button" key={ach.name} aria-label={`View details for ${ach.name}`} onClick={() => setSelectedAchievement(ach)} style={{
                     display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
                     padding: "6px 4px", borderRadius: 8,
-                    background: "rgba(255,255,255,0.03)", border: `1px solid ${vis.color}33`, textAlign: "center",
+                    background: "rgba(255,255,255,0.03)", border: `1px solid ${vis.color}33`, textAlign: "center", cursor: "pointer", color: "inherit", minWidth: 0,
                   }}>
                     <BadgeIcon icon={vis.icon} color={vis.color} />
                     <div style={{
@@ -594,7 +598,7 @@ export const DashboardPage = () => {
                       fontSize: "0.75rem", color: "#64748b", lineHeight: 1.1,
                       display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical", overflow: "hidden", width: "100%"
                     }}>{ach.description}</div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -606,8 +610,7 @@ export const DashboardPage = () => {
                 <Calendar size={13} color="#38bdf8" />
                 <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#38bdf8", textTransform: "uppercase", letterSpacing: "0.06em" }}>UPCOMING EVENTS</span>
               </div>
-              <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 700, cursor: "pointer" }}
-                onClick={() => navigate("/events")}>View All →</span>
+              <button type="button" onClick={() => navigate("/events")} style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 700, cursor: "pointer", background: "none", border: 0 }}>View All →</button>
             </div>
             <div className="dashboard-events__list">
               {events.length === 0 && <p className="dashboard-hud__empty">No upcoming events scheduled.</p>}
@@ -649,6 +652,13 @@ export const DashboardPage = () => {
         </section>
 
       </div>
+      {selectedAchievement && <div role="presentation" onClick={() => setSelectedAchievement(null)} style={{ position: "fixed", inset: 0, zIndex: 1000, display: "grid", placeItems: "center", padding: 20, background: "rgba(2,6,23,.78)" }}>
+        <section role="dialog" aria-modal="true" aria-labelledby="achievement-title" onClick={event => event.stopPropagation()} style={{ width: "min(100%, 380px)", padding: 24, borderRadius: 16, color: "#f8fafc", background: "#0b1224", border: "1px solid rgba(251,191,36,.35)", boxShadow: "0 20px 70px rgba(0,0,0,.6)" }}>
+          <h2 id="achievement-title" style={{ margin: "0 0 8px", textAlign: "center", fontSize: "1.15rem" }}>{selectedAchievement.name}</h2>
+          <p style={{ margin: "0 0 20px", color: "#94a3b8", textAlign: "center" }}>{selectedAchievement.description}</p>
+          <button type="button" autoFocus onClick={() => setSelectedAchievement(null)} className="hud-btn" style={{ width: "100%", padding: 9, borderRadius: 8, color: "#e2e8f0", background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.12)", cursor: "pointer" }}>Close</button>
+        </section>
+      </div>}
     </>
   );
 };
