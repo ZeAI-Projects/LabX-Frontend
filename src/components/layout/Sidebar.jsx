@@ -2,13 +2,14 @@ import { Award, Bot, Calendar, Home, LogOut, Map, Trophy, User, Users } from 'lu
 import { Link, NavLink } from 'react-router-dom'
 import labxLogo from '../../assets/images/labx-logo.png'
 import { soundManager } from '../../features/authentication/components/gamified/soundEffects.js'
+import { getRoleLabel } from '../../utils/roles.js'
+import { ProfileAvatar } from '../common/ProfileAvatar.jsx'
 
 export function Sidebar({ user, onSignOut }) {
   const isFounder = user.role === 'founder'
   const displayName = user.full_name || user.username || 'LabX Member'
   const displayHandle = `@${user.username || user.email?.split('@')[0] || user.role}`
-  const initials = displayName.split(/\s+/).slice(0, 2).map(part => part.charAt(0)).join('').toUpperCase()
-  const deckName = isFounder ? 'FOUNDER COMMAND' : 'MENTOR COMMAND'
+  const deckName = `${getRoleLabel(user.role).toUpperCase()} COMMAND`
 
   return (
     <aside className="labx-sidebar">
@@ -21,7 +22,7 @@ export function Sidebar({ user, onSignOut }) {
       <nav className="labx-sidebar-nav" aria-label="Main navigation">
         <SidebarItem to="/dashboard" icon={<Home size={18} />} label="Dashboard" />
         {isFounder && <>
-          <SidebarItem to="/roadmap" icon={<Map size={18} />} label="Projects" />
+          <SidebarItem to="/roadmap" icon={<Map size={18} />} label="Roadmap" />
           <SidebarItem to="/leaderboard" icon={<Trophy size={18} />} label="Leaderboard" />
           <SidebarItem to="/guild" icon={<Bot size={18} />} label="Guilds" />
           <SidebarItem to="/social" icon={<Users size={18} />} label="Social" />
@@ -33,7 +34,7 @@ export function Sidebar({ user, onSignOut }) {
       <div className="labx-sidebar-footer">
         <div className="labx-user-card">
           <Link className="labx-user-profile" to="/profile" aria-label={`Open profile for ${displayName}`} onClick={soundManager.playHover}>
-            <div className="labx-user-avatar" aria-hidden="true">{initials}</div>
+            <ProfileAvatar user={user} />
             <div className="labx-user-info">
               <div className="labx-user-name" title={displayName}>{displayName}</div>
               <div className="labx-user-role" title={displayHandle}>{displayHandle}</div>

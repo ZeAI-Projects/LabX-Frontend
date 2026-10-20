@@ -1,20 +1,25 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { AlertCircle, ArrowRight, CheckCircle2, Shield, Volume2, VolumeX } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { AlertCircle, ArrowLeft, ArrowRight, Shield, Volume2, VolumeX } from 'lucide-react';
 import { useAuth } from '../../../hooks/use_auth.js';
+import { sessionStore } from '../../../services/storage/local_storage.js';
 import { HologramX } from '../components/gamified/HologramX';
 import { ParticleNetwork } from '../components/gamified/ParticleNetwork';
 import { soundManager } from '../components/gamified/soundEffects';
 import { useAuthEffects } from '../components/gamified/useAuthEffects';
 import '../components/Register.css';
+import '../components/Recovery.css';
 
-export function PasswordRecoveryShell({ title, subtitle, children }) {
+export function PasswordRecoveryShell({ title, subtitle, step = 1, children }) {
   const [soundActive, setSoundActive] = useState(soundManager.isEnabled);
 
   return (
-    <div className="gamified-auth-container">
+    <div className="gamified-auth-container password-recovery-container">
       <ParticleNetwork />
       <div className="auth-top-hud">
+        <Link className="recovery-exit-link" to="/register" onMouseEnter={soundManager.playHover}>
+          <ArrowLeft size={14} aria-hidden="true" />Back to sign up
+        </Link>
         <button
           type="button"
           className="hud-sound-toggle"
@@ -52,15 +57,18 @@ export function PasswordRecoveryShell({ title, subtitle, children }) {
           </div>
         </div>
         <div className="form-panel">
-          <div className="auth-mode-switch-tabs">
-            <Link className="mode-tab-btn" to="/register" onMouseEnter={soundManager.playHover}>Register</Link>
-            <Link className="mode-tab-btn" to="/login" onMouseEnter={soundManager.playHover}>Login</Link>
-          </div>
+          <ol className="recovery-steps" aria-label="Password recovery progress">
+            <li className={step === 1 ? 'current' : 'complete'} aria-current={step === 1 ? 'step' : undefined}>
+              <span aria-hidden="true">1</span>Email address
+            </li>
+            <li className={step === 2 ? 'current' : ''} aria-current={step === 2 ? 'step' : undefined}>
+              <span aria-hidden="true">2</span>Reset password
+            </li>
+          </ol>
           <div className="form-header">
             <h2 className="form-title">{title}</h2>
             <p className="form-subtitle">{subtitle}</p>
           </div>
-          <div className="auth-demo-notice"><p>Demo only — no email is sent.</p></div>
           {children}
         </div>
       </div>
@@ -72,68 +80,83 @@ export function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
+  const emailInput = useRef(null);
+  const pending = useRef(false);
+  const navigate = useNavigate();
   const { requestPasswordReset } = useAuth();
   const { isMounted } = useAuthEffects();
 
+  useEffect(() => {
+    if (error) emailInput.current?.focus();
+  }, [error]);
+
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (loading) return;
+    if (pending.current) return;
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      setError(normalizedEmail ? 'Enter a valid email address.' : 'Email address is required.');
+      emailInput.current?.focus();
+      return;
+    }
+    pending.current = true;
     setLoading(true);
     setError('');
-    setResult(null);
+    sessionStore.removeItem('labx_password_recovery');
     try {
-      const response = await requestPasswordReset(email.trim());
+      const recovery = await requestPasswordReset(normalizedEmail);
       if (!isMounted()) return;
-      setResult(response);
+      sessionStore.writeJSON('labx_password_recovery', recovery);
       soundManager.playXpGain();
-    } catch (error) {
-      if (isMounted()) setError(error.message || 'Unable to create a reset link. Please try again.');
+      navigate('/reset-password', { state: recovery });
+    } catch (requestError) {
+      if (isMounted()) {
+        setError(requestError.message || 'We couldn’t send the verification code. Please try again.');
+        emailInput.current?.focus();
+      }
     } finally {
+      pending.current = false;
       if (isMounted()) setLoading(false);
     }
   };
 
   return (
-    <PasswordRecoveryShell title="Forgot Password" subtitle="Enter your registered email to request a password reset link.">
-      {error && <div className="auth-error-banner" role="alert"><AlertCircle size={17} /><span>{error}</span></div>}
-      {result && (
-        <div className="auth-success-banner" role="status">
-          <CheckCircle2 size={18} />
-          <div>
-            <p>If an account exists for that email, a password reset link has been prepared.</p>
-            {result.resetToken && (
-              <Link className="login-link auth-reset-link" to={`/reset-password?token=${encodeURIComponent(result.resetToken)}`}>
-                Open demo reset link
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
-      <form onSubmit={handleSubmit} aria-busy={loading}>
+    <PasswordRecoveryShell title="Forgot Password" subtitle="Enter the email address registered with your LabX account.">
+      <div className="auth-demo-notice"><p>Demo preview — no email is sent. Your six-digit code will appear on the next screen.</p></div>
+      {error && <div id="recovery-email-error" className="auth-error-banner" role="alert"><AlertCircle size={17} /><span>{error}</span></div>}
+      <form onSubmit={handleSubmit} aria-busy={loading} noValidate>
         <div className="gamified-field-group">
-          <label className="gamified-field-label" htmlFor="recovery-email">Email Address</label>
+          <label className="gamified-field-label" htmlFor="recovery-email">Email Address<span className="required-mark" aria-hidden="true" /></label>
           <input
+            ref={emailInput}
             id="recovery-email"
             name="email"
             type="email"
             autoComplete="email"
+            autoCapitalize="none"
+            spellCheck={false}
             className="gamified-input"
             required
+            disabled={loading}
+            aria-invalid={Boolean(error)}
+            aria-describedby={`recovery-email-instruction${error ? ' recovery-email-error' : ''}`}
             value={email}
             onChange={(event) => {
               setEmail(event.target.value);
-              setResult(null);
+              setError('');
             }}
             onFocus={soundManager.playFocus}
             placeholder="you@example.com"
           />
+          <p className="auth-field-hint" id="recovery-email-instruction">Enter your registered email address to receive a six-digit verification code.</p>
         </div>
         <button type="submit" className="btn-warp-create" disabled={loading} onMouseEnter={soundManager.playHover}>
-          <span>{loading ? 'Preparing reset link...' : 'Send reset link'}</span><ArrowRight size={18} />
+          <span>{loading ? 'Sending code…' : 'Send six-digit code'}</span><ArrowRight size={18} aria-hidden="true" />
         </button>
       </form>
-      <div className="form-footer-login"><Link className="login-link" to="/login">Back to Login</Link></div>
+      <div className="form-footer-login">
+        <Link className="login-link recovery-back-link" to="/login"><ArrowLeft size={15} aria-hidden="true" />Back to sign in</Link>
+      </div>
     </PasswordRecoveryShell>
   );
 }

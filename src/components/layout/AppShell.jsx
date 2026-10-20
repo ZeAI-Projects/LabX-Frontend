@@ -8,7 +8,7 @@ import './labxshell.css'
 
 const pageTitles = {
   dashboard: 'Dashboard',
-  roadmap: 'Projects',
+  roadmap: 'Roadmap',
   leaderboard: 'Leaderboard',
   guild: 'Guilds',
   social: 'Social',
@@ -23,6 +23,7 @@ export function AppShell({ children }) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const section = pathname.split('/')[1] || 'dashboard'
+  const isRoadmapMap = /^\/roadmap\/(?!new$)[^/]+$/.test(pathname) || /^\/roadmap\/joined\/[^/]+\/[^/]+$/.test(pathname)
 
   function signOut() {
     logout()
@@ -30,7 +31,7 @@ export function AppShell({ children }) {
   }
 
   return (
-    <div className="app-layout app-shell">
+    <div className={`app-layout app-shell${isRoadmapMap ? ' app-shell--roadmap-focus' : ''}`}>
       <a className="labx-skip-link" href="#app-page-content">Skip to page content</a>
       <Sidebar user={user} onSignOut={signOut} />
       <MobileNavigation user={user} onSignOut={signOut} />
@@ -39,7 +40,7 @@ export function AppShell({ children }) {
         <Navbar
           user={user}
           title={pageTitles[section] || 'LabX'}
-          pageHasHeading={section === 'dashboard' || section === 'roadmap'}
+          pageHasHeading={section === 'dashboard' || section === 'roadmap' || section === 'leaderboard'}
           onSignOut={signOut}
         />
         <div id="app-page-content" className="app-shell__page" tabIndex={-1}>{children}</div>

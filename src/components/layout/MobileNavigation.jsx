@@ -2,17 +2,18 @@ import { useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { Award, Bell, Bot, Calendar, Home, LogOut, Map, Menu, Trophy, User, Users, X } from 'lucide-react'
 import './MobileNavigation.css'
+import { ProfileAvatar } from '../common/ProfileAvatar.jsx'
 
 const sharedLinks = [
   ['/events', 'Events', Calendar], ['/achievements', 'Achievements', Award],
   ['/profile', 'Profile', User], ['/notifications', 'Notifications', Bell],
 ]
 const founderLinks = [
-  ['/dashboard', 'Dashboard', Home], ['/roadmap', 'Projects', Map],
+  ['/dashboard', 'Dashboard', Home], ['/roadmap', 'Roadmap', Map],
   ['/leaderboard', 'Leaderboard', Trophy], ['/guild', 'Guilds', Bot],
   ['/social', 'Social', Users], ...sharedLinks,
 ]
-const mentorLinks = [['/dashboard', 'Dashboard', Home], ...sharedLinks]
+const memberLinks = [['/dashboard', 'Dashboard', Home], ...sharedLinks]
 
 export function MobileNavigation({ user, onSignOut }) {
   const { pathname } = useLocation()
@@ -20,7 +21,7 @@ export function MobileNavigation({ user, onSignOut }) {
   const trigger = useRef(null)
   const [open, setOpen] = useState(false)
   const isFounder = user.role === 'founder'
-  const links = isFounder ? founderLinks : mentorLinks
+  const links = isFounder ? founderLinks : memberLinks
   const primaryPaths = isFounder ? ['/dashboard', '/roadmap', '/events'] : ['/dashboard', '/events', '/achievements']
   const primary = primaryPaths.map(path => links.find(([target]) => target === path))
   const moreActive = !primaryPaths.some(path => pathname === path || pathname.startsWith(`${path}/`))
@@ -71,7 +72,7 @@ export function MobileNavigation({ user, onSignOut }) {
             {links.map(([path, label, Icon]) => <NavLink key={path} to={path} onClick={close}><Icon size={19} aria-hidden="true" /><span>{label}</span></NavLink>)}
           </nav>
           <NavLink to="/profile" className="mobile-menu__profile" onClick={close} aria-label={`Open profile for ${displayName}`}>
-            <span className="labx-user-avatar" aria-hidden="true">{displayName.charAt(0).toUpperCase()}</span>
+            <ProfileAvatar user={user} />
             <span className="labx-user-info"><span className="labx-user-name">{displayName}</span><span className="labx-user-role">{displayHandle}</span></span>
           </NavLink>
           <button type="button" className="mobile-menu__logout" onClick={() => { close(); onSignOut() }}><LogOut size={18} aria-hidden="true" />Sign out</button>

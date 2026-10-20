@@ -2,6 +2,7 @@ import { Bell, LogOut } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { getMockPointsBalance } from '../../features/achievements/services/mock_achievements.js'
 import { FloatingXp } from './FloatingXp.jsx'
+import { getRoleLabel } from '../../utils/roles.js'
 
 export function Navbar({ user, title, pageHasHeading, onSignOut }) {
   const Title = pageHasHeading ? 'p' : 'h1'
@@ -12,7 +13,7 @@ export function Navbar({ user, title, pageHasHeading, onSignOut }) {
         <div className="labx-title-line" aria-hidden="true" />
         <div>
           <Title className="labx-page-title">{title}</Title>
-          <span className="labx-subtitle">{user.role === 'mentor' ? 'MENTOR' : 'FOUNDER'} COMMAND CENTER</span>
+          <span className="labx-subtitle">{getRoleLabel(user.role).toUpperCase()} COMMAND CENTER</span>
         </div>
       </div>
       <div className="labx-navbar-actions">

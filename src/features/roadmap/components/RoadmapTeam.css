@@ -1,0 +1,66 @@
+.roadmap-team-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 9px 13px; border: 1px solid #37506c; border-radius: 8px; background: #1a2b42; color: #c9e2f0; font: inherit; font-size: .78rem; font-weight: 600; cursor: pointer; }
+.roadmap-team-button:hover { border-color: #70cbdc; background: #223b53; }
+.roadmap-team-button--primary { background: #65d5e7; color: #08242e; border-color: #65d5e7; }
+.roadmap-team-button--primary:hover { background: #97e5ef; color: #08242e; }
+.roadmap-team-dialog { position: fixed; inset: 0; margin: auto; width: min(680px, calc(100vw - 28px)); max-height: calc(100dvh - 36px); overflow-y: auto; padding: 25px; border: 1px solid #3e536f; border-radius: 16px; background: #101b2d; color: #d9e5f4; box-shadow: 0 20px 80px #0009; }
+.roadmap-team-dialog::backdrop { background: #020713bd; backdrop-filter: blur(5px); }
+.roadmap-team-dialog *, .roadmap-collaboration-list * { box-sizing: border-box; }
+.roadmap-team-dialog :is(button, input, select):focus-visible, .roadmap-team-button:focus-visible, .roadmap-collaboration-list :is(button, a):focus-visible { outline: 2px solid #7fe6f6; outline-offset: 3px; }
+.roadmap-team-heading { display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; }
+.roadmap-team-heading > div, .roadmap-team-member-heading > div, .roadmap-team-pending li > div { min-width: 0; }
+.roadmap-team-kicker { color: #82d4e0; font-size: .65rem; letter-spacing: 1.5px; text-transform: uppercase; }
+.roadmap-team-heading h2 { margin: 7px 0; font-size: 1.4rem; }
+.roadmap-team-heading p { margin: 0; color: #b6c8df; font-size: .85rem; overflow-wrap: anywhere; }
+.roadmap-team-close { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; background: #21314a; border: 1px solid #3d516d; border-radius: 8px; color: #d0dfef; cursor: pointer; }
+.roadmap-team-note { color: #98adc8; font-size: .75rem; line-height: 1.7; margin: 16px 0; }
+.roadmap-team-error, .roadmap-team-notice { padding: 12px; border-radius: 7px; font-size: .8rem; line-height: 1.6; overflow-wrap: anywhere; }
+.roadmap-team-error { color: #ffb0be; background: #e34f6a16; border: 1px solid #ad536a45; }
+.roadmap-team-notice { color: #a7e9d3; background: #4cc6a016; border: 1px solid #4cc6a035; }
+.roadmap-team-invite { display: grid; grid-template-columns: minmax(0, 1fr) minmax(130px, .55fr); gap: 9px 14px; padding-bottom: 22px; border-bottom: 1px solid #a0b9e01c; }
+.roadmap-team-invite label:nth-of-type(1) { grid-column: 1; grid-row: 1; }
+.roadmap-team-invite input { grid-column: 1; grid-row: 2; }
+.roadmap-team-invite label:nth-of-type(2) { grid-column: 2; grid-row: 1; }
+.roadmap-team-invite select { grid-column: 2; grid-row: 2; }
+.roadmap-team-invite > button { grid-column: 1 / -1; justify-self: end; margin-top: 4px; }
+.roadmap-team-dialog label { display: block; color: #c7d6e9; font-size: .76rem; line-height: 1.5; overflow-wrap: anywhere; }
+.roadmap-team-dialog :is(input, select) { width: 100%; min-width: 0; min-height: 43px; padding: 10px 11px; border: 1px solid #39506c; border-radius: 7px; color: #dce8f6; background: #0c1524; color-scheme: dark; font: inherit; font-size: .8rem; }
+.roadmap-team-dialog h3 { margin: 22px 0 12px; font-size: 1rem; }
+.roadmap-team-members h3 > span { color: #8aaacb; margin-left: 7px; font-size: .75rem; }
+.roadmap-team-empty { font-size: .78rem; color: #8da3bf; line-height: 1.6; }
+.roadmap-team-member { padding: 17px; margin: 12px 0; background: #16243a; border: 1px solid #3850716b; border-radius: 10px; }
+.roadmap-team-member-heading { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
+.roadmap-team-member-heading strong { display: block; font-size: .85rem; overflow-wrap: anywhere; }
+.roadmap-team-member-heading div > span { display: block; color: #99afca; font-size: .73rem; margin-top: 5px; overflow-wrap: anywhere; }
+.roadmap-team-member-heading small { color: #a4dcea; padding: 4px 7px; background: #74d4df0d; border: 1px solid #74d4df2b; border-radius: 4px; white-space: nowrap; font-size: .65rem; }
+.roadmap-team-assignment { margin: 17px 0 10px; }
+.roadmap-team-assignment > div { display: flex; gap: 8px; margin-top: 7px; }
+.roadmap-team-assignment select { flex: 1; }
+.roadmap-team-assignment button { flex-shrink: 0; }
+.roadmap-team-assigned, .roadmap-team-pending ul { list-style: none; padding: 0; margin: 10px 0 0; }
+.roadmap-team-assigned li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid #a0bbdf12; color: #a7bdd7; font-size: .73rem; line-height: 1.5; }
+.roadmap-team-assigned button { display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; background: transparent; color: #e0a7b2; border: 1px solid #9b526940; border-radius: 5px; cursor: pointer; }
+.roadmap-team-pending li { display: flex; justify-content: space-between; gap: 15px; padding: 12px 0; border-bottom: 1px solid #a0bbdf12; font-size: .76rem; }
+.roadmap-team-pending strong { display: block; overflow-wrap: anywhere; }
+.roadmap-team-pending div > span { display: block; color: #8ea4c0; margin-top: 5px; overflow-wrap: anywhere; }
+.roadmap-team-pending li > span { color: #d4bd8c; font-size: .7rem; }
+.roadmap-collaboration-list { min-width: 0; }
+.roadmap-collaboration-list h2 { margin: 0 0 10px; font-size: 1.1rem; }
+.roadmap-collaboration-list > p { margin: 0 0 20px; color: #9db2cc; font-size: .8rem; line-height: 1.7; }
+.roadmap-collaboration-list ul { list-style: none; padding: 0; margin: 0; }
+.roadmap-collaboration-list li { display: flex; align-items: center; gap: 18px; justify-content: space-between; padding: 18px; border: 1px solid #3a527154; background: #111e30; border-radius: 10px; margin-bottom: 12px; }
+.roadmap-collaboration-list li > div { min-width: 0; }
+.roadmap-collaboration-list h3 { margin: 0 0 7px; font-size: .95rem; overflow-wrap: anywhere; }
+.roadmap-collaboration-list li p { margin: 4px 0; color: #99b0cd; font-size: .75rem; line-height: 1.6; overflow-wrap: anywhere; }
+.roadmap-invitation-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.roadmap-invitation-status { color: #a8d5e0; font-size: .76rem; }
+.roadmap-collaboration-empty { padding: 30px 20px; border: 1px dashed #385371; border-radius: 10px; color: #98adc6; font-size: .83rem; line-height: 1.7; }
+@media (max-width: 560px) {
+  .roadmap-team-dialog { padding: 21px 17px; }
+  .roadmap-team-invite { display: flex; flex-direction: column; }
+  .roadmap-team-invite > button { align-self: stretch; margin-top: 7px; }
+  .roadmap-team-invite label:nth-of-type(2) { margin-top: 6px; }
+  .roadmap-team-assignment > div { flex-direction: column; }
+  .roadmap-team-member { padding: 14px; }
+  .roadmap-collaboration-list li { flex-direction: column; align-items: stretch; gap: 12px; }
+  .roadmap-invitation-actions > button { flex: 1; }
+}

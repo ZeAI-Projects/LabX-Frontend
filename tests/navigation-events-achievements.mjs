@@ -4,6 +4,7 @@ import { mkdir } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { preview } from 'vite'
 import { chromium } from 'playwright'
+import { DEMO_CREDENTIALS } from '../src/features/authentication/services/mock_auth.js'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const output = fileURLToPath(new URL('../test-results/community/', import.meta.url))
@@ -37,8 +38,14 @@ try {
   page.on('response', (response) => { if (response.status() >= 400) assetErrors.push(`${response.status()} ${response.url()}`) })
   const go = (path) => page.goto(`${origin}${path}`)
   const at = (path) => page.waitForURL(`${origin}${path}`)
-  const heading = (name) => page.getByRole('heading', { name, exact: true, level: name === 'Welcome Back' ? 2 : 1 })
+  const heading = (name) => page.getByRole('heading', { name, exact: true, level: name === 'Sign in' ? 2 : 1 })
   const submit = () => page.locator('button[type="submit"]').click()
+  const verifySignup = async () => {
+    await at('/verify-email')
+    const code = (await page.getByTestId('demo-signup-code').innerText()).trim()
+    await page.getByLabel('Six-digit code', { exact: true }).fill(code)
+    await page.getByRole('button', { name: 'Verify email', exact: true }).click()
+  }
   const signOut = async () => { await page.getByRole('button', { name: 'Sign out', exact: true }).click(); await at('/login') }
   const closeDialog = async () => { await page.keyboard.press('Escape'); await page.locator('dialog[open]').waitFor({ state: 'hidden' }) }
   const checkLayout = async (name, widths = [320, 390, 768, 1440]) => {
@@ -55,15 +62,16 @@ try {
   for (const path of ['/events', '/achievements']) {
     await go(path)
     await at('/login')
-    await heading('Welcome Back').waitFor()
+    await heading('Sign in').waitFor()
   }
-  await page.getByRole('button', { name: 'Use demo credentials' }).click()
+  await page.getByLabel('Email Address', { exact: true }).fill(DEMO_CREDENTIALS.email)
+  await page.getByLabel('Password', { exact: true }).fill(DEMO_CREDENTIALS.password)
   await submit()
   await at('/dashboard')
   await heading('Dashboard').waitFor()
   assert.equal(await page.locator('.labx-brand-logo').evaluate((logo) => Boolean(logo.closest('a,button'))), false, 'Brand does not navigate')
   const sidebar = page.locator('.labx-sidebar-nav')
-  for (const name of ['Dashboard', 'Projects', 'Leaderboard', 'Guilds', 'Social', 'Events', 'Achievements', 'Profile']) await sidebar.getByRole('link', { name, exact: true }).waitFor()
+  for (const name of ['Dashboard', 'Roadmap', 'Leaderboard', 'Guilds', 'Social', 'Events', 'Achievements', 'Profile']) await sidebar.getByRole('link', { name, exact: true }).waitFor()
   assert.equal(await sidebar.getByRole('link', { name: 'Dashboard', exact: true }).getAttribute('aria-current'), 'page')
   const coin = page.getByRole('button', { name: '450 LabX Coins', exact: true })
   await coin.hover()
@@ -72,9 +80,9 @@ try {
   await page.keyboard.press('Escape')
   assert.equal(await coin.getAttribute('aria-expanded'), 'false')
 
-  await sidebar.getByRole('link', { name: 'Projects', exact: true }).click()
+  await sidebar.getByRole('link', { name: 'Roadmap', exact: true }).click()
   await at('/roadmap')
-  await heading('Project roadmaps').waitFor()
+  await heading('Roadmap').waitFor()
   assert.equal(await page.getByRole('dialog').count(), 0, 'Project grid opens without an assessment gate')
   await sidebar.getByRole('link', { name: 'Achievements', exact: true }).click()
   await at('/achievements')
@@ -106,7 +114,7 @@ try {
   await closeDialog()
   await page.getByRole('link', { name: 'View Leaderboard', exact: true }).click()
   await heading('Leaderboard').waitFor()
-  await page.getByText('Coming soon', { exact: true }).waitFor()
+  await page.getByRole('table', { name: 'Founder rankings', exact: true }).waitFor()
   await page.getByRole('link', { name: 'Open profile for Demo Founder', exact: true }).click()
   await heading('Profile').waitFor()
   await page.getByText('founder@labx.demo', { exact: true }).waitFor()
@@ -194,6 +202,7 @@ try {
   await page.getByLabel('Password', { exact: true }).fill('FounderPass1!')
   await page.getByLabel('Confirm Password', { exact: true }).fill('FounderPass1!')
   await submit()
+  await verifySignup()
   await at('/roadmap/new')
   await page.getByRole('link', { name: 'All projects', exact: true }).click()
   await at('/roadmap')
@@ -216,7 +225,8 @@ try {
   await page.getByLabel('Password', { exact: true }).fill('MentorPass1!')
   await page.getByLabel('Confirm Password', { exact: true }).fill('MentorPass1!')
   await submit()
-  await at('/mentor/assessment')
+  await verifySignup()
+  await at('/onboarding/mentor')
   await go('/dashboard')
   await heading('Dashboard').waitFor()
   for (const path of ['/roadmap', '/leaderboard', '/guild', '/social']) {
@@ -235,10 +245,10 @@ try {
   await page.setViewportSize({ width: 320, height: 844 })
   await page.getByRole('button', { name: 'More navigation', exact: true }).click()
   await menu.waitFor()
-  assert.equal(await menu.getByRole('link', { name: 'Projects', exact: true }).count(), 0)
+  assert.equal(await menu.getByRole('link', { name: 'Roadmap', exact: true }).count(), 0)
   await closeDialog()
   await signOut()
-  await heading('Welcome Back').waitFor()
+  await heading('Sign in').waitFor()
   assert.equal(await page.locator('.app-shell').count(), 0)
   assert.deepEqual(errors, [], 'No browser runtime errors')
   assert.deepEqual(assetErrors, [], 'All assets are available locally')

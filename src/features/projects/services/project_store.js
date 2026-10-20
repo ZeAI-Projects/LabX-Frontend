@@ -1,13 +1,13 @@
 import { createSafeStorage, localStore } from '../../../services/storage/local_storage.js';
 import { mockAuth } from '../../authentication/services/mock_auth.js';
-import { draftKey, readAssessmentDraft } from '../../assessment/services/assessment_draft.js';
-import { createEmptyAnswers, evaluateAssessment, normalizeDraftAnswers, validateAssessmentStep } from '../../assessment/services/mock_assessment.js';
+import { createEmptyDraft, draftKey, normalizeAssessmentDraft, readAssessmentDraft } from '../../assessment/services/assessment_draft.js';
+import { ASSESSMENT_QUESTIONS, ASSESSMENT_VERSION, evaluateAssessment, normalizeDraftAnswers } from '../../assessment/services/mock_assessment.js';
 
 export const projectsKey = (userId) => `labx:projects:v1:${encodeURIComponent(userId)}`;
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
-const emptyDraft = () => ({ step: 1, answers: createEmptyAnswers() });
+const emptyDraft = createEmptyDraft;
 
 function projectName(value) {
   const name = typeof value === 'string' ? value.trim() : '';
@@ -16,17 +16,7 @@ function projectName(value) {
   return name;
 }
 
-function normalizeDraft(value) {
-  const answers = normalizeDraftAnswers(value?.answers);
-  let step = Number.isInteger(value?.step) ? Math.max(1, Math.min(7, value.step)) : 1;
-  for (let previous = 1; previous < step; previous += 1) {
-    if (validateAssessmentStep(answers, previous)) {
-      step = previous;
-      break;
-    }
-  }
-  return { step, answers };
-}
+const normalizeDraft = normalizeAssessmentDraft;
 
 function normalizeProject(value, ownerId) {
   if (!isObject(value) || value.owner_id !== ownerId || typeof value.id !== 'string' || !value.id
@@ -143,7 +133,7 @@ export function createProjectStore({
   }
 
   function requireIncomplete(project) {
-    if (project.assessment_completed) throw new Error('This assessment is complete. Completed answers cannot be changed.');
+    if (project.assessment_completed) throw new Error('This assessment is complete. Edit answers from its summary.');
   }
 
   return {
@@ -184,6 +174,24 @@ export function createProjectStore({
       return updateProject(id, expectedUserId, (project) => {
         requireIncomplete(project);
         project.draft = normalizeDraft(draft);
+      });
+    },
+
+    updateAssessmentChoice(id, questionKey, choice, expectedChoice, expectedUserId = activeUserId) {
+      return updateProject(id, expectedUserId, (project) => {
+        if (!project.assessment_completed || project.assessment_result?.assessment_version !== ASSESSMENT_VERSION) {
+          throw new Error('Only completed assessments with the current questions can be edited.');
+        }
+        if (!ASSESSMENT_QUESTIONS.some((question) => question.key === questionKey)) {
+          throw new Error('Choose a valid assessment question.');
+        }
+        if (project.assessment_answers?.[questionKey] !== expectedChoice) {
+          throw new Error('This answer changed in another tab. Refresh the summary and try again.');
+        }
+        const answers = { ...project.assessment_answers, [questionKey]: choice };
+        const result = evaluateAssessment(answers);
+        project.assessment_answers = clone(normalizeDraftAnswers(answers));
+        project.assessment_result = { ...project.assessment_result, domain: result.domain, guild: result.guild };
       });
     },
 

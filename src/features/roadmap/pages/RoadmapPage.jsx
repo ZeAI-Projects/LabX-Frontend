@@ -1,139 +1,126 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, ArrowUp, BookOpen, Lock, Play } from 'lucide-react';
+import { useEffect, useReducer } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, Check, FlaskConical, LockKeyhole, Play, Sparkles, Trophy, Users } from 'lucide-react';
 import { TierRankBadge } from '../../../components/common/TierRankBadge.jsx';
-import { createMockRoadmap } from '../services/mock_roadmap.js';
-import { MilestonePreview } from '../components/MilestonePreview.jsx';
-import '../components/RoadmapPage.css';
+import { useAuth } from '../../../hooks/use_auth.js';
+import { roadmapStore } from '../services/roadmap_store.js';
+import { collaborationStore } from '../services/roadmap_collaboration.js';
+import { MissionDialog } from '../components/MissionDialog.jsx';
+import { RoadmapTeam } from '../components/RoadmapTeam.jsx';
+import { RoadmapHighway } from '../components/RoadmapHighway.jsx';
+import '../components/RoadmapWorkflow.css';
+import '../components/RoadmapReference.css';
 
-const ROAD_FIRST_NODE_Y = 350;
-const ROAD_ROW_HEIGHT = 260;
+const stateLabel = { active: 'Your next mission', locked: 'Locked', completed: 'Completed', credited: 'Placement credit' };
+const covered = (mission) => ['completed', 'credited'].includes(mission.state);
+const stageStatus = (stage) => {
+  const missions = stage.levels.flatMap((level) => level.milestones);
+  if (missions.every(covered)) return missions.some((mission) => mission.state === 'credited') ? 'credited' : 'completed';
+  return stage.isCurrent ? 'current' : 'locked';
+};
 
-export function RoadmapPage({ project }) {
-  return <RoadmapSession key={project.id} project={project} result={project.assessment_result} />;
+export function RoadmapPage({ project, ownerId = project.owner_id }) {
+  return <RoadmapSession key={`${ownerId}:${project.id}`} project={project} ownerId={ownerId} />;
 }
 
-function RoadmapSession({ result, project }) {
-  const roadmap = useMemo(() => createMockRoadmap(result), [result]);
-  const [selectedStageIndex, setSelectedStageIndex] = useState(null);
-  const [selectedMilestone, setSelectedMilestone] = useState(null);
-  const stageNavigation = useRef(null);
-  const currentMission = useRef(null);
-  const activeStageIndex = selectedStageIndex ?? roadmap.currentStageIndex;
-  const activeStage = roadmap.stages[activeStageIndex];
-  const visibleMilestones = useMemo(() => activeStage.levels.flatMap(({ milestones }) => milestones).toReversed(), [activeStage]);
-  const totalSvgHeight = ROAD_FIRST_NODE_Y + (visibleMilestones.length - 1) * ROAD_ROW_HEIGHT + 170;
-  const highwayPath = useMemo(() => {
-    const points = visibleMilestones.map((_, index) => ({ x: index % 2 === 0 ? 140 : 1260, y: index * ROAD_ROW_HEIGHT + ROAD_FIRST_NODE_Y }));
-    return points.reduce((path, point, index) => {
-      if (index === 0) return `M ${point.x} ${point.y}`;
-      const previous = points[index - 1];
-      return `${path} C ${previous.x} ${previous.y + ROAD_ROW_HEIGHT / 2}, ${point.x} ${point.y - ROAD_ROW_HEIGHT / 2}, ${point.x} ${point.y}`;
-    }, '');
-  }, [visibleMilestones]);
-
+function RoadmapSession({ project, ownerId }) {
+  const { user } = useAuth();
+  const [, refresh] = useReducer((value) => value + 1, 0);
+  const [searchParams, setSearchParams] = useSearchParams();
   useEffect(() => {
-    const navigation = stageNavigation.current;
-    const selected = navigation?.querySelector('[aria-pressed="true"]');
-    if (selected && navigation.scrollWidth > navigation.clientWidth) {
-      navigation.scrollLeft += selected.getBoundingClientRect().left - navigation.getBoundingClientRect().left - 8;
-    }
-  }, [activeStageIndex]);
+    for (const event of ['storage', 'focus', 'labx:roadmap-change']) window.addEventListener(event, refresh);
+    return () => { for (const event of ['storage', 'focus', 'labx:roadmap-change']) window.removeEventListener(event, refresh); };
+  }, []);
+  let access, roadmap, error;
+  try {
+    access = collaborationStore.getAccess(project.id, ownerId, user.id);
+    roadmap = roadmapStore.read(project.id, ownerId, user.id);
+  } catch (err) { error = err.message; }
+  if (error) return <section className="rm-page rm-access-error"><h1>Roadmap unavailable</h1><p role="alert">{error}</p><Link to="/roadmap" className="rm-button">Back to roadmaps</Link></section>;
 
-  return (
-    <div className="pubg-roadmap-page">
-      <div className="pubg-roadmap-bg" aria-hidden="true"><div className="pubg-radial-glow" /><div className="pubg-grid-lines" /></div>
-      <Link className="roadmap-project-back" to="/roadmap"><ArrowLeft size={16} aria-hidden="true" />All projects</Link>
-      <header className="pubg-roadmap-header">
-        <div className="pubg-header-title-col">
-          <span className="pubg-header-kicker">Project roadmap</span>
-          <h1 className="pubg-header-title">{project.name}</h1>
-          <p className="roadmap-domain-subtitle">{roadmap.domain}</p>
-        </div>
-        <div className="pubg-header-stats-pill">
-          <span>Progress: <strong>{roadmap.progressPercent}%</strong></span><span aria-hidden="true">·</span>
-          <span>Milestones: <strong>{roadmap.completedCount} / {roadmap.totalCount}</strong></span>
-        </div>
-      </header>
-      <div className="roadmap-placement-note">
-        <span>Mock starting point: <strong>{roadmap.stages[roadmap.currentStageIndex].name} · Level {roadmap.currentLevel}</strong></span>
-        <span>Placement does not mark earlier milestones complete.</span>
+  const isOwner = access.role === 'owner';
+  const allMissions = roadmap.stages.flatMap((stage) => stage.levels.flatMap((level) => level.milestones));
+  const current = allMissions.find((mission) => mission.id === roadmap.currentMilestoneId);
+  const canOpen = (mission) => mission.state !== 'locked' && (isOwner || access.assignedMissionIds.includes(mission.id));
+  const selectedMission = allMissions.find((mission) => mission.id === searchParams.get('milestone') && canOpen(mission));
+  const requestedStage = roadmap.stages.findIndex((stage) => stage.name === searchParams.get('stage'));
+  const activeStageIndex = selectedMission?.stageIndex ?? (requestedStage < 0 ? roadmap.currentStageIndex : requestedStage);
+  const stage = roadmap.stages[activeStageIndex];
+  const stageMissions = stage.levels.flatMap((level) => level.milestones);
+  const stageCovered = stageMissions.filter(covered).length;
+  const currentAssigned = current && canOpen(current) && (isOwner || current.id !== 'discover-l1-m1');
+  const assigned = allMissions.filter((mission) => access.assignedMissionIds.includes(mission.id));
+  const setStage = (index) => {
+    setSearchParams((params) => { const next = new URLSearchParams(params); next.set('stage', roadmap.stages[index].name); next.delete('milestone'); return next; });
+  };
+  const openMission = (mission) => {
+    if (!mission || !canOpen(mission)) return;
+    setSearchParams((params) => { const next = new URLSearchParams(params); next.set('stage', mission.stageName); next.set('milestone', mission.id); return next; });
+  };
+  const closeMission = () => {
+    setSearchParams((params) => { const next = new URLSearchParams(params); next.delete('milestone'); return next; }, { replace: true });
+  };
+
+  return <div className="rm-page rm-reference" style={{ '--stage-color': stage.tier.color }}>
+    <div className="rm-project-bar">
+      <div className="rm-project-context">
+        <Link className="rm-back" to={isOwner ? '/roadmap' : '/roadmap?view=joined'}><ArrowLeft size={14} />All roadmaps</Link>
+        <span aria-hidden="true">/</span><h1>{project.name}</h1>
       </div>
-      <nav ref={stageNavigation} className="roadmap-stage-selector" aria-label="Roadmap stages">
-        {roadmap.stages.map((stage, index) => (
-          <button key={stage.id} type="button" className={`roadmap-stage-selector__item ${stage.isUnlocked ? 'is-unlocked' : 'is-locked'} ${index === activeStageIndex ? 'is-selected' : ''}`}
-            onClick={() => setSelectedStageIndex(index)} aria-pressed={index === activeStageIndex}
-            aria-label={`${stage.name}, Stage ${index + 1}${stage.isCurrent ? ', current' : stage.isUnlocked ? ', available' : ', locked'}`}>
-            <TierRankBadge stageIndex={index} subRank={1} size={34} label={stage.tier.name} state={stage.isUnlocked ? 'active' : 'locked'} />
-            <span><small>STAGE {index + 1}</small><strong>{stage.name}</strong></span>
-            {stage.isCurrent ? <em>CURRENT</em> : stage.isUnlocked ? <em>AVAILABLE</em> : <Lock size={13} />}
-          </button>
-        ))}
+      {isOwner ? <RoadmapTeam project={project} roadmap={roadmap} onChange={refresh} /> : <span className="rm-member-badge"><Users size={15} />Joined roadmap</span>}
+    </div>
+
+    <header className="rm-domain-header">
+      <div className="rm-domain-title"><span className="rm-eyebrow">Domain progression highway</span><h2>{roadmap.domain}</h2></div>
+      <div className="rm-coverage">
+        <div className="rm-coverage-pill" role="progressbar" aria-label="Roadmap coverage" aria-valuemin={0} aria-valuemax={roadmap.totalCount} aria-valuenow={roadmap.completedCount + roadmap.creditedCount}
+          aria-valuetext={`${roadmap.completedCount} completed, ${roadmap.creditedCount} placement credits, ${roadmap.totalCount} total missions`}>
+          <span>Tier Progress: <strong>{roadmap.progressPercent}%</strong></span><i aria-hidden="true" /><span>Milestones: <strong>{roadmap.completedCount + roadmap.creditedCount} / {roadmap.totalCount}</strong></span>
+        </div>
+        {roadmap.creditedCount > 0 && <small>+ {roadmap.creditedCount} covered by placement</small>}
+      </div>
+    </header>
+
+    <div className="rm-map-navigation">
+      <nav className="rm-stage-nav" aria-label="Roadmap stages">
+        {roadmap.stages.map((item, index) => {
+          const status = stageStatus(item);
+          return <button key={item.id} type="button" data-stage-id={item.id} data-stage-status={status}
+            className={`rm-stage-tab is-${status}${activeStageIndex === index ? ' is-selected' : ''}`}
+            aria-pressed={activeStageIndex === index} aria-label={`${item.name}, Stage ${index + 1}${status === 'current' ? ', current' : item.isUnlocked ? ', available' : ', locked'}`}
+            style={{ '--tab-color': item.tier.color }} onClick={() => setStage(index)}>
+            <span className="rm-stage-crest" aria-hidden="true"><TierRankBadge stageIndex={index} size={39} state={status === 'locked' ? 'locked' : 'active'} /></span>
+            <span className="rm-stage-card-title"><small>STAGE {index + 1}</small><strong>{item.name}</strong></span>
+            <span className="rm-stage-card-status">
+              {status === 'completed' ? <>Complete<Check size={13} /></> : status === 'credited' ? <>Covered<Sparkles size={12} /></> : status === 'current' ? 'Current' : <LockKeyhole size={15} />}
+            </span>
+          </button>;
+        })}
       </nav>
+      {currentAssigned && <button type="button" className="rm-mission-launch" onClick={() => openMission(current)}><Play size={13} />Open current mission<ArrowRight size={14} /></button>}
+    </div>
+    {current && !currentAssigned && <p className="rm-permission-note"><LockKeyhole size={15} />{current.id === 'discover-l1-m1' ? 'The main founder completes the initial mission.' : 'The main founder can assign the current mission to you.'}</p>}
+    {roadmap.isComplete && <div className="rm-complete-banner"><Trophy size={26} /><div><h2>Roadmap completed!</h2><p>All five stages covered. Look how far you have come.</p></div></div>}
 
-      {activeStage.isUnlocked ? (
-        <>
-          <div className="roadmap-journey-summary">
-            <span><ArrowUp size={16} />Your journey progresses from bottom to top</span>
-            {activeStage.isCurrent && <button type="button" onClick={() => currentMission.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'center' })}>Current milestone<ArrowRight size={15} /></button>}
-          </div>
-          <section className="game-board-container" aria-label={`${activeStage.name} roadmap`} style={{ minHeight: totalSvgHeight }}>
-            <svg className="master-highway-svg" viewBox={`0 0 1400 ${totalSvgHeight}`} preserveAspectRatio="none" aria-hidden="true">
-              <path d={highwayPath} fill="none" stroke="#0a1020" strokeWidth="48" strokeLinecap="round" />
-              <path d={highwayPath} fill="none" stroke="#151e34" strokeWidth="38" strokeLinecap="round" />
-              <path d={highwayPath} fill="none" stroke="rgba(255,255,255,.2)" strokeWidth="3" strokeDasharray="8 8" />
-            </svg>
-            <div key={activeStage.id} className="stage-board-section stage-enter" style={{ '--tier-color': activeStage.tier.color, '--tier-glow': activeStage.tier.glow }}>
-              <div className="stage-section-divider">
-                <div className="stage-section-pill is-active">
-                  <TierRankBadge stageIndex={activeStageIndex} subRank={1} size={48} label={activeStage.tier.name} />
-                  <div className="stage-pill-text-col"><span className="stage-pill-kicker">STAGE 0{activeStageIndex + 1}</span><h2 className="stage-pill-name">{activeStage.tier.name} — {activeStage.name}</h2></div>
-                </div>
-              </div>
-              {visibleMilestones.map((milestone, index) => <MilestoneRow key={milestone.id} milestone={milestone} tier={activeStage.tier} index={index} currentRef={milestone.id === roadmap.currentMilestoneId ? currentMission : undefined} onOpen={setSelectedMilestone} />)}
-            </div>
-          </section>
-        </>
-      ) : (
-        <section className="roadmap-stage-preview-lock" aria-labelledby="locked-stage-title">
-          <div className="roadmap-stage-preview-lock__message">
-            <div className="locked-badge-wrap"><TierRankBadge stageIndex={activeStageIndex} subRank={1} size={84} label={activeStage.tier.name} state="locked" /><div className="locked-shield-pulse" /></div>
-            <div className="locked-kicker"><Lock size={14} /><span>Restricted Sector · Locked Stage</span></div>
-            <h2 id="locked-stage-title">{activeStage.tier.name} — {activeStage.name}</h2>
-            <p>Complete the required work in your current stage, <strong>{roadmap.stages[roadmap.currentStageIndex].name}</strong>, before advancing.</p>
-            <button type="button" className="btn-return-active-stage" onClick={() => setSelectedStageIndex(null)}>Return to Active Stage</button>
-          </div>
-        </section>
-      )}
-      {selectedMilestone && <MilestonePreview milestone={selectedMilestone} onClose={() => setSelectedMilestone(null)} />}
-    </div>
-  );
-}
+    {!isOwner && <section className="rm-member-summary" aria-label="Your assigned missions">
+      <div><Users size={20} /><span><strong>Your assigned missions</strong><small>Only the main founder manages this roadmap and its team.</small></span></div>
+      {assigned.length ? <ul>{assigned.map((mission) => <li key={mission.id}><button className="rm-button" type="button" disabled={!canOpen(mission)} onClick={() => openMission(mission)}>{mission.name}<span>{stateLabel[mission.state]}</span></button></li>)}</ul> : <p>No missions assigned yet. Your main founder can assign one from Team &amp; invitations.</p>}
+    </section>}
 
-function MilestoneRow({ milestone, tier, index, currentRef, onOpen }) {
-  const isLeft = index % 2 === 0;
-  const isAccessible = milestone.state !== 'locked';
-  const node = (
-    <div className="board-node-anchor" aria-hidden="true">
-      <div className={`node-portal-${milestone.state}`}>
-        {milestone.state === 'active' ? <Play size={34} fill="currentColor" /> : isAccessible ? <BookOpen size={30} /> : <Lock size={28} />}
+    <section className="rm-board game-board-container" aria-labelledby="rm-stage-title">
+      <h2 id="rm-stage-title" className="rm-visually-hidden">{stage.name} your next chapter.</h2>
+      <div className="rm-stage-banner">
+        <div className={`rm-stage-pill${stage.isUnlocked ? '' : ' is-locked'}`}>
+          <span aria-hidden="true"><TierRankBadge stageIndex={activeStageIndex} size={59} state={stage.isUnlocked ? 'active' : 'locked'} /></span>
+          <div><span>STAGE {String(activeStageIndex + 1).padStart(2, '0')}</span><h3>{stage.tier.name} &mdash; {stage.name}</h3></div>
+        </div>
+        <span className="rm-stage-tally">{stageCovered} / 15 missions covered</span>
       </div>
-    </div>
-  );
-  const card = (
-    <button type="button" disabled={!isAccessible} className={`board-holo-card state-${milestone.state}`} onClick={() => onOpen(milestone)} aria-label={`${milestone.stageName}, Level ${milestone.level}, Milestone ${milestone.order}: ${milestone.name}, ${milestone.state}${isAccessible ? ', open mock preview' : ''}`}>
-      <div className="card-header-row">
-        <div className="card-tier-label-group"><TierRankBadge stageIndex={milestone.stageIndex} subRank={milestone.level} size={28} label={tier.name} state={milestone.state} /><span className="card-kicker-tag">LEVEL {milestone.level} · M0{milestone.order}</span></div>
-        <span className={`card-status-pill ${milestone.state}`}>{milestone.state === 'locked' && <Lock size={10} />}{milestone.state.toUpperCase()}</span>
-      </div>
-      <h3 className="card-mission-title">{milestone.name}</h3>
-      <p className="card-mission-desc">{milestone.description}</p>
-      <div className="card-footer-row" style={{ justifyContent: 'flex-end' }}><span className={`card-action-cta ${milestone.state}`}>{milestone.state === 'active' ? 'INITIALIZE' : isAccessible ? 'VIEW PREVIEW' : 'LOCKED'}{isAccessible && <ArrowRight size={13} />}</span></div>
-    </button>
-  );
-  return (
-    <div ref={currentRef} className={`board-milestone-row state-${milestone.state} ${isLeft ? 'align-left' : 'align-right'}`}>
-      {isLeft ? node : card}<div className={`board-laser-link ${milestone.state}`} />{isLeft ? card : node}
-    </div>
-  );
+      {!stage.isUnlocked && <div className="rm-locked-note"><LockKeyhole size={17} /><p>This stage unlocks after the earlier requirements are covered. You can preview the mission names below.</p><button type="button" onClick={() => setStage(roadmap.currentStageIndex)}>Return to Active Stage<ArrowRight size={14} /></button></div>}
+      <RoadmapHighway stage={stage} canOpen={canOpen} onOpen={openMission} isOwner={isOwner} assignedMissionIds={access.assignedMissionIds} />
+      <footer className="rm-board-footer"><span><Play size={12} />Current mission</span><span><Check size={14} />Completed</span><span><Sparkles size={13} />Placement credit</span><span><LockKeyhole size={13} />Locked</span></footer>
+    </section>
+    <div className="rm-bottom-note"><FlaskConical size={16} /><p>Interactive demo · Submissions and invitations stay in this browser. Evaluation checks completeness; it does not verify evidence or award LabX points.</p></div>
+    {selectedMission && <MissionDialog key={selectedMission.id} project={project} ownerId={ownerId} userId={user.id} mission={selectedMission} roadmap={roadmap} isOwner={isOwner} canContinue={currentAssigned} onClose={closeMission} onChange={refresh} onNext={() => { if (currentAssigned) openMission(current); else closeMission(); }} />}
+  </div>;
 }

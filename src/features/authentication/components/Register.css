@@ -911,9 +911,6 @@
 }
 
 .auth-demo-notice p + p { margin-top: 4px; }
-.auth-demo-credentials { overflow-wrap: anywhere; color: #cbd5e1; }
-.demo-fill-button { margin: 6px 0 0; text-align: left; }
-.demo-fill-button:disabled { opacity: 0.6; cursor: wait; }
 
 .remember-terminal {
   display: flex;

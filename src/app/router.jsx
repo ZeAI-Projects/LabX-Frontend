@@ -4,7 +4,6 @@ import { useAuth } from '../hooks/use_auth.js'
 import { OnboardingLayout } from '../components/layout/OnboardingLayout.jsx'
 import { AppShell } from '../components/layout/AppShell.jsx'
 import { FeaturePlaceholder } from '../components/common/FeaturePlaceholder.jsx'
-import { OnboardingHandoff } from '../components/common/OnboardingHandoff.jsx'
 import { useProjects } from '../features/projects/hooks/use_projects.js'
 import { getLoginDestination } from '../utils/onboarding.js'
 
@@ -12,6 +11,8 @@ const lazyPage = (load, name) => lazy(() => load().then((module) => ({ default: 
 const IntroVideo = lazyPage(() => import('../features/authentication/pages/IntroVideo.jsx'), 'IntroVideo')
 const Register = lazyPage(() => import('../features/authentication/pages/Register.jsx'), 'Register')
 const Login = lazyPage(() => import('../features/authentication/pages/Login.jsx'), 'Login')
+const VerifyEmail = lazyPage(() => import('../features/authentication/pages/VerifyEmail.jsx'), 'VerifyEmail')
+const RoleOnboarding = lazyPage(() => import('../features/authentication/pages/RoleOnboarding.jsx'), 'RoleOnboarding')
 const ForgotPassword = lazyPage(() => import('../features/authentication/pages/ForgotPassword.jsx'), 'ForgotPassword')
 const ResetPassword = lazyPage(() => import('../features/authentication/pages/ResetPassword.jsx'), 'ResetPassword')
 const AssessmentWizard = lazyPage(() => import('../features/assessment/pages/AssessmentWizard.jsx'), 'AssessmentWizard')
@@ -19,15 +20,16 @@ const AssessmentResult = lazyPage(() => import('../features/assessment/pages/Ass
 const OnboardingComplete = lazyPage(() => import('../features/dashboard/pages/OnboardingComplete.jsx'), 'OnboardingComplete')
 const RoadmapPage = lazyPage(() => import('../features/roadmap/pages/RoadmapPage.jsx'), 'RoadmapPage')
 const AchievementsPage = lazyPage(() => import('../features/achievements/pages/AchievementsPage.jsx'), 'AchievementsPage')
+const LeaderboardPage = lazyPage(() => import('../features/leaderboard/pages/LeaderboardPage.jsx'), 'LeaderboardPage')
 const EventsPage = lazyPage(() => import('../features/events/pages/EventsPage.jsx'), 'EventsPage')
+const ProfilePage = lazyPage(() => import('../features/profile/pages/ProfilePage.jsx'), 'ProfilePage')
 const ProjectsPage = lazyPage(() => import('../features/projects/pages/ProjectsPage.jsx'), 'ProjectsPage')
 const NewProjectPage = lazyPage(() => import('../features/projects/pages/NewProjectPage.jsx'), 'NewProjectPage')
+const JoinedRoadmapRoute = lazyPage(() => import('../features/roadmap/pages/JoinedRoadmaps.jsx'), 'JoinedRoadmapRoute')
 
-function WelcomeRoute() {
+function EntryRoute() {
   const { user, isAuthenticated } = useAuth()
-  return isAuthenticated
-    ? <Navigate to={getLoginDestination(user)} replace />
-    : <IntroVideo />
+  return <Navigate to={isAuthenticated ? getLoginDestination(user) : '/login'} replace />
 }
 
 function ProtectedLayout() {
@@ -56,7 +58,8 @@ function FounderOnly({ children }) {
 function LegacyAssessmentRoute({ result = false }) {
   const { user } = useAuth()
   const { projects } = useProjects()
-  if (user.role === 'mentor') return <Navigate to="/mentor/assessment" replace />
+  if (user.role === 'mentor') return <Navigate to="/onboarding/mentor" replace />
+  if (user.role !== 'founder') return <Navigate to="/dashboard" replace />
   const completed = projects.find(project => project.assessment_completed)
   const destination = result
     ? completed ? `/roadmap/${completed.id}/result` : '/roadmap'
@@ -85,14 +88,23 @@ function ProjectRoute({ view }) {
   }
   if (!project.assessment_completed) return <Navigate to={`${base}/assessment`} replace />
   return view === 'result'
-    ? <AssessmentResult project={project} result={project.assessment_result} />
+    ? <AssessmentResult key={project.id} project={project} result={project.assessment_result} />
     : <RoadmapPage key={project.id} project={project} />
 }
 
 function MentorRoute() {
   const { user } = useAuth()
   if (user.role !== 'mentor') return <Navigate to="/dashboard" replace />
-  return <OnboardingHandoff />
+  return <Navigate to="/onboarding/mentor" replace />
+}
+
+function RoleOnboardingRoute() {
+  const { user } = useAuth()
+  const { role } = useParams()
+  if (!['investor', 'mentor'].includes(role) || user.role !== role) {
+    return <Navigate to="/dashboard" replace />
+  }
+  return <RoleOnboarding key={user.id} />
 }
 
 export default function AppRouter() {
@@ -102,12 +114,15 @@ export default function AppRouter() {
   return (
     <Suspense fallback={<div className="route-fallback" role="status" aria-label="Loading LabX"><div className="spinner" /></div>}>
       <Routes>
-        <Route path="/" element={<WelcomeRoute />} />
+        <Route path="/" element={<EntryRoute />} />
+        <Route path="/intro" element={<IntroVideo />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route element={<ProtectedLayout />}>
+          <Route path="/onboarding/:role" element={<RoleOnboardingRoute />} />
           <Route path="/assessment" element={<LegacyAssessmentRoute />} />
           <Route path="/assessment/result" element={<LegacyAssessmentRoute result />} />
           <Route path="/roadmap/:projectId/assessment" element={<ProjectRoute view="assessment" />} />
@@ -118,13 +133,14 @@ export default function AppRouter() {
           <Route path="/q1" element={<Navigate to="/dashboard" replace />} />
           <Route path="/roadmap" element={<FounderOnly><ProjectsPage /></FounderOnly>} />
           <Route path="/roadmap/new" element={<FounderOnly><NewProjectPage /></FounderOnly>} />
+          <Route path="/roadmap/joined/:ownerId/:projectId" element={<JoinedRoadmapRoute />} />
           <Route path="/roadmap/:projectId" element={<ProjectRoute view="roadmap" />} />
           <Route path="/dashboard" element={<OnboardingComplete />} />
           <Route path="/achievements" element={<AchievementsPage />} />
           <Route path="/events" element={<EventsPage />} />
-          <Route path="/profile" element={<FeaturePlaceholder />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/notifications" element={<FeaturePlaceholder />} />
-          <Route path="/leaderboard" element={<FounderFeature />} />
+          <Route path="/leaderboard" element={<FounderOnly><LeaderboardPage /></FounderOnly>} />
           <Route path="/guild" element={<FounderFeature />} />
           <Route path="/social" element={<FounderFeature />} />
         </Route>

@@ -1,110 +1,105 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  DOMAIN_OPTIONS, EVIDENCE_OPTIONS, createEmptyAnswers, evaluateAssessment,
-  toggleEvidence, validateAssessmentStep,
+  ASSESSMENT_QUESTIONS, ASSESSMENT_QUESTION_COUNT, ASSESSMENT_VERSION,
+  DOMAIN_OPTIONS, createEmptyAnswers, evaluateAssessment, normalizeDraftAnswers, validateAssessmentStep,
 } from './mock_assessment.js';
 import {
-  draftKey, readAssessmentDraft, removeAssessmentDraft, saveAssessmentDraft,
+  createEmptyDraft, draftKey, normalizeAssessmentDraft, readAssessmentDraft,
+  removeAssessmentDraft, saveAssessmentDraft,
 } from './assessment_draft.js';
 
-const beginner = () => ({ q1: 1, q2: 1, q3: ['none_yet'], q4: 1, q5: 1, q6: 1, q7: 1 });
-const experienced = () => ({
-  q1: 12, q2: 9, q3: EVIDENCE_OPTIONS.filter(({ key }) => key !== 'none_yet').map(({ key }) => key),
-  q4: 5, q5: 6, q6: 7, q7: 9,
-});
-
+const beginner = () => Object.fromEntries(ASSESSMENT_QUESTIONS.map(({ key }) => [key, 1]));
+const experienced = () => ({ q1: 12, q2: 5, q3: 11, q4: 11, q5: 8, q6: 8, q7: 12, q8: 12 });
 function memoryStorage() {
   const values = new Map();
-  return {
-    getItem: (key) => values.get(key) ?? null,
-    setItem: (key, value) => values.set(key, value),
-    removeItem: (key) => values.delete(key),
-  };
+  return { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key) };
 }
 
-test('all seven steps require valid answers before evaluation', () => {
-  for (let step = 1; step <= 7; step += 1) {
+test('all eight questions require exactly one valid predefined answer, including the blocker', () => {
+  assert.equal(ASSESSMENT_QUESTION_COUNT, 8);
+  assert.deepEqual(ASSESSMENT_QUESTIONS.map(question => question.options.length), [17, 12, 12, 12, 9, 9, 13, 13]);
+  for (let step = 1; step <= ASSESSMENT_QUESTION_COUNT; step += 1) {
     assert.ok(validateAssessmentStep(createEmptyAnswers(), step));
     assert.equal(validateAssessmentStep(beginner(), step), '');
-    const missing = { ...beginner(), [`q${step}`]: step === 3 ? [] : null };
-    assert.throws(() => evaluateAssessment(missing));
+    const key = `q${step}`;
+    for (const value of [null, undefined, [], [1, 2], '1', 'Custom answer', 0, -1, 1.5, ASSESSMENT_QUESTIONS[step - 1].options.length + 1]) {
+      assert.throws(() => evaluateAssessment({ ...beginner(), [key]: value }));
+    }
   }
-  for (const value of [-1, 0, 13, 1.5, '1']) {
-    assert.throws(() => evaluateAssessment({ ...beginner(), q1: value }));
-  }
-  assert.throws(() => evaluateAssessment({ ...beginner(), q7: 10 }));
-  assert.throws(() => evaluateAssessment({ ...beginner(), q3: ['unknown'] }));
-  assert.throws(() => evaluateAssessment({ ...beginner(), q3: ['none_yet', 'prototype'] }));
+  for (const step of [0, 9, '1', 1.5]) assert.ok(validateAssessmentStep(beginner(), step));
 });
 
-test('evidence selection keeps None yet exclusive and allows clearing other choices', () => {
-  assert.deepEqual(toggleEvidence(['prototype'], 'none_yet'), ['none_yet']);
-  assert.deepEqual(toggleEvidence(['none_yet'], 'prototype'), ['prototype']);
-  assert.deepEqual(toggleEvidence(['prototype'], 'prototype'), []);
-  assert.deepEqual(toggleEvidence(['prototype'], 'working_mvp'), ['prototype', 'working_mvp']);
-  assert.deepEqual(toggleEvidence(['prototype'], 'invalid'), ['prototype']);
+test('every supplied selection is accepted without exposing a free-text escape', () => {
+  for (const [index, question] of ASSESSMENT_QUESTIONS.entries()) {
+    for (let answer = 1; answer <= question.options.length; answer += 1) {
+      assert.equal(validateAssessmentStep({ [question.key]: answer }, index + 1), '');
+    }
+  }
+  assert.equal(ASSESSMENT_QUESTIONS[2].options.includes('Not sure yet'), false);
+  assert.equal(ASSESSMENT_QUESTIONS[7].options.at(-2), 'No major blocker');
 });
 
-test('each selected domain determines its corresponding guild', () => {
+test('selected problem areas set the domain and uncertain answers do not invent a guild', () => {
   DOMAIN_OPTIONS.forEach((domain, index) => {
     const result = evaluateAssessment({ ...beginner(), q1: index + 1 });
     assert.equal(result.domain, domain);
-    assert.equal(result.guild, `${domain} Guild`);
-    assert.equal(result.stage, 'Launch');
-    assert.equal(result.level, 5);
-    assert.equal(result.placement_status, 'mock');
+    assert.equal(result.guild, index < 15 ? `${domain} Guild` : null);
+    assert.equal(result.assessment_version, ASSESSMENT_VERSION);
   });
 });
 
-test('stage and level use the approved illustrative preview independently of answers', () => {
+test('new questions do not introduce an unsupported score or alter the existing placement workflow', () => {
   const first = evaluateAssessment(beginner());
   const advanced = evaluateAssessment({ ...experienced(), q1: 1 });
   assert.deepEqual(first, advanced);
-  assert.equal(first.stage, 'Launch');
-  assert.equal(first.level, 5);
   assert.equal(first.placement_status, 'mock');
   assert.equal(first.version, 3);
   assert.equal(first.isMock, true);
   assert.equal(Object.hasOwn(first, 'score'), false);
-  assert.equal(Object.hasOwn(first, 'stageIndex'), false);
-});
-
-test('result is deterministic and leaves the completed answers unchanged', () => {
   const answers = experienced();
-  const original = structuredClone(answers);
-  const result = evaluateAssessment(answers);
-  assert.deepEqual(result, evaluateAssessment(answers));
-  assert.deepEqual(answers, original);
+  const copy = structuredClone(answers);
+  assert.deepEqual(evaluateAssessment(answers), evaluateAssessment(answers));
+  assert.deepEqual(answers, copy);
 });
 
-test('draft refresh restores answers and step without sharing data between users', () => {
+test('versioned drafts preserve all eight answers and remain isolated between accounts', () => {
   const storage = memoryStorage();
-  const draft = { step: 5, answers: beginner() };
+  const draft = { version: ASSESSMENT_VERSION, step: 8, answers: beginner() };
   assert.equal(saveAssessmentDraft(storage, 'user-a', draft), true);
   assert.deepEqual(readAssessmentDraft(storage, 'user-a'), draft);
-  assert.deepEqual(readAssessmentDraft(storage, 'user-b'), { step: 1, answers: createEmptyAnswers() });
-  saveAssessmentDraft(storage, 'user-b', { step: 2, answers: { ...beginner(), q1: 12 } });
+  assert.deepEqual(readAssessmentDraft(storage, 'user-b'), createEmptyDraft());
+  saveAssessmentDraft(storage, 'user-b', { ...draft, step: 2, answers: { ...beginner(), q1: 12 } });
   removeAssessmentDraft(storage, 'user-a');
   assert.equal(storage.getItem(draftKey('user-a')), null);
   assert.equal(readAssessmentDraft(storage, 'user-b').answers.q1, 12);
 });
 
-test('corrupt drafts recover safely and cannot skip incomplete questions', () => {
+test('old numeric answers are never reinterpreted as answers to different questions', () => {
+  const old = { step: 4, answers: { q1: 1, q2: 3, q3: ['prototype'], q4: 2 } };
+  for (const version of [undefined, 1]) {
+    assert.deepEqual(normalizeAssessmentDraft({ ...old, version }), { ...createEmptyDraft(), questionsUpdated: true });
+  }
+  assert.deepEqual(normalizeAssessmentDraft({ step: 1, answers: { q1: null, q3: [] } }), createEmptyDraft());
+  const fresh = { ...createEmptyDraft(), questionsUpdated: true, answers: { ...createEmptyAnswers(), q1: 1 } };
+  assert.deepEqual(normalizeAssessmentDraft(fresh), fresh);
+});
+
+test('corrupt drafts recover safely and cannot skip unanswered questions', () => {
   const storage = memoryStorage();
-  storage.setItem(draftKey('user'), '{invalid json');
-  assert.equal(readAssessmentDraft(storage, 'user').step, 1);
+  storage.setItem(draftKey('user'), '{broken');
+  assert.deepEqual(readAssessmentDraft(storage, 'user'), createEmptyDraft());
   saveAssessmentDraft(storage, 'user', {
-    step: 7,
-    answers: { ...beginner(), q2: 99, q3: ['none_yet', 'prototype', 'prototype', 'unknown'] },
+    version: ASSESSMENT_VERSION, step: 99,
+    answers: { ...beginner(), q2: 99, q3: ['prototype'] },
   });
   const recovered = readAssessmentDraft(storage, 'user');
   assert.equal(recovered.step, 2);
   assert.equal(recovered.answers.q2, null);
-  assert.deepEqual(recovered.answers.q3, ['prototype']);
+  assert.equal(recovered.answers.q3, null);
+  assert.equal(normalizeDraftAnswers({ ...beginner(), q8: 'Funding' }).q8, null);
+  const blocked = { getItem() { throw new Error('Disabled'); }, setItem() { throw new Error('Disabled'); } };
+  assert.deepEqual(readAssessmentDraft(blocked, 'user'), createEmptyDraft());
+  assert.equal(saveAssessmentDraft(blocked, 'user', createEmptyDraft()), false);
   assert.equal(saveAssessmentDraft(null, 'user', {}), false);
-  assert.equal(readAssessmentDraft(null, 'user').step, 1);
-  const blockedStorage = { getItem() { throw new Error('Disabled'); }, setItem() { throw new Error('Disabled'); } };
-  assert.equal(readAssessmentDraft(blockedStorage, 'user').step, 1);
-  assert.equal(saveAssessmentDraft(blockedStorage, 'user', {}), false);
 });

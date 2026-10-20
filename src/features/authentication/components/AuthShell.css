@@ -1,0 +1,87 @@
+/* Shared compact frame and controls for sign up, sign in, and email verification. */
+.compact-auth-page { padding: 24px 20px; }
+.compact-auth-page .auth-top-hud { max-width: 960px; justify-content: flex-end; margin-bottom: 10px; padding: 0; }
+.compact-auth-page .hud-sound-toggle { min-height: 36px; padding: 6px 11px; font-size: .7rem; color: #91a7bf; background: #0c1421aa; border-color: #243247; }
+.compact-auth-page .gamified-card-shell { max-width: 960px; min-height: 546px; flex-direction: row; border-radius: 18px; }
+.compact-auth-page .showcase-panel { flex: 0 0 34%; min-width: 0; padding: 30px 28px; }
+.compact-auth-page .brand-logo-wrap { margin-bottom: 30px; }
+.compact-auth-page .brand-logo-text { font-size: 1.8rem; }
+.compact-auth-page .brand-sub-badge { font-size: .72rem; }
+.compact-auth-page .showcase-title { font-size: 1.75rem; line-height: 1.2; margin-bottom: 12px; }
+.compact-auth-page .showcase-desc { font-size: .8rem; line-height: 1.7; }
+.compact-auth-page .hologram-reactor-wrapper { margin: 16px 0 !important; }
+.compact-auth-page .hologram-3d-stage svg { width: 200px; height: 200px; }
+.auth-brand-note { display: flex; align-items: center; gap: 8px; color: #8599b2; font-size: .67rem; line-height: 1.6; }
+.compact-auth-page .form-panel { flex: 1; min-width: 0; padding: 28px 32px; justify-content: flex-start; }
+.compact-auth-page .auth-mode-switch-tabs { margin-bottom: 21px; }
+.compact-auth-page .mode-tab-btn { min-height: 36px; font-size: .75rem; text-transform: none; letter-spacing: 0; }
+.compact-auth-page .mode-tab-btn.active { box-shadow: none; }
+.compact-auth-page .mode-tab-btn:disabled { cursor: wait; }
+.compact-auth-page .form-header { margin-bottom: 22px; }
+.compact-auth-page .form-title { font-size: 1.55rem; margin-bottom: 5px; }
+.compact-auth-page .form-subtitle { font-size: .82rem; }
+.compact-auth-fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: 15px 14px; }
+.compact-signup-fields { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.compact-auth-page .gamified-field-group { margin: 0; min-width: 0; gap: 6px; }
+.compact-signup-email, .compact-password-hint { grid-column: 1 / -1; }
+.compact-auth-page .gamified-field-label { font-size: .75rem; font-weight: 550; }
+.compact-auth-page .gamified-input { min-width: 0; min-height: 44px; padding: 10px 12px; font-size: .82rem; border-radius: 8px; }
+.compact-auth-page .gamified-input:disabled { opacity: .65; cursor: wait; }
+.compact-auth-page .gamified-input::placeholder { color: #71819a; }
+.compact-auth-page .gamified-input[aria-invalid="true"] { border-color: #f87171b3; }
+.compact-auth-page .input-action-icon { right: 3px; width: 40px; min-width: 40px; height: 40px; min-height: 40px; color: #8c9fb9; }
+.compact-auth-page .gamified-input-wrap:has(.input-action-icon) .gamified-input { padding-right: 43px; }
+.compact-password-hint { margin-top: -7px; color: #8fa1b9; font-size: .69rem; line-height: 1.6; }
+.compact-auth-actions { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 23px; }
+.compact-auth-page .remember-terminal { min-height: 40px; font-size: .75rem; color: #a2b1c8; white-space: nowrap; }
+.compact-auth-page .custom-checkbox { width: 16px; height: 16px; box-shadow: none; border-radius: 4px; }
+.compact-auth-page .btn-warp-create { width: auto; min-width: 170px; min-height: 44px; padding: 11px 20px; font-size: .84rem; border-radius: 9px; box-shadow: 0 4px 18px #7c3aed28; }
+.compact-auth-page .auth-error-banner { padding: 9px 11px; font-size: .76rem; line-height: 1.5; overflow-wrap: anywhere; }
+.compact-auth-page .auth-error-banner svg { flex-shrink: 0; }
+.compact-auth-page .auth-success-banner { padding: 9px 11px; font-size: .76rem; line-height: 1.5; margin-bottom: 16px; }
+.compact-auth-page .forgot-pass-link { font-size: .75rem; }
+.compact-signin-password-label { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.compact-demo-note { margin-top: 16px; color: #8395ad; font-size: .67rem; line-height: 1.5; text-align: center; }
+.verification-account { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; color: #aebbd0; font-size: .8rem; margin-bottom: 18px; overflow-wrap: anywhere; }
+.verification-account svg { color: #38bdf8; flex-shrink: 0; }
+.verification-account span { min-width: 0; overflow-wrap: anywhere; }
+.compact-auth-page .verification-demo-notice { font-size: .74rem; padding: 10px 12px; }
+.verification-demo-code { display: inline-block; font-family: ui-monospace, monospace; font-size: .9rem; font-weight: 700; letter-spacing: .12em; color: #e2e8f0; margin-left: 3px; }
+.compact-auth-page .verification-code-input { font-family: ui-monospace, monospace; font-size: 1.2rem; font-weight: 600; letter-spacing: .45em; }
+.verification-hint { font-size: .72rem; color: #8fa1b9; margin-top: 5px; line-height: 1.5; }
+.verification-resend { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; font-size: .75rem; margin: 0; }
+.verification-resend:disabled { opacity: .6; cursor: wait; }
+.verification-status { margin-bottom: 14px; color: #a7f3d0; font-size: .75rem; line-height: 1.5; }
+.verification-footer { margin-top: auto; padding-top: 20px; color: #8395ad; font-size: .73rem; line-height: 1.6; text-align: center; }
+
+@media (max-width: 800px) {
+  .compact-auth-page .gamified-card-shell { flex-direction: column; min-height: 0; max-width: 580px; }
+  .compact-auth-page .auth-top-hud { max-width: 580px; }
+  .compact-auth-page .showcase-panel { flex: none; padding: 16px 26px; border-right: 0; border-bottom: 1px solid #ffffff10; }
+  .compact-auth-page .brand-logo-wrap { margin: 0; }
+  .compact-auth-page .brand-logo-text { font-size: 1.6rem; }
+  .compact-auth-page .showcase-subhead, .compact-auth-page .showcase-title, .compact-auth-page .showcase-desc, .auth-brand-note { display: none; }
+  .compact-auth-page .hologram-reactor-wrapper { display: none !important; }
+  .compact-auth-page .form-panel { padding: 24px 26px; }
+}
+
+@media (max-width: 600px) {
+  .compact-auth-page { padding: 12px; }
+  .compact-auth-page .hud-sound-toggle { min-height: 44px; }
+  .compact-auth-page .showcase-panel { padding: 13px 18px; }
+  .compact-auth-page .form-panel { padding: 20px 18px; }
+  .compact-auth-page .auth-mode-switch-tabs { margin-bottom: 17px; }
+  .compact-auth-page .mode-tab-btn { min-height: 44px; }
+  .compact-auth-page .form-header { margin-bottom: 18px; }
+  .compact-auth-fields { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .compact-auth-page .gamified-input { min-height: 46px; font-size: 16px; }
+  .compact-auth-page .gamified-field-label { font-size: .78rem; }
+  .compact-auth-page .input-action-icon { min-width: 44px; width: 44px; height: 44px; min-height: 44px; }
+  .compact-auth-page .gamified-input-wrap:has(.input-action-icon) .gamified-input { padding-right: 48px; }
+  .compact-password-hint { grid-row: 5; margin: -5px 0 0; }
+  .compact-auth-actions { flex-direction: column; align-items: stretch; gap: 10px; margin-top: 12px; }
+  .compact-auth-page .btn-warp-create { width: 100%; min-height: 46px; }
+  .compact-demo-note { font-size: .66rem; margin-top: 12px; }
+  .verification-resend { min-height: 44px; }
+  .compact-auth-page .forgot-pass-link { display: inline-flex; align-items: center; min-height: 30px; }
+}

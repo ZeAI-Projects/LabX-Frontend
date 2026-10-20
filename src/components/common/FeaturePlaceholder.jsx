@@ -1,6 +1,7 @@
 import { ArrowLeft, Bell, Bot, Sparkles, Trophy, UserRound, Users } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/use_auth.js'
+import { getRoleLabel } from '../../utils/roles.js'
 import './FeaturePlaceholder.css'
 
 const destinations = {
@@ -22,13 +23,13 @@ export function FeaturePlaceholder() {
       <div className="feature-placeholder__icon"><Icon size={34} /></div>
       <span className="feature-placeholder__status"><Sparkles size={14} /> Coming soon</span>
       <h2>{destination.label}</h2>
-      <p>{destination.description}</p>
+      <p>{destination.label === 'Profile' && user.role !== 'founder' ? 'Your full profile will be available here.' : destination.description}</p>
       {destination.label === 'Profile' && (
         <dl>
           <div><dt>Full name</dt><dd>{user.full_name}</dd></div>
           <div><dt>Username</dt><dd>@{user.username || user.email.split('@')[0]}</dd></div>
           <div><dt>Email</dt><dd>{user.email}</dd></div>
-          <div><dt>Role</dt><dd>{user.role === 'mentor' ? 'Mentor' : 'Founder'}</dd></div>
+          <div><dt>Role</dt><dd>{getRoleLabel(user.role)}</dd></div>
         </dl>
       )}
       <Link to="/dashboard" className="btn btn-secondary"><ArrowLeft size={16} />Back to Dashboard</Link>

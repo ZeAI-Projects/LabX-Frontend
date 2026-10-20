@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { EVENT_STORAGE_KEY, MOCK_EVENTS, REPORT_REASONS, createEventStore, getRegistrationAvailability, selectEvents } from '../src/features/events/services/mock_events.js'
+import { EVENT_STORAGE_KEY, MAX_CERTIFICATE_BYTES, MOCK_EVENTS, REPORT_REASONS, createEventStore, eventPhase, getRegistrationAvailability, getSafeEventLink, getTrackingStatus, selectEvents } from '../src/features/events/services/mock_events.js'
 
 const OCTOBER_14 = Date.parse('2026-10-14T12:00:00+05:30')
 const founder = { id: 'founder-events-test', role: 'founder' }
@@ -129,7 +129,7 @@ test('corrupt saved data is ignored without losing valid past registrations or r
       reports: { 'past-pitch-workshop': validReport },
     }))
     const saved = store.read(founder)
-    assert.deepEqual(saved.registrations, { 'past-pitch-workshop': pastRegistration })
+    assert.deepEqual(saved.registrations, { 'past-pitch-workshop': { ...pastRegistration, method: 'internal' } })
     assert.deepEqual(saved.reports, { 'past-pitch-workshop': validReport })
     assert.equal(selectEvents(MOCK_EVENTS, { view: 'my' }, saved.registrations, OCTOBER_14).length, 1)
   }
@@ -145,12 +145,151 @@ test('corrupt saved data is ignored without losing valid past registrations or r
       reports: { 'past-pitch-workshop': validReport, 'customer-workshop': report, unknown: validReport },
     }))
     assert.deepEqual(store.read(founder), {
-      registrations: { 'past-pitch-workshop': pastRegistration },
+      registrations: { 'past-pitch-workshop': { ...pastRegistration, method: 'internal' } },
       reports: { 'past-pitch-workshop': validReport },
+      outcomes: {},
     })
   }
   for (const value of [null, [], 'invalid', { registrations: [], reports: 'invalid' }]) {
     storage.setItem(key, JSON.stringify(value))
-    assert.deepEqual(store.read(founder), { registrations: {}, reports: {} })
+    assert.deepEqual(store.read(founder), { registrations: {}, reports: {}, outcomes: {} })
   }
+})
+
+test('external registration stays pending until explicitly confirmed and cannot use the internal action', () => {
+  const storage = memoryStorage()
+  const store = createEventStore({ storage, now: () => OCTOBER_14 })
+  const event = byId('accelerator-preview')
+  assert.throws(() => store.register(founder, event.id), /organizer preview/)
+  assert.throws(() => store.confirmExternal(founder, event.id, 'ABC'), /Start the external/)
+  const pending = store.beginExternal(founder, event.id)
+  assert.equal(pending.status, 'external_pending')
+  assert.equal(getTrackingStatus(event, pending, null, OCTOBER_14), 'Registration pending')
+  assert.equal(getRegistrationAvailability(event, founder, pending, OCTOBER_14).label, 'Continue registration')
+  assert.deepEqual(store.beginExternal(founder, event.id), pending)
+  assert.throws(() => store.setReminder(founder, event.id, true), /Register before/)
+  assert.throws(() => store.confirmExternal(founder, event.id, ''), /confirmation reference/)
+  assert.throws(() => store.confirmExternal(founder, event.id, 'x'.repeat(121)), /120/)
+  const confirmed = store.confirmExternal(founder, event.id, '  Demo confirmation 42  ')
+  assert.equal(confirmed.confirmationReference, 'Demo confirmation 42')
+  assert.equal(confirmed.status, 'registered')
+  assert.deepEqual(store.confirmExternal(founder, event.id, 'again'), confirmed)
+  assert.deepEqual(createEventStore({ storage }).read(founder).registrations[event.id], confirmed)
+  assert.deepEqual(store.read(mentor).registrations, {})
+  assert.throws(() => store.beginExternal(founder, 'customer-workshop'), /on LabX/)
+})
+
+test('external confirmation rechecks eligibility, capacity and expired deadlines', () => {
+  let now = OCTOBER_14
+  const event = { ...byId('accelerator-preview'), roles: ['founder'] }
+  const store = createEventStore({ storage: memoryStorage(), now: () => now, events: [event] })
+  store.beginExternal(founder, event.id)
+  assert.throws(() => store.confirmExternal({ ...founder, role: 'investor' }, event.id, 'ref'), /Not eligible/)
+  event.available = 0
+  assert.throws(() => store.confirmExternal(founder, event.id, 'ref'), /Fully booked/)
+  event.available = 1
+  now = Date.parse(event.deadline)
+  assert.throws(() => store.confirmExternal(founder, event.id, 'ref'), /Registration closed/)
+  assert.equal(store.read(founder).registrations[event.id].status, 'external_pending')
+})
+
+test('only HTTPS links without embedded credentials can be offered for external registration', () => {
+  assert.equal(getSafeEventLink('https://example.org/?labx-demo=test'), 'https://example.org/?labx-demo=test')
+  for (const value of ['javascript:alert(1)', 'data:text/html,test', 'http://example.org/', 'https://user:pass@example.org/', '/relative', null]) {
+    assert.equal(getSafeEventLink(value), null)
+  }
+  const event = { ...byId('accelerator-preview'), registrationUrl: 'javascript:alert(1)' }
+  const store = createEventStore({ storage: memoryStorage(), now: () => OCTOBER_14, events: [event] })
+  assert.throws(() => store.beginExternal(founder, event.id), /Registration unavailable/)
+})
+
+test('advanced discovery filters combine dates, role, location, price, prizes and sponsorship', () => {
+  const filtered = selectEvents(MOCK_EVENTS, {
+    dateFrom: '2026-10-20', dateTo: '2026-10-20', location: 'BENGALURU', eligibility: 'eligible',
+    fee: 'free', prizes: 'with-prizes', sponsored: 'sponsored',
+  }, {}, OCTOBER_14, founder)
+  assert.deepEqual(filtered.map(({ id }) => id), ['prototype-hackathon'])
+  assert.deepEqual(selectEvents(MOCK_EVENTS, { fee: 'paid' }, {}, OCTOBER_14, founder).map(({ id }) => id), ['product-training'])
+  const investor = { id: 'investor-event', role: 'investor' }
+  const eligible = selectEvents(MOCK_EVENTS, { eligibility: 'eligible' }, {}, OCTOBER_14, investor)
+  assert.ok(eligible.length > 0)
+  assert.ok(eligible.every((event) => event.roles.includes('investor')))
+  assert.equal(selectEvents(MOCK_EVENTS, { dateFrom: '2026-11-01', dateTo: '2026-10-01' }, {}, OCTOBER_14).length, 0)
+  assert.ok(selectEvents(MOCK_EVENTS, { sponsored: 'organic' }, {}, OCTOBER_14).every((event) => !event.sponsored))
+})
+
+const sampleCertificate = () => {
+  const bytes = Buffer.from('%PDF-1.4\nsample certificate\n%%EOF')
+  return { name: 'certificate.pdf', type: 'application/pdf', size: bytes.length, dataUrl: `data:application/pdf;base64,${bytes.toString('base64')}` }
+}
+
+test('participation and real certificate bytes persist per account and completed tracker updates', () => {
+  const storage = memoryStorage()
+  let now = OCTOBER_14
+  const store = createEventStore({ storage, now: () => now })
+  const event = byId('customer-workshop')
+  assert.throws(() => store.saveOutcome(founder, event.id, { participation: 'attended' }), /Confirm registration/)
+  const registration = store.register(founder, event.id)
+  assert.equal(getTrackingStatus(event, registration, null, now), 'Upcoming')
+  assert.throws(() => store.saveOutcome(founder, event.id, { participation: 'attended' }), /after the event starts/)
+  now = Date.parse(event.startsAt)
+  assert.equal(eventPhase(event, now), 'ongoing')
+  assert.equal(getTrackingStatus(event, registration, null, now), 'Ongoing')
+  assert.ok(selectEvents(MOCK_EVENTS, { view: 'ongoing' }, {}, now).some(({ id }) => id === event.id))
+  const outcome = store.saveOutcome(founder, event.id, {
+    participation: 'attended', notes: '  Learned to ask open questions  ', award: 'Peer recognition',
+    rating: 5, feedback: 'Useful practice.', certificate: sampleCertificate(),
+  })
+  assert.equal(outcome.notes, 'Learned to ask open questions')
+  assert.equal(outcome.status, 'completed')
+  const reloaded = createEventStore({ storage }).read(founder)
+  assert.deepEqual(reloaded.outcomes[event.id], outcome)
+  assert.deepEqual(store.read(mentor).outcomes, {})
+  assert.equal(getTrackingStatus(event, registration, outcome, now), 'Completed')
+  assert.deepEqual(selectEvents(MOCK_EVENTS, { view: 'completed' }, reloaded.registrations, now, founder, reloaded.outcomes).map(({ id }) => id), [event.id])
+  assert.equal(selectEvents(MOCK_EVENTS, { view: 'my', myPeriod: 'ongoing' }, reloaded.registrations, now, founder, reloaded.outcomes).length, 0)
+  assert.equal(selectEvents(MOCK_EVENTS, { view: 'my', myPeriod: 'completed' }, reloaded.registrations, now, founder, reloaded.outcomes).length, 1)
+  now = Date.parse(event.endsAt)
+  assert.equal(eventPhase(event, now), 'past')
+  assert.equal(getTrackingStatus(event, registration, null, now), 'Past')
+  const edited = store.saveOutcome(founder, event.id, { participation: 'completed', notes: 'Revised result', certificate: null })
+  assert.equal(edited.certificate, null)
+  assert.equal(store.read(founder).outcomes[event.id].notes, 'Revised result')
+})
+
+test('invalid outcomes and unsafe or oversized certificates cannot overwrite saved participation', () => {
+  let now = OCTOBER_14
+  const store = createEventStore({ storage: memoryStorage(), now: () => now })
+  store.register(founder, 'customer-workshop')
+  now = Date.parse(byId('customer-workshop').endsAt)
+  const valid = store.saveOutcome(founder, 'customer-workshop', { participation: 'completed', notes: 'Saved result' })
+  for (const value of [
+    { participation: '' }, { participation: 'completed', notes: 'x'.repeat(2001) },
+    { participation: 'completed', award: 'x'.repeat(201) }, { participation: 'attended', rating: 6 },
+    { participation: 'attended', rating: '5' },
+    ...[
+      { ...sampleCertificate(), size: MAX_CERTIFICATE_BYTES + 1 },
+      { ...sampleCertificate(), type: 'image/svg+xml' },
+      { ...sampleCertificate(), name: '../certificate.pdf' },
+      { ...sampleCertificate(), dataUrl: 'javascript:alert(1)' },
+      { ...sampleCertificate(), dataUrl: 'data:application/pdf;base64,SGVsbG8=' },
+      { ...sampleCertificate(), size: 2 },
+    ].map((certificate) => ({ participation: 'completed', certificate })),
+  ]) {
+    assert.throws(() => store.saveOutcome(founder, 'customer-workshop', value))
+    assert.deepEqual(store.read(founder).outcomes['customer-workshop'], valid)
+  }
+})
+
+test('corrupt tracker records cannot turn an external click or unregistered event into completion', () => {
+  const storage = memoryStorage()
+  const store = createEventStore({ storage, now: () => OCTOBER_14 })
+  store.beginExternal(founder, 'accelerator-preview')
+  store.register(founder, 'customer-workshop')
+  const data = store.read(founder)
+  const outcome = { participation: 'completed', status: 'completed', updatedAt: new Date(OCTOBER_14).toISOString() }
+  data.outcomes = { 'accelerator-preview': outcome, 'customer-workshop': outcome, unknown: outcome }
+  storage.setItem(`${EVENT_STORAGE_KEY}:${founder.id}`, JSON.stringify(data))
+  assert.deepEqual(store.read(founder).outcomes, {})
+  assert.equal(getTrackingStatus(byId('accelerator-preview'), data.registrations['accelerator-preview'], outcome), 'Registration pending')
 })

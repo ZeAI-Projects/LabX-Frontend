@@ -1,0 +1,183 @@
+.password-recovery-container .form-panel {
+  min-width: 0;
+}
+
+.password-recovery-container .recovery-exit-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 4px 0;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.password-recovery-container .recovery-exit-link:hover {
+  color: #67e8f9;
+}
+
+.password-recovery-container .recovery-exit-link:focus-visible {
+  outline: 2px solid #67e8f9;
+  outline-offset: 5px;
+  border-radius: 3px;
+}
+
+.recovery-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  padding: 0;
+  margin: 4px 0 24px;
+  list-style: none;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.recovery-steps li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.recovery-steps li > span {
+  display: grid;
+  place-items: center;
+  width: 23px;
+  height: 23px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 50%;
+  font-size: 0.68rem;
+}
+
+.recovery-steps .current {
+  color: #67e8f9;
+}
+
+.recovery-steps .current > span,
+.recovery-steps .complete > span {
+  color: #67e8f9;
+  background: rgba(6, 182, 212, 0.12);
+  border-color: rgba(6, 182, 212, 0.55);
+}
+
+.recovery-account {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -8px 0 16px;
+  color: #cbd5e1;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.recovery-account > svg {
+  color: #38bdf8;
+  flex-shrink: 0;
+}
+
+.recovery-account > span {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.recovery-account .login-link {
+  margin-left: auto;
+}
+
+.recovery-demo-code {
+  display: inline-block;
+  color: #e2e8f0;
+  font-family: ui-monospace, monospace;
+  font-size: 0.87rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  margin-left: 3px;
+}
+
+.recovery-code-input {
+  font-family: ui-monospace, monospace;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.45em;
+}
+
+.recovery-code-input::placeholder {
+  color: #64748b;
+}
+
+.recovery-code-help {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  column-gap: 12px;
+}
+
+.recovery-resend {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  margin: 0;
+  padding: 3px 0;
+  background: transparent;
+  border: 0;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.recovery-resend:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.recovery-status {
+  color: #a7f3d0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  margin: 0 0 14px;
+}
+
+.recovery-back-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-left: 0;
+}
+
+.password-recovery-container .gamified-input[aria-invalid="true"] {
+  border-color: rgba(248, 113, 113, 0.7);
+}
+
+.password-recovery-container .auth-error-banner {
+  overflow-wrap: anywhere;
+}
+
+.password-recovery-container .auth-error-banner > svg {
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .recovery-steps {
+    column-gap: 16px;
+    font-size: 0.7rem;
+    margin-bottom: 20px;
+  }
+
+  .recovery-resend,
+  .recovery-back-link,
+  .recovery-account .login-link {
+    min-height: 44px;
+  }
+
+  .recovery-account .login-link {
+    display: inline-flex;
+    align-items: center;
+  }
+}

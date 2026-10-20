@@ -47,7 +47,7 @@ export function NewProjectPage() {
           <p>Start with what you’re building. We’ll use a short assessment to create a roadmap just for this project.</p>
           <ol className="projects-setup-steps" aria-label="Project setup steps">
             <li aria-current="step"><span className="projects-setup-steps__icon"><FolderPlus size={19} aria-hidden="true" /></span><div><strong>01 &nbsp; Project name</strong><span>Give this idea a place of its own.</span></div></li>
-            <li><span className="projects-setup-steps__icon"><ClipboardList size={19} aria-hidden="true" /></span><div><strong>02 &nbsp; Assessment</strong><span>Answer seven questions about your project.</span></div></li>
+            <li><span className="projects-setup-steps__icon"><ClipboardList size={19} aria-hidden="true" /></span><div><strong>02 &nbsp; Assessment</strong><span>Answer eight questions about your project.</span></div></li>
             <li><span className="projects-setup-steps__icon"><Route size={19} aria-hidden="true" /></span><div><strong>03 &nbsp; Your roadmap</strong><span>Explore your project’s next steps.</span></div></li>
           </ol>
         </section>
@@ -57,7 +57,7 @@ export function NewProjectPage() {
           <p>A working title is perfect. You can rename it anytime.</p>
           <form onSubmit={submit} noValidate aria-busy={saving}>
             <div className="projects-field">
-              <label htmlFor="new-project-name">Project name <span aria-hidden="true">*</span></label>
+              <label htmlFor="new-project-name">Project name<span className="required-mark" aria-hidden="true" /></label>
               <input ref={inputRef} id="new-project-name" placeholder="e.g. GreenLoop" value={name} onChange={(event) => { setName(event.target.value); setError(''); }} maxLength={100} required disabled={saving} autoComplete="off" aria-invalid={Boolean(error)} aria-describedby={`project-name-hint${error ? ' project-name-error' : ''}`} />
               <div className="projects-field__hint"><span id="project-name-hint">Choose a name you’ll recognize.</span><span>{name.length}/100</span></div>
             </div>

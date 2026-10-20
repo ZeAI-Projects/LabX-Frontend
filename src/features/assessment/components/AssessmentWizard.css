@@ -1,6 +1,7 @@
 .assessment-wizard { max-width:780px; margin:38px auto; padding:0 16px 50px; }
 .assessment-project-back { display:inline-flex; margin-bottom:24px; color:#a5f3fc; font-size:.85rem; }
 .assessment-project-name { margin:0 0 10px; color:#67e8f9; font-size:1rem; font-weight:700; overflow-wrap:anywhere; }
+.assessment-update-notice { margin:0 0 18px; padding:13px 16px; border:1px solid #67e8f933; border-radius:10px; color:#b5d2e3; background:#102132; font-size:.85rem; line-height:1.6; }
 .assessment-card { position:relative; overflow:hidden; padding:32px; border-color:rgba(99,102,241,.25); animation:assessment-card-in .45s cubic-bezier(.2,.8,.2,1) both; }
 .assessment-card::before { content:""; position:absolute; width:240px; height:240px; right:-130px; top:-150px; border-radius:50%; border:1px solid rgba(103,232,249,.13); box-shadow:0 0 75px rgba(99,102,241,.14); pointer-events:none; }
 .assessment-question__heading { display:flex; align-items:flex-start; gap:17px; margin-bottom:25px; }
@@ -38,4 +39,4 @@
 @keyframes selected-icon-pulse { 50%{box-shadow:0 0 22px hsla(var(--option-hue),85%,65%,.32)} }
 @keyframes check-pop { from{opacity:0;transform:scale(.25) rotate(-25deg)} to{opacity:1;transform:none} }
 @media (max-width:600px) { .assessment-wizard { margin-top:24px;padding-inline:10px; }.assessment-card { padding:21px 15px; }.assessment-question__heading { gap:12px; }.assessment-question__icon { width:48px;height:48px;border-radius:15px; }.assessment-question h2 { font-size:1.08rem; }.assessment-option { padding:11px 12px; }.assessment-option:hover,.assessment-option.is-selected { transform:translateX(3px); } }
-@media (prefers-reduced-motion:reduce) { .assessment-wizard * { animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; } }
+@media (prefers-reduced-motion:reduce) { .assessment-wizard * { animation-duration:.01ms!important; animation-delay:0s!important; animation-iteration-count:1!important; transition-duration:.01ms!important; } }

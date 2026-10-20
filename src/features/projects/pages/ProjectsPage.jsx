@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowRight, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Folder, FolderPlus, Pencil, Plus, Route, Trash2, UserRound, X } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ArrowRight, CheckCircle2, ChevronLeft, ChevronRight, Folder, FolderPlus, Pencil, Plus, Route, Trash2, X } from 'lucide-react';
 import { useProjects } from '../hooks/use_projects.js';
-import { DOMAIN_OPTIONS, validateAssessmentStep } from '../../assessment/services/mock_assessment.js';
+import { ASSESSMENT_QUESTION_COUNT, DOMAIN_OPTIONS, validateAssessmentStep } from '../../assessment/services/mock_assessment.js';
+import { JoinedRoadmaps, RoadmapInvitations } from '../../roadmap/pages/JoinedRoadmaps.jsx';
 import '../components/Projects.css';
 
-const PAGE_SIZE = 6;
+const PAGE_SIZE = 10;
 const dateFormatter = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
 function formatDate(value) {
@@ -13,56 +14,60 @@ function formatDate(value) {
   return Number.isNaN(date.getTime()) ? 'Date unavailable' : dateFormatter.format(date);
 }
 
-function ProjectCard({ project, onEdit, onDelete }) {
+function ProjectRow({ project, onEdit, onDelete }) {
   const completed = project.assessment_completed;
   const result = project.assessment_result;
+  const roadmap = project.roadmap_snapshot;
   const answers = project.draft?.answers;
-  const answeredCount = Array.from({ length: 7 }, (_, index) => index + 1)
+  const answeredCount = Array.from({ length: ASSESSMENT_QUESTION_COUNT }, (_, index) => index + 1)
     .filter((step) => !validateAssessmentStep(answers, step)).length;
   const domain = completed ? result?.domain : DOMAIN_OPTIONS[(answers?.q1 || 0) - 1];
   const action = completed ? 'Open roadmap' : answeredCount > 0 ? 'Continue assessment' : 'Start assessment';
 
   return (
-    <article className={`project-card${completed ? ' project-card--ready' : ''}`} aria-labelledby={`project-title-${project.id}`}>
-      <div className="project-card__top">
-        <span className="project-card__icon" aria-hidden="true">{completed ? <Route size={22} /> : <Folder size={22} />}</span>
+    <tr className={`project-row${completed ? ' project-row--ready' : ''}`} aria-labelledby={`project-title-${project.id}`}>
+      <th scope="row">
+        <div className="project-row__identity">
+          <span className="project-row__icon" aria-hidden="true">{completed ? <Route size={18} /> : <Folder size={18} />}</span>
+          <div>
+            <h2 id={`project-title-${project.id}`} title={project.name}>{project.name}</h2>
+            <p className="project-row__domain" title={domain || 'Your assessment will define your roadmap.'}>{domain || 'Domain not set yet'}</p>
+          </div>
+        </div>
+      </th>
+      <td>
         <span className={`project-status${completed ? ' project-status--ready' : ''}`}>
           {completed ? <CheckCircle2 size={13} aria-hidden="true" /> : <span className="project-status__dot" aria-hidden="true" />}
-          {completed ? 'Roadmap ready' : answeredCount > 0 ? 'Assessment in progress' : 'Assessment pending'}
+          {completed ? roadmap?.isComplete ? 'Roadmap completed' : 'Roadmap ready' : answeredCount > 0 ? 'Assessment in progress' : 'Assessment pending'}
         </span>
-      </div>
-      <h2 id={`project-title-${project.id}`}>{project.name}</h2>
-      <p className={`project-card__domain${domain ? '' : ' project-card__domain--pending'}`}>{domain || 'Your assessment will define your roadmap.'}</p>
-
-      {completed ? (
-        <dl className="project-placement">
-          <div><dt>Current stage</dt><dd>{result?.stage || 'Not assigned'}</dd></div>
-          <div><dt>Level</dt><dd>{result?.level ?? 'Not assigned'}</dd></div>
-        </dl>
-      ) : (
-        <div className="project-draft">
-          <div><span>Assessment progress</span><strong>{answeredCount} of 7</strong></div>
-          <div className="project-draft__track" role="progressbar" aria-label={`Questions answered for ${project.name}`} aria-valuemin={0} aria-valuemax={7} aria-valuenow={answeredCount}>
-            <span style={{ width: `${answeredCount / 7 * 100}%` }} />
+      </td>
+      <td>
+        {completed ? (
+          <div className="project-row__placement">
+            <strong>{roadmap?.isComplete ? 'All stages covered' : `${roadmap?.stages[roadmap.currentStageIndex].name || 'Discover'} · Level ${roadmap?.currentLevel || 1}`}</strong>
+            <span>{roadmap?.completedCount || 0} / 75 completed{roadmap?.creditedCount ? ` · ${roadmap.creditedCount} credited` : ''}</span>
           </div>
-          <p>{answeredCount > 0 ? 'Pick up where you left off.' : 'Seven questions to map your next steps.'}</p>
+        ) : (
+          <div className="project-draft">
+            <span><strong>{answeredCount}</strong> of {ASSESSMENT_QUESTION_COUNT} answered</span>
+            <div className="project-draft__track" role="progressbar" aria-label={`Questions answered for ${project.name}`} aria-valuemin={0} aria-valuemax={ASSESSMENT_QUESTION_COUNT} aria-valuenow={answeredCount}>
+              <span style={{ width: `${answeredCount / ASSESSMENT_QUESTION_COUNT * 100}%` }} />
+            </div>
+          </div>
+        )}
+      </td>
+      <td><span className="project-row__creator" title={project.created_by || 'You'}>{project.created_by || 'You'}</span></td>
+      <td className="project-row__date">{formatDate(project.created_at)}</td>
+      <td>
+        <div className="project-row__actions">
+          <Link className="projects-button project-row__open" to={`/roadmap/${project.id}${completed ? '' : '/assessment'}`} aria-label={`${action}: ${project.name}`}>
+            {answeredCount > 0 && !completed ? 'Continue' : action}<ArrowRight size={14} aria-hidden="true" />
+          </Link>
+          <button type="button" className="project-row__action" onClick={() => onEdit(project)} aria-label={`Edit ${project.name}`} title="Edit name"><Pencil size={15} aria-hidden="true" /></button>
+          <button type="button" className="project-row__action project-row__action--danger" onClick={() => onDelete(project)} aria-label={`Delete ${project.name}`} title="Delete project"><Trash2 size={15} aria-hidden="true" /></button>
         </div>
-      )}
-
-      <dl className="project-card__meta">
-        <div><dt><UserRound size={14} aria-hidden="true" />Created by</dt><dd>{project.created_by || 'You'}</dd></div>
-        <div><dt><CalendarDays size={14} aria-hidden="true" />Created</dt><dd>{formatDate(project.created_at)}</dd></div>
-      </dl>
-      <footer className="project-card__footer">
-        <Link className="projects-button project-card__open" to={`/roadmap/${project.id}${completed ? '' : '/assessment'}`} aria-label={`${action}: ${project.name}`}>
-          {action}<ArrowRight size={16} aria-hidden="true" />
-        </Link>
-        <div className="project-card__actions">
-          <button type="button" className="projects-text-button" onClick={() => onEdit(project)} aria-label={`Edit ${project.name}`}><Pencil size={14} aria-hidden="true" />Edit name</button>
-          <button type="button" className="projects-text-button projects-text-button--danger" onClick={() => onDelete(project)} aria-label={`Delete ${project.name}`}><Trash2 size={14} aria-hidden="true" />Delete</button>
-        </div>
-      </footer>
-    </article>
+      </td>
+    </tr>
   );
 }
 
@@ -126,7 +131,7 @@ function ProjectDialog({ project, mode, onClose, onSave, focusAfterClose }) {
         <h2 id="project-dialog-title">{isDelete ? 'Delete project?' : 'Edit project name'}</h2>
         <p id="project-dialog-description">{isDelete ? <>This will permanently delete <strong>{project.name}</strong>, its assessment, and its roadmap. This cannot be undone.</> : 'Update the name shown on this project and its roadmap. Your assessment stays the same.'}</p>
         <form onSubmit={submit} noValidate aria-busy={saving}>
-          {!isDelete && <div className="projects-field"><label htmlFor="edit-project-name">Project name</label><input ref={inputRef} id="edit-project-name" value={name} onChange={(event) => { setName(event.target.value); setError(''); }} maxLength={100} required disabled={saving} autoComplete="off" aria-invalid={Boolean(error)} aria-describedby={error ? 'project-dialog-error' : undefined} /></div>}
+          {!isDelete && <div className="projects-field"><label htmlFor="edit-project-name">Project name<span className="required-mark" aria-hidden="true" /></label><input ref={inputRef} id="edit-project-name" value={name} onChange={(event) => { setName(event.target.value); setError(''); }} maxLength={100} required disabled={saving} autoComplete="off" aria-invalid={Boolean(error)} aria-describedby={error ? 'project-dialog-error' : undefined} /></div>}
           {error && <p id="project-dialog-error" className="projects-feedback projects-feedback--error" role="alert">{error}</p>}
           <div className="projects-dialog__actions">
             <button ref={cancelRef} type="button" className="projects-button" onClick={dismiss} disabled={saving}>Cancel</button>
@@ -140,6 +145,8 @@ function ProjectDialog({ project, mode, onClose, onSave, focusAfterClose }) {
 
 export function ProjectsPage() {
   const { projects, renameProject, deleteProject } = useProjects();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const view = ['joined', 'invitations'].includes(searchParams.get('view')) ? searchParams.get('view') : 'my';
   const [page, setPage] = useState(1);
   const [dialog, setDialog] = useState(null);
   const [notice, setNotice] = useState('');
@@ -169,14 +176,26 @@ export function ProjectsPage() {
   return (
     <div className="projects-page">
       <header className="projects-header">
-        <div><span className="projects-eyebrow"><Route size={15} aria-hidden="true" />Build your next chapter</span><h1>Project roadmaps</h1><p>Every project has its own path. Create a project, take its assessment, and find your next steps.</p></div>
+        <div><span className="projects-eyebrow"><Route size={15} aria-hidden="true" />Build your next chapter</span><h1>Roadmap</h1><p>One idea, one journey. Create a roadmap, unlock missions, and build with your team.</p></div>
         <Link to="/roadmap/new" className="projects-button projects-button--primary"><Plus size={18} aria-hidden="true" />New project</Link>
       </header>
 
-      <div className="projects-section-heading"><h2 ref={headingRef} tabIndex={-1}>My projects <span>{projects.length}</span></h2><p>One assessment. One roadmap. Each project.</p></div>
+      <nav className="projects-view-tabs" aria-label="Roadmap collection">
+        {[['my', 'My roadmaps'], ['joined', 'Joined roadmaps'], ['invitations', 'Invitations']].map(([value, label]) => <button type="button" key={value} aria-pressed={view === value} onClick={() => { setSearchParams(value === 'my' ? {} : { view: value }); setPage(1); }}>{label}{value === 'my' && <span>{projects.length}</span>}</button>)}
+      </nav>
+      {view === 'joined' ? <JoinedRoadmaps /> : view === 'invitations' ? <RoadmapInvitations /> : <>
+      <div className="projects-section-heading"><h2 ref={headingRef} tabIndex={-1}>My projects <span>{projects.length}</span></h2><p>Your missions. Your momentum.</p></div>
       {notice && <p className="projects-feedback" role="status">{notice}</p>}
       {projects.length ? <>
-        <div className="projects-grid">{visibleProjects.map((project) => <ProjectCard key={project.id} project={project} onEdit={(item) => openDialog(item, 'edit')} onDelete={(item) => openDialog(item, 'delete')} />)}</div>
+        <div className="projects-list" role="region" aria-label="Project list — scroll horizontally for all details and actions" tabIndex={0}>
+          <table className="projects-table">
+            <caption className="projects-sr-only">Your projects, assessment progress, and available actions</caption>
+            <colgroup><col /><col className="projects-table__status" /><col className="projects-table__progress" /><col className="projects-table__creator" /><col className="projects-table__date" /><col className="projects-table__actions" /></colgroup>
+            <thead><tr><th scope="col">Project</th><th scope="col">Status</th><th scope="col">Progress</th><th scope="col">Created by</th><th scope="col">Created</th><th scope="col">Actions</th></tr></thead>
+            <tbody>{visibleProjects.map((project) => <ProjectRow key={project.id} project={project} onEdit={(item) => openDialog(item, 'edit')} onDelete={(item) => openDialog(item, 'delete')} />)}</tbody>
+          </table>
+        </div>
+        <p className="projects-scroll-hint">Scroll across to see all project details and actions.</p>
         <nav className="projects-pagination" aria-label="Projects pagination">
           <p role="status">Showing <strong>{start + 1}–{Math.min(start + PAGE_SIZE, projects.length)}</strong> of <strong>{projects.length}</strong> projects</p>
           <div><button type="button" className="projects-button projects-pagination__arrow" aria-label="Previous page" disabled={currentPage <= 1} onClick={() => changePage(currentPage - 1)}><ChevronLeft size={18} aria-hidden="true" /></button><span aria-current="page">Page {currentPage} of {totalPages}</span><button type="button" className="projects-button projects-pagination__arrow" aria-label="Next page" disabled={currentPage >= totalPages} onClick={() => changePage(currentPage + 1)}><ChevronRight size={18} aria-hidden="true" /></button></div>
@@ -185,10 +204,11 @@ export function ProjectsPage() {
         <span className="projects-empty__icon" aria-hidden="true"><FolderPlus size={36} /></span>
         <span className="projects-eyebrow">Your first project starts here</span>
         <h2 id="projects-empty-title">An idea deserves a roadmap.</h2>
-        <p>Give your project a name, then answer seven questions to create its roadmap. Add more projects whenever inspiration strikes.</p>
+        <p>Give your project a name, then answer eight questions to create its roadmap. Add more projects whenever inspiration strikes.</p>
         <Link to="/roadmap/new" className="projects-button projects-button--primary"><Plus size={17} aria-hidden="true" />Create your first project</Link>
         <div className="projects-empty__steps" aria-hidden="true"><span>01 &nbsp; Name your project</span><ChevronRight size={13} /><span>02 &nbsp; Take the assessment</span><ChevronRight size={13} /><span>03 &nbsp; Explore your roadmap</span></div>
       </section>}
+      </>}
       {dialog && <ProjectDialog key={`${dialog.mode}-${dialog.project.id}`} project={dialog.project} mode={dialog.mode} onClose={() => setDialog(null)} onSave={saveChange} focusAfterClose={headingRef} />}
     </div>
   );

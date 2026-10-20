@@ -1,4 +1,159 @@
-export const DOMAIN_OPTIONS = [
+export const ASSESSMENT_VERSION = 2;
+
+export const ASSESSMENT_QUESTIONS = Object.freeze([
+  {
+    key: 'q1',
+    title: 'Which problem area best describes your startup?',
+    options: [
+      'Healthcare & MedTech',
+      'Education',
+      'Finance & FinTech',
+      'Cybersecurity',
+      'Mobility & Logistics',
+      'Agriculture & FoodTech',
+      'Climate & Sustainability',
+      'Smart Cities & Infrastructure',
+      'Women Safety & Social Impact',
+      'Media & CreatorTech',
+      'DefenceTech',
+      'LegalTech',
+      'Consumer Products',
+      'Manufacturing & Industry',
+      'Retail & Commerce',
+      'Other / Not listed',
+      'Not sure yet',
+    ],
+  },
+  {
+    key: 'q2',
+    title: 'Who are your primary target users?',
+    options: [
+      'Individual consumers',
+      'Students',
+      'Startups and founders',
+      'Small and medium businesses',
+      'Large enterprises',
+      'Healthcare providers',
+      'Farmers',
+      'Government organizations',
+      'Developers and technical teams',
+      'Industrial organizations',
+      'Multiple user groups',
+      'Not sure yet',
+    ],
+  },
+  {
+    key: 'q3',
+    title: 'What type of solution are you developing?',
+    options: [
+      'Web application',
+      'Mobile application',
+      'AI-powered software',
+      'SaaS platform',
+      'Hardware or electronic device',
+      'Robotics or autonomous system',
+      'IoT solution',
+      'Marketplace',
+      'Physical consumer product',
+      'Research-based solution',
+      'Combination of software and hardware',
+      'Other / Not listed',
+    ],
+  },
+  {
+    key: 'q4',
+    title: 'Which option best describes your startup today?',
+    options: [
+      'Exploring an idea',
+      'Defining the problem',
+      'Validating the problem',
+      'Validating the proposed solution',
+      'Building a prototype',
+      'Developing an MVP',
+      'Testing with users',
+      'Launching the product',
+      'Acquiring customers',
+      'Generating revenue',
+      'Scaling an established product',
+      'Not sure yet',
+    ],
+  },
+  {
+    key: 'q5',
+    title: 'What is your current level of problem validation?',
+    options: [
+      'Not researched',
+      'Assumptions only',
+      'Desk research completed',
+      'Interviews completed',
+      'Surveys completed',
+      'Problem validated through user interviews and surveys',
+      'Prototype tested with target users',
+      'Repeat usage or strong demand observed',
+      'Not sure yet',
+    ],
+  },
+  {
+    key: 'q6',
+    title: 'What have you built or tested so far?',
+    options: [
+      'Concept only',
+      'Product design or specification',
+      'Proof of concept',
+      'Prototype',
+      'Minimum Viable Product (MVP)',
+      'Product being tested by users',
+      'Product in active use',
+      'Established product being improved or scaled',
+      'Not sure yet',
+    ],
+  },
+  {
+    key: 'q7',
+    title: 'Which option best describes your customer and business progress?',
+    options: [
+      'No target customers identified',
+      'Target customers identified',
+      'Potential users contacted',
+      'User interviews completed',
+      'Interested users identified',
+      'Waitlist created',
+      'Pilot users acquired',
+      'Active users acquired',
+      'Paying customers acquired',
+      'Revenue generated',
+      'Repeatable customer acquisition achieved',
+      'Established business being scaled',
+      'Not sure yet',
+    ],
+  },
+  {
+    key: 'q8',
+    title: 'What is your biggest current blocker?',
+    options: [
+      'Problem clarity',
+      'Technical feasibility',
+      'Product development',
+      'Customer validation',
+      'Business model',
+      'Team formation',
+      'Funding',
+      'Marketing and customer acquisition',
+      'Go-to-market strategy',
+      'Legal or regulatory compliance',
+      'Product-market fit',
+      'No major blocker',
+      'Not sure yet',
+    ],
+  },
+].map((question) => Object.freeze({ ...question, options: Object.freeze(question.options) })));
+
+export const ASSESSMENT_QUESTION_COUNT = ASSESSMENT_QUESTIONS.length;
+export const DOMAIN_OPTIONS = ASSESSMENT_QUESTIONS[0].options;
+
+// Completed assessments keep the domain labels selected in earlier versions.
+export const SUPPORTED_DOMAIN_OPTIONS = Object.freeze([...new Set([
+  ...DOMAIN_OPTIONS,
   'Artificial Intelligence & Machine Learning',
   'Healthcare & MedTech',
   'Smart Education',
@@ -11,151 +166,62 @@ export const DOMAIN_OPTIONS = [
   'Smart Cities & Infrastructure',
   'Media, Entertainment & Creator Technology',
   'Space, Robotics & Advanced Technology',
-];
-
-export const STAGE_OPTIONS = [
-  'I have only identified a problem',
-  'I have an idea/concept',
-  'I have researched the problem and potential users',
-  'I have validated the problem with real users',
-  'I have built a prototype/MVP',
-  'I have launched the product',
-  'I have active users',
-  'I have paying customers/revenue',
-  'I am actively scaling the product',
-];
-
-export const EVIDENCE_OPTIONS = [
-  { key: 'problem_statement', label: 'Problem statement documented' },
-  { key: 'user_interviews', label: 'User interviews completed' },
-  { key: 'market_research', label: 'Market/competitor research completed' },
-  { key: 'customer_validation', label: 'Customer/user validation' },
-  { key: 'prototype', label: 'Prototype' },
-  { key: 'working_mvp', label: 'Working MVP' },
-  { key: 'live_product', label: 'Live product' },
-  { key: 'active_users', label: 'Active users' },
-  { key: 'paying_customers', label: 'Paying customers' },
-  { key: 'revenue', label: 'Revenue' },
-  { key: 'none_yet', label: 'None yet' },
-];
-
-export const EXECUTION_OPTIONS = [
-  'I need step-by-step guidance',
-  'I can do basic tasks with help',
-  'I can complete most tasks independently',
-  'I can handle complex tasks independently',
-  'I can lead execution and make technical/product decisions',
-];
-
-export const VALIDATION_OPTIONS = [
-  'None yet',
-  'Talked to potential users',
-  'Users have tested my solution',
-  'Regular active users',
-  'Paying customers',
-  'Consistent revenue/growth',
-];
-
-export const MATURITY_OPTIONS = [
-  'No product yet',
-  'Concept/wireframe',
-  'Prototype/demo',
-  'Partially working product',
-  'Working MVP',
-  'Production-ready product',
-  'Production product being continuously improved with real users',
-];
-
-export const COMPLETED_OPTIONS = [
-  'Only identified the problem',
-  'Researched the problem and users',
-  'Validated problem/solution with real users',
-  'Built a prototype',
-  'Built a working MVP',
-  'Launched a working product',
-  'Have active users',
-  'Have paying customers/revenue',
-  'Actively scaling',
-];
-
-const QUESTION_OPTIONS = {
-  q1: DOMAIN_OPTIONS,
-  q2: STAGE_OPTIONS,
-  q4: EXECUTION_OPTIONS,
-  q5: VALIDATION_OPTIONS,
-  q6: MATURITY_OPTIONS,
-  q7: COMPLETED_OPTIONS,
-};
+])]);
 
 const VALIDATION_MESSAGES = [
-  'Please select a domain.',
-  'Please select your project stage.',
-  'Please select at least one evidence item, or choose None yet.',
-  'Please select your execution capability.',
-  'Please select your validation level.',
-  'Please select your product maturity.',
-  'Please select the work you have completed.',
+  'Please select a problem area.',
+  'Please select your primary target users.',
+  'Please select your solution type.',
+  'Please select your startup stage.',
+  'Please select your problem validation level.',
+  'Please select what you have built or tested.',
+  'Please select your customer and business progress.',
+  'Please select your biggest current blocker.',
 ];
 
-const EVIDENCE_KEYS = new Set(EVIDENCE_OPTIONS.map(({ key }) => key));
-
 export function createEmptyAnswers() {
-  return { q1: null, q2: null, q3: [], q4: null, q5: null, q6: null, q7: null };
+  return Object.fromEntries(ASSESSMENT_QUESTIONS.map(({ key }) => [key, null]));
 }
 
 export function validateAssessmentStep(answers, step) {
-  if (!Number.isInteger(step) || step < 1 || step > 7) return 'Invalid assessment step.';
-  const answer = answers?.[`q${step}`];
-  const valid = step === 3
-    ? Array.isArray(answer)
-      && answer.length > 0
-      && answer.every((key) => EVIDENCE_KEYS.has(key))
-      && new Set(answer).size === answer.length
-      && (!answer.includes('none_yet') || answer.length === 1)
-    : Number.isInteger(answer) && answer >= 1 && answer <= QUESTION_OPTIONS[`q${step}`].length;
+  if (!Number.isInteger(step) || step < 1 || step > ASSESSMENT_QUESTION_COUNT) return 'Invalid assessment step.';
+  const question = ASSESSMENT_QUESTIONS[step - 1];
+  const answer = answers?.[question.key];
+  const valid = Number.isInteger(answer) && answer >= 1 && answer <= question.options.length;
   return valid ? '' : VALIDATION_MESSAGES[step - 1];
-}
-
-export function toggleEvidence(current, key) {
-  if (!EVIDENCE_KEYS.has(key)) return current;
-  if (key === 'none_yet') return ['none_yet'];
-  const selected = current.filter((item) => item !== 'none_yet');
-  return selected.includes(key)
-    ? selected.filter((item) => item !== key)
-    : [...selected, key];
 }
 
 // Illustrative values approved for the frontend preview; these are not a scoring rule.
 export const ILLUSTRATIVE_PLACEMENT = Object.freeze({ stage: 'Launch', level: 5 });
 
-// Domain and guild follow the selected answer. Stage and level use the preview above.
+// New questions do not introduce an unapproved scoring or eligibility rule.
 export function evaluateAssessment(answers) {
-  for (let step = 1; step <= 7; step += 1) {
+  for (let step = 1; step <= ASSESSMENT_QUESTION_COUNT; step += 1) {
     const error = validateAssessmentStep(answers, step);
     if (error) throw new Error(error);
   }
 
   const domain = DOMAIN_OPTIONS[answers.q1 - 1];
-
+  const hasDefinedDomain = !['Other / Not listed', 'Not sure yet'].includes(domain);
   return {
     domain,
     ...ILLUSTRATIVE_PLACEMENT,
-    guild: `${domain} Guild`,
+    guild: hasDefinedDomain ? `${domain} Guild` : null,
     placement_status: 'mock',
     isMock: true,
     version: 3,
+    assessment_version: ASSESSMENT_VERSION,
   };
 }
 
 export function normalizeDraftAnswers(value) {
   const answers = createEmptyAnswers();
-  if (!value || typeof value !== 'object') return answers;
-  for (const key of Object.keys(QUESTION_OPTIONS)) {
-    if (!validateAssessmentStep(value, Number(key.slice(1)))) answers[key] = value[key];
-  }
-  if (Array.isArray(value.q3)) {
-    const evidence = [...new Set(value.q3.filter((key) => EVIDENCE_KEYS.has(key)))];
-    answers.q3 = evidence.length > 1 ? evidence.filter((key) => key !== 'none_yet') : evidence;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return answers;
+  for (let step = 1; step <= ASSESSMENT_QUESTION_COUNT; step += 1) {
+    if (!validateAssessmentStep(value, step)) {
+      const { key } = ASSESSMENT_QUESTIONS[step - 1];
+      answers[key] = value[key];
+    }
   }
   return answers;
 }

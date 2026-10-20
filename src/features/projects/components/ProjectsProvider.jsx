@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useReducer } from 'react';
 import { useAuth } from '../../../hooks/use_auth.js';
 import { ProjectsContext } from '../hooks/projects_context.js';
 import { projectStore } from '../services/project_store.js';
+import { roadmapStore } from '../../roadmap/services/roadmap_store.js';
 
 function AccountProjects({ children, store, userId }) {
   const [revision, refresh] = useReducer((value) => value + 1, 0);
@@ -9,15 +10,21 @@ function AccountProjects({ children, store, userId }) {
   // auth pages must retain their pending navigation when sign-in completes.
   const { projects } = useMemo(() => ({
     revision,
-    projects: userId ? store.listProjects(userId) : [],
+    projects: userId ? store.listProjects(userId).map((project) => {
+      if (!project.assessment_completed) return project;
+      try { return { ...project, roadmap_snapshot: roadmapStore.read(project.id, userId, userId) }; }
+      catch { return project; }
+    }) : [],
   }), [store, userId, revision]);
 
   useEffect(() => {
     window.addEventListener('storage', refresh);
     window.addEventListener('focus', refresh);
+    window.addEventListener('labx:roadmap-change', refresh);
     return () => {
       window.removeEventListener('storage', refresh);
       window.removeEventListener('focus', refresh);
+      window.removeEventListener('labx:roadmap-change', refresh);
     };
   }, [refresh]);
 
@@ -33,9 +40,10 @@ function AccountProjects({ children, store, userId }) {
   const deleteProject = useCallback((id) => mutate('deleteProject', id), [mutate]);
   const saveDraft = useCallback((id, draft) => mutate('saveDraft', id, draft), [mutate]);
   const completeProject = useCallback((id, answers) => mutate('completeProject', id, answers), [mutate]);
+  const updateAssessmentChoice = useCallback((id, questionKey, choice, expectedChoice) => mutate('updateAssessmentChoice', id, questionKey, choice, expectedChoice), [mutate]);
   const value = useMemo(() => ({
-    projects, createProject, renameProject, deleteProject, saveDraft, completeProject,
-  }), [projects, createProject, renameProject, deleteProject, saveDraft, completeProject]);
+    projects, createProject, renameProject, deleteProject, saveDraft, completeProject, updateAssessmentChoice,
+  }), [projects, createProject, renameProject, deleteProject, saveDraft, completeProject, updateAssessmentChoice]);
 
   return <ProjectsContext.Provider value={value}>{children}</ProjectsContext.Provider>;
 }

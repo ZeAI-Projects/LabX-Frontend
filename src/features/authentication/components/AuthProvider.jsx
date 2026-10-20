@@ -39,9 +39,34 @@ export function AuthProvider({ children, store = mockAuth }) {
     return result;
   }, [store]);
 
+  const requestRegistration = useCallback((email, password, fullName, options) =>
+    store.requestRegistration(email, password, fullName, options), [store]);
+  const resendRegistration = useCallback((email) => store.resendRegistration(email), [store]);
+  const verifyRegistration = useCallback(async (email, code) => {
+    const result = await store.verifyRegistration(email, code);
+    setUser(result.user);
+    return result;
+  }, [store]);
+  const completeRoleOnboarding = useCallback((details) => {
+    try {
+      const updatedUser = store.completeRoleOnboarding(details, user?.id);
+      setUser(updatedUser);
+      return updatedUser;
+    } catch (error) {
+      setUser(store.getUser());
+      throw error;
+    }
+  }, [store, user]);
+
   const logout = useCallback(() => {
     store.logout();
     setUser(null);
+  }, [store]);
+
+  const refreshUser = useCallback(() => {
+    const current = store.getUser();
+    setUser(current);
+    return current;
   }, [store]);
 
   const completeAssessment = useCallback((result, answers) => {
@@ -67,8 +92,8 @@ export function AuthProvider({ children, store = mockAuth }) {
   }, [store, user]);
 
   const requestPasswordReset = useCallback((email) => store.requestPasswordReset(email), [store]);
-  const resetPassword = useCallback(async (token, password) => {
-    const result = await store.resetPassword(token, password);
+  const resetPassword = useCallback(async (email, code, password) => {
+    const result = await store.resetPassword(email, code, password);
     setUser(store.getUser());
     return result;
   }, [store]);
@@ -79,17 +104,23 @@ export function AuthProvider({ children, store = mockAuth }) {
     isAuthenticated: Boolean(user),
     isFounder: user?.role === 'founder',
     isMentor: user?.role === 'mentor',
+    isInvestor: user?.role === 'investor',
     isAdmin: false,
     assessmentCompleted: Boolean(user?.assessment_completed),
     assessmentSkipped: Boolean(user?.assessment_skipped),
     login,
     register,
+    requestRegistration,
+    resendRegistration,
+    verifyRegistration,
+    completeRoleOnboarding,
     logout,
+    refreshUser,
     completeAssessment,
     skipAssessment,
     requestPasswordReset,
     resetPassword,
-  }), [user, login, register, logout, completeAssessment, skipAssessment, requestPasswordReset, resetPassword]);
+  }), [user, login, register, requestRegistration, resendRegistration, verifyRegistration, completeRoleOnboarding, logout, refreshUser, completeAssessment, skipAssessment, requestPasswordReset, resetPassword]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

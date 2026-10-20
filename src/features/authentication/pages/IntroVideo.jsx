@@ -5,11 +5,11 @@ export const IntroVideo = () => {
   const navigate = useNavigate();
   const [reduceMotion] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
-  const continueToRegister = () => {
-    navigate('/register', { replace: true });
+  const continueToWelcome = () => {
+    navigate('/', { replace: true });
   };
 
-  if (reduceMotion) return <Navigate to="/register" replace />;
+  if (reduceMotion) return <Navigate to="/" replace />;
 
   return (
     <main
@@ -28,16 +28,16 @@ export const IntroVideo = () => {
         autoPlay
         muted
         playsInline
-        onEnded={continueToRegister}
-        onError={continueToRegister}
+        onEnded={continueToWelcome}
+        onError={continueToWelcome}
         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
       >
-        <source src="/videos/labx-intro.mp4" type="video/mp4" onError={continueToRegister} />
+        <source src="/videos/labx-intro.mp4" type="video/mp4" onError={continueToWelcome} />
       </video>
 
       <button
         type="button"
-        onClick={continueToRegister}
+        onClick={continueToWelcome}
         aria-label="Skip welcome animation"
         style={{
           position: 'absolute',
