@@ -11,6 +11,79 @@ function memoryStorage() {
   return { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: (key) => values.delete(key) }
 }
 
+test('saved broadcasts persist per account independently of registration, reminders and participation', () => {
+  const storage = memoryStorage()
+  let now = OCTOBER_14
+  const store = createEventStore({ storage, now: () => now })
+  const original = store.setSaved(founder, 'customer-workshop', true)
+  now += 1000
+  assert.deepEqual(store.setSaved(founder, 'customer-workshop', true), original, 'Saving twice keeps one bookmark and its timestamp')
+  assert.deepEqual(store.read(founder).registrations, {})
+  assert.deepEqual(store.read(founder).outcomes, {})
+  const reloaded = createEventStore({ storage, now: () => now })
+  assert.deepEqual(reloaded.read(founder).savedEvents, { 'customer-workshop': original })
+  assert.deepEqual(reloaded.read(mentor).savedEvents, {})
+  reloaded.register(founder, 'customer-workshop')
+  const registration = reloaded.setReminder(founder, 'customer-workshop', true)
+  assert.equal(reloaded.setSaved(founder, 'customer-workshop', false), null)
+  assert.equal(reloaded.setSaved(founder, 'customer-workshop', false), null)
+  assert.deepEqual(reloaded.read(founder).savedEvents, {})
+  assert.deepEqual(reloaded.read(founder).registrations['customer-workshop'], registration, 'Removing a bookmark does not cancel or change registration')
+})
+
+test('Saved includes past, full, closed and role-ineligible events and supports discovery filters', () => {
+  const store = createEventStore({ storage: memoryStorage(), now: () => OCTOBER_14 })
+  const ids = ['past-pitch-workshop', 'climate-sprint', 'showcase-closed', 'mentor-circle']
+  for (const id of ids) store.setSaved(founder, id, true)
+  const saved = store.read(founder)
+  const selected = selectEvents(MOCK_EVENTS, { view: 'saved' }, saved.registrations, OCTOBER_14, founder, saved.outcomes, saved.savedEvents)
+  assert.deepEqual(new Set(selected.map(({ id }) => id)), new Set(ids))
+  assert.deepEqual(selectEvents(MOCK_EVENTS, { view: 'saved', category: 'Workshop' }, {}, OCTOBER_14, founder, {}, saved.savedEvents).map(({ id }) => id), ['past-pitch-workshop'])
+  assert.deepEqual(selectEvents(MOCK_EVENTS, { view: 'saved', query: 'Climate' }, {}, OCTOBER_14, founder, {}, saved.savedEvents).map(({ id }) => id), ['climate-sprint'])
+  assert.deepEqual(selectEvents(MOCK_EVENTS, { view: 'my' }, saved.registrations, OCTOBER_14), [])
+  assert.throws(() => store.setSaved(founder, 'unknown', true), /unavailable/)
+  assert.throws(() => store.setSaved(founder, 'community-transmission', true), /unavailable/)
+  assert.throws(() => store.setSaved(null, 'customer-workshop', true), /Log in/)
+  assert.throws(() => store.setSaved(founder, 'customer-workshop', 'yes'), /whether to save/)
+})
+
+test('corrupt or retired bookmarks never inflate Saved while valid bookmarks survive', () => {
+  const storage = memoryStorage()
+  const savedAt = new Date(OCTOBER_14).toISOString()
+  const valid = { eventId: 'customer-workshop', savedAt }
+  storage.setItem(`${EVENT_STORAGE_KEY}:${founder.id}`, JSON.stringify({ savedEvents: {
+    'customer-workshop': valid,
+    'climate-sprint': { eventId: 'climate-sprint', savedAt: 'invalid' },
+    'mentor-circle': { eventId: 'customer-workshop', savedAt },
+    'residency-opportunity': true,
+    unknown: { eventId: 'unknown', savedAt },
+    'community-transmission': { eventId: 'community-transmission', savedAt },
+  } }))
+  const store = createEventStore({ storage })
+  assert.deepEqual(store.read(founder).savedEvents, { 'customer-workshop': valid })
+  assert.ok(MOCK_EVENTS.every(({ type }) => type === 'event'), 'Transmissions are removed from the broadcast catalogue')
+})
+
+test('failed bookmark writes report errors without claiming success or losing existing bookmarks', () => {
+  const backing = memoryStorage()
+  let failWrites = false
+  const storage = { ...backing, setItem: (key, value) => {
+    if (failWrites) throw new Error('Storage is full')
+    backing.setItem(key, value)
+  } }
+  const store = createEventStore({ storage, now: () => OCTOBER_14 })
+  store.setSaved(founder, 'customer-workshop', true)
+  const before = store.read(founder)
+  failWrites = true
+  assert.throws(() => store.setSaved(founder, 'climate-sprint', true), /Unable to save/)
+  assert.throws(() => store.setSaved(founder, 'customer-workshop', false), /Unable to save/)
+  assert.deepEqual(store.read(founder), before)
+  assert.deepEqual(createEventStore({ storage: backing }).read(founder), before)
+  failWrites = false
+  store.setSaved(founder, 'climate-sprint', true)
+  assert.equal(Object.keys(store.read(founder).savedEvents).length, 2)
+})
+
 test('registrations and reminders persist across reloads and remain separate for each account', () => {
   const storage = memoryStorage()
   const store = createEventStore({ storage, now: () => OCTOBER_14 })
@@ -41,7 +114,6 @@ test('both UI availability and registration action reject past, closed, full and
     [founder, 'climate-sprint', 'Fully booked'],
     [founder, 'mentor-circle', 'Not eligible'],
     [mentor, 'impact-grant', 'Not eligible'],
-    [founder, 'community-transmission', 'Information only'],
   ]
   for (const [user, id, label] of rejected) {
     assert.deepEqual(getRegistrationAvailability(byId(id), user, null, OCTOBER_14), { allowed: false, label })
@@ -66,7 +138,7 @@ test('search, category, format, broadcast and date sort work together', () => {
   assert.equal(selectEvents(MOCK_EVENTS, { query: 'unlikely unmatched text' }, {}, OCTOBER_14).length, 0)
   const descending = selectEvents(MOCK_EVENTS, { sort: 'latest' }, {}, OCTOBER_14)
   assert.ok(descending.every((event, index) => index === 0 || Date.parse(descending[index - 1].startsAt) >= Date.parse(event.startsAt)))
-  assert.deepEqual(selectEvents(MOCK_EVENTS, { broadcast: 'announcement' }, {}, OCTOBER_14).map((event) => event.id), ['community-transmission'])
+  assert.deepEqual(selectEvents(MOCK_EVENTS, { broadcast: 'announcement' }, {}, OCTOBER_14), [])
   assert.deepEqual(selectEvents(MOCK_EVENTS, { view: 'past' }, {}, OCTOBER_14).map((event) => event.id), ['past-pitch-workshop'])
 })
 
@@ -148,11 +220,12 @@ test('corrupt saved data is ignored without losing valid past registrations or r
       registrations: { 'past-pitch-workshop': { ...pastRegistration, method: 'internal' } },
       reports: { 'past-pitch-workshop': validReport },
       outcomes: {},
+      savedEvents: {},
     })
   }
   for (const value of [null, [], 'invalid', { registrations: [], reports: 'invalid' }]) {
     storage.setItem(key, JSON.stringify(value))
-    assert.deepEqual(store.read(founder), { registrations: {}, reports: {}, outcomes: {} })
+    assert.deepEqual(store.read(founder), { registrations: {}, reports: {}, outcomes: {}, savedEvents: {} })
   }
 })
 

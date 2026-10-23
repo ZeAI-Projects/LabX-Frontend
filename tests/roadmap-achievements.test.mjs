@@ -45,6 +45,18 @@ function fixture({ storage = memoryStorage(), onApproved, selectedProject = proj
     storage,
     read: () => store.read(selectedProject.id, selectedProject.owner_id, currentUser?.id),
     submit: (missionId, payload = valid()) => store.submitMission(selectedProject.id, selectedProject.owner_id, missionId, payload, currentUser?.id),
+    approveMember: (missionId) => {
+      currentUser = { ...owner, id: selectedProject.owner_id }
+      const args = [selectedProject.id, selectedProject.owner_id, missionId]
+      const latest = store.read(selectedProject.id, selectedProject.owner_id, currentUser.id).missionWorkflowsById[missionId].versions.at(-1)
+      const target = { version: latest.version, submissionId: latest.id }
+      store.reviewSubmission(...args, { ...target, decision: 'approved' }, currentUser.id)
+      const uploaded = store.beginApprovedUpload(...args, target, currentUser.id)
+      const jobId = uploaded.missionWorkflowsById[missionId].evaluationJobs.at(-1).id
+      for (const action of ['queue', 'evaluate', 'complete_meets']) store.advanceEvaluation(...args, { jobId, action }, currentUser.id)
+      currentUser = member
+      return store.read(selectedProject.id, selectedProject.owner_id, member.id)
+    },
     reload: () => { store = createRoadmapStore(options) },
     onAccess: (callback) => { accessCount = 0; hook = callback },
     revoke: () => { available = false },
@@ -170,8 +182,11 @@ test('collaborator recognition belongs to the submitting founder and requires al
   app.signIn(member)
   app.assign(['discover-l1-m2'])
   app.submit('discover-l1-m2')
+  assert.equal(recognition(achievements, member).completedQuests, 0)
+  app.approveMember('discover-l1-m2')
   app.assign(['discover-l1-m3'])
-  const visible = app.submit('discover-l1-m3')
+  app.submit('discover-l1-m3')
+  const visible = app.approveMember('discover-l1-m3')
   assert.deepEqual(Object.keys(visible.submissionsByMilestone), ['discover-l1-m3'])
   assert.equal(recognition(achievements, member).completedQuests, 2)
   assert.equal(recognition(achievements, member).completedMilestones, 0)
@@ -179,6 +194,7 @@ test('collaborator recognition belongs to the submitting founder and requires al
   for (const id of ['discover-l2-m1', 'discover-l2-m2', 'discover-l2-m3']) {
     app.assign([id])
     app.submit(id)
+    app.approveMember(id)
   }
   assert.equal(recognition(achievements, member).completedQuests, 5)
   assert.equal(recognition(achievements, member).completedMilestones, 1)

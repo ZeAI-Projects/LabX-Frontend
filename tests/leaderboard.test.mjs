@@ -6,7 +6,7 @@ import { getLeaderboardSnapshot, LEADERBOARD_DOMAINS } from '../src/features/lea
 
 const LEGACY_DOMAIN_OPTIONS = LEADERBOARD_DOMAINS.slice(0, 12).map(domain => domain.name)
 
-const demoUser = { id: 'demo-founder', role: 'founder', full_name: 'Demo Founder', username: 'founder', total_points: 999999, badges_count: 99 }
+const demoUser = { id: 'demo-founder', role: 'founder', full_name: 'Founder', username: 'founder', total_points: 999999, badges_count: 99 }
 const newUser = { id: 'new-founder', role: 'founder', full_name: 'New Founder', username: 'newfounder', total_points: 999999 }
 const project = (owner, domainIndex, overrides = {}) => ({
   id: `project-${domainIndex}`,
@@ -18,11 +18,66 @@ const project = (owner, domainIndex, overrides = {}) => ({
 })
 
 test('leaderboard supports the new problem areas and preserves legacy domain ids', () => {
-  assert.equal(LEADERBOARD_DOMAINS.length, SUPPORTED_DOMAIN_OPTIONS.length)
-  assert.deepEqual(new Set(LEADERBOARD_DOMAINS.map((domain) => domain.name)), new Set(SUPPORTED_DOMAIN_OPTIONS))
-  assert.ok(DOMAIN_OPTIONS.every(name => LEADERBOARD_DOMAINS.some(domain => domain.name === name)))
-  assert.deepEqual(LEADERBOARD_DOMAINS.map((domain) => domain.id), Array.from({ length: LEADERBOARD_DOMAINS.length }, (_, index) => String(index + 1)))
+  const excluded = ['Other / Not listed', 'Not sure yet']
+  const eligible = SUPPORTED_DOMAIN_OPTIONS.filter(name => !excluded.includes(name))
+  assert.equal(LEADERBOARD_DOMAINS.length, eligible.length)
+  assert.deepEqual(new Set(LEADERBOARD_DOMAINS.map((domain) => domain.name)), new Set(eligible))
+  assert.ok(DOMAIN_OPTIONS.filter(name => !excluded.includes(name)).every(name => LEADERBOARD_DOMAINS.some(domain => domain.name === name)))
+  const previousNames = [...LEGACY_DOMAIN_OPTIONS, ...SUPPORTED_DOMAIN_OPTIONS.filter(name => !LEGACY_DOMAIN_OPTIONS.includes(name))]
+  assert.ok(LEADERBOARD_DOMAINS.every(domain => domain.id === String(previousNames.indexOf(domain.name) + 1)))
   assert.ok(LEADERBOARD_DOMAINS.every((domain) => domain.shortName && /^#[a-f0-9]{6}$/i.test(domain.color)))
+})
+
+test('placeholder assessments keep a global rank without creating a domain category or rank', () => {
+  for (const domain of ['Other / Not listed', 'Not sure yet', 'Others / Not Sure Yet']) {
+    const user = { ...newUser, assessment_completed: true, assessment_result: { domain, stage: 'Build', level: 2 } }
+    const snapshot = getLeaderboardSnapshot({ user })
+    assert.ok(snapshot.userStanding.global_rank > 0)
+    assert.equal(snapshot.userStanding.domain_rank, null)
+    assert.equal(snapshot.domainUserStanding, null)
+    assert.deepEqual(snapshot.userStanding.domain_ranks, [])
+    assert.equal(snapshot.domains.some(entry => entry.name === domain), false)
+  }
+})
+
+test('global and domain ranks stay consistent across scopes, ties, multiple projects and search', () => {
+  const projects = [project(demoUser, 9), project(demoUser, 11)]
+  const global = getLeaderboardSnapshot({ user: demoUser, projects })
+  assert.equal(global.userStanding.global_rank, global.userStanding.rank)
+  assert.equal(global.userStanding.domain_rank, 2, '450 points ties Anika in Smart Cities')
+  assert.deepEqual(global.userStanding.domain_ranks.map(({ id, rank }) => [id, rank]), [['10', 2], ['12', 1]])
+  assert.equal(global.userStanding.primary_domain.id, '10')
+  assert.equal(global.domainUserStanding.rank, 2)
+  for (const domainId of ['10', '12']) {
+    const scoped = getLeaderboardSnapshot({ user: demoUser, projects, scope: 'domain', domainId, search: demoUser.full_name })
+    const expected = global.userStanding.domain_ranks.find(entry => entry.id === domainId).rank
+    assert.equal(scoped.userStanding.rank, expected)
+    assert.equal(scoped.userStanding.domain_rank, expected)
+    assert.equal(scoped.userStanding.global_rank, global.userStanding.rank)
+    assert.equal(scoped.globalUserStanding.rank, global.userStanding.rank)
+    assert.equal(scoped.domainUserStanding.rank, expected)
+    assert.deepEqual(scoped.userStanding.domain_ranks, global.userStanding.domain_ranks)
+  }
+  const unjoined = getLeaderboardSnapshot({ user: demoUser, projects, scope: 'domain', domainId: '2' })
+  assert.equal(unjoined.userStanding, null)
+  assert.equal(unjoined.domainUserStanding, null)
+  assert.equal(unjoined.globalUserStanding.rank, global.userStanding.rank)
+})
+
+test('scope metrics aggregate approved points and badges once per founder and survive name filtering', () => {
+  const projects = [project(demoUser, 11), project(demoUser, 11, { id: 'another-project' })]
+  const options = { user: demoUser, projects, scope: 'domain', domainId: '12' }
+  const domain = getLeaderboardSnapshot(options)
+  assert.deepEqual(domain.metrics, { totalFounders: 3, totalPoints: 850, totalBadges: 4, leadingPoints: 450 })
+  assert.deepEqual(getLeaderboardSnapshot({ ...options, search: 'Samira' }).metrics, domain.metrics)
+  const global = getLeaderboardSnapshot({ user: demoUser, projects })
+  assert.equal(global.metrics.totalFounders, 25)
+  assert.equal(global.metrics.totalPoints, global.allRankings.reduce((sum, founder) => sum + founder.total_points, 0))
+  assert.equal(global.metrics.totalBadges, global.allRankings.reduce((sum, founder) => sum + founder.badges_count, 0))
+  assert.equal(global.metrics.leadingPoints, 4800)
+  const emptyDomain = LEADERBOARD_DOMAINS.find(entry => entry.name === 'LegalTech')
+  assert.deepEqual(getLeaderboardSnapshot({ scope: 'domain', domainId: emptyDomain.id }).metrics,
+    { totalFounders: 0, totalPoints: 0, totalBadges: 0, leadingPoints: 0 })
 })
 
 test('new problem areas accept current founders without fabricating other members', () => {
@@ -216,6 +271,8 @@ test('snapshots are deeply immutable and neither mutate nor retain caller data',
   assert.throws(() => { snapshot.rankings.pop() }, TypeError)
   assert.throws(() => { snapshot.userStanding.total_points = 99 }, TypeError)
   assert.throws(() => { snapshot.userStanding.domains[0].name = 'Changed' }, TypeError)
+  assert.throws(() => { snapshot.userStanding.domain_ranks[0].rank = 99 }, TypeError)
+  assert.throws(() => { snapshot.metrics.totalPoints = 99 }, TypeError)
   assert.throws(() => { snapshot.domains[0].color = 'red' }, TypeError)
   assert.throws(() => { LEADERBOARD_DOMAINS[0].id = 'changed' }, TypeError)
   user.full_name = 'Updated Name'

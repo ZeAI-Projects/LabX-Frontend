@@ -1,13 +1,18 @@
+import { lazy, Suspense } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/use_auth.js'
 import { Sidebar } from './Sidebar.jsx'
 import { Navbar } from './Navbar.jsx'
 import { MobileNavigation } from './MobileNavigation.jsx'
+import { ProgressCelebration } from '../common/ProgressCelebration.jsx'
 import './FounderWorlds.css'
 import './labxshell.css'
 
+const JoinRoadmapPopup = lazy(() => import('../../features/roadmap/pages/JoinRoadmapPage.jsx').then(module => ({ default: module.JoinRoadmapPopup })))
+
 const pageTitles = {
   dashboard: 'Dashboard',
+  chats: 'Chats',
   roadmap: 'Roadmap',
   leaderboard: 'Leaderboard',
   guild: 'Guilds',
@@ -20,10 +25,9 @@ const pageTitles = {
 
 export function AppShell({ children }) {
   const { user, logout } = useAuth()
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   const navigate = useNavigate()
   const section = pathname.split('/')[1] || 'dashboard'
-  const isRoadmapMap = /^\/roadmap\/(?!new$)[^/]+$/.test(pathname) || /^\/roadmap\/joined\/[^/]+\/[^/]+$/.test(pathname)
 
   function signOut() {
     logout()
@@ -31,7 +35,7 @@ export function AppShell({ children }) {
   }
 
   return (
-    <div className={`app-layout app-shell${isRoadmapMap ? ' app-shell--roadmap-focus' : ''}`}>
+    <div className="app-layout app-shell">
       <a className="labx-skip-link" href="#app-page-content">Skip to page content</a>
       <Sidebar user={user} onSignOut={signOut} />
       <MobileNavigation user={user} onSignOut={signOut} />
@@ -40,11 +44,13 @@ export function AppShell({ children }) {
         <Navbar
           user={user}
           title={pageTitles[section] || 'LabX'}
-          pageHasHeading={section === 'dashboard' || section === 'roadmap' || section === 'leaderboard'}
+          compact={['dashboard', 'chats', 'roadmap', 'leaderboard'].includes(section)}
           onSignOut={signOut}
         />
         <div id="app-page-content" className="app-shell__page" tabIndex={-1}>{children}</div>
       </main>
+      <ProgressCelebration key={user.id}/>
+      {user.role === 'founder' && section === 'roadmap' && new URLSearchParams(search).get('join') === '1' && <Suspense fallback={null}><JoinRoadmapPopup key={user.id} /></Suspense>}
     </div>
   )
 }

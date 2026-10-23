@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowRight, CheckCircle2, ChevronLeft, ChevronRight, Folder, FolderPlus, Pencil, Plus, Route, Trash2, X } from 'lucide-react';
+import { ArrowRight, CheckCircle2, ChevronLeft, ChevronRight, Folder, FolderPlus, Pencil, Plus, Route, Search, SlidersHorizontal, Trash2, X } from 'lucide-react';
 import { useProjects } from '../hooks/use_projects.js';
-import { ASSESSMENT_QUESTION_COUNT, DOMAIN_OPTIONS, validateAssessmentStep } from '../../assessment/services/mock_assessment.js';
+import { ASSESSMENT_QUESTION_COUNT } from '../../assessment/services/mock_assessment.js';
+import { paginationItems, projectDetails, projectDomains, PROJECT_SORTS, PROJECT_STATUSES, selectProjects, UNSET_DOMAIN } from '../services/project_list.js';
 import { JoinedRoadmaps, RoadmapInvitations } from '../../roadmap/pages/JoinedRoadmaps.jsx';
+import { JoinRoadmapTrigger } from '../../roadmap/components/JoinRoadmapTrigger.jsx';
 import '../components/Projects.css';
 
-const PAGE_SIZE = 10;
+
 const dateFormatter = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
 function formatDate(value) {
@@ -16,12 +18,8 @@ function formatDate(value) {
 
 function ProjectRow({ project, onEdit, onDelete }) {
   const completed = project.assessment_completed;
-  const result = project.assessment_result;
   const roadmap = project.roadmap_snapshot;
-  const answers = project.draft?.answers;
-  const answeredCount = Array.from({ length: ASSESSMENT_QUESTION_COUNT }, (_, index) => index + 1)
-    .filter((step) => !validateAssessmentStep(answers, step)).length;
-  const domain = completed ? result?.domain : DOMAIN_OPTIONS[(answers?.q1 || 0) - 1];
+  const { answeredCount, domain } = projectDetails(project);
   const action = completed ? 'Open roadmap' : answeredCount > 0 ? 'Continue assessment' : 'Start assessment';
 
   return (
@@ -61,7 +59,7 @@ function ProjectRow({ project, onEdit, onDelete }) {
       <td>
         <div className="project-row__actions">
           <Link className="projects-button project-row__open" to={`/roadmap/${project.id}${completed ? '' : '/assessment'}`} aria-label={`${action}: ${project.name}`}>
-            {answeredCount > 0 && !completed ? 'Continue' : action}<ArrowRight size={14} aria-hidden="true" />
+            <span className="project-action-label">{answeredCount > 0 && !completed ? 'Continue' : action}</span><span className="project-action-short" aria-hidden="true">{completed ? 'Open' : answeredCount > 0 ? 'Continue' : 'Start'}</span><ArrowRight size={14} aria-hidden="true" />
           </Link>
           <button type="button" className="project-row__action" onClick={() => onEdit(project)} aria-label={`Edit ${project.name}`} title="Edit name"><Pencil size={15} aria-hidden="true" /></button>
           <button type="button" className="project-row__action project-row__action--danger" onClick={() => onDelete(project)} aria-label={`Delete ${project.name}`} title="Delete project"><Trash2 size={15} aria-hidden="true" /></button>
@@ -147,20 +145,55 @@ export function ProjectsPage() {
   const { projects, renameProject, deleteProject } = useProjects();
   const [searchParams, setSearchParams] = useSearchParams();
   const view = ['joined', 'invitations'].includes(searchParams.get('view')) ? searchParams.get('view') : 'my';
-  const [page, setPage] = useState(1);
   const [dialog, setDialog] = useState(null);
   const [notice, setNotice] = useState('');
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
   const headingRef = useRef(null);
-  const totalPages = Math.max(1, Math.ceil(projects.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const start = (currentPage - 1) * PAGE_SIZE;
-  const visibleProjects = projects.slice(start, start + PAGE_SIZE);
-
-  const changePage = (next) => {
-    setPage(next);
-    headingRef.current?.focus({ preventScroll: true });
-    headingRef.current?.scrollIntoView({ block: 'start', behavior: 'instant' });
+  const query = searchParams.get('q') || '';
+  const status = PROJECT_STATUSES.some(([value]) => value === searchParams.get('status')) ? searchParams.get('status') : '';
+  const domain = searchParams.get('domain') || '';
+  const sort = PROJECT_SORTS.some(([value]) => value === searchParams.get('sort')) ? searchParams.get('sort') : 'updated';
+  const domains = projectDomains(projects);
+  const results = selectProjects(projects, { query, status, domain, sort, page: searchParams.get('page') || 1 });
+  const hasFilters = Boolean(query || status || domain);
+  const updateControl = (key, value) => {
+    setSearchParams(() => {
+      // Browser history updates before a transition renders. Reading it here
+      // preserves the last action when users change filters in quick succession.
+      const next = new URLSearchParams(window.location.search);
+      if (value && !(key === 'sort' && value === 'updated')) next.set(key, value);
+      else next.delete(key);
+      next.delete('page');
+      return next;
+    }, { replace: true });
   };
+  const clearFilters = () => {
+    setSearchParams(() => {
+      const next = new URLSearchParams(window.location.search);
+      ['q', 'status', 'domain', 'page'].forEach((key) => next.delete(key));
+      return next;
+    }, { replace: true });
+  };
+  const changePage = (page) => {
+    setSearchParams(() => {
+      const next = new URLSearchParams(window.location.search);
+      if (page > 1) next.set('page', String(page));
+      else next.delete('page');
+      return next;
+    });
+    headingRef.current?.focus({ preventScroll: true });
+    headingRef.current?.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+  };
+  // A deletion can remove the last page; keep the displayed page and URL in sync.
+  useEffect(() => {
+    if (view !== 'my' || !searchParams.has('page') || searchParams.get('page') === String(results.page)) return;
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      if (results.page > 1) next.set('page', String(results.page));
+      else next.delete('page');
+      return next;
+    }, { replace: true });
+  }, [view, searchParams, setSearchParams, results.page]);
   const openDialog = (project, mode) => { setNotice(''); setDialog({ project, mode }); };
   const saveChange = async (id, name) => {
     if (dialog.mode === 'edit') {
@@ -168,7 +201,6 @@ export function ProjectsPage() {
       setNotice('Project name updated.');
     } else {
       await deleteProject(id);
-      setPage(Math.min(currentPage, Math.max(1, Math.ceil((projects.length - 1) / PAGE_SIZE))));
       setNotice(`“${dialog.project.name}” was deleted.`);
     }
   };
@@ -177,29 +209,45 @@ export function ProjectsPage() {
     <div className="projects-page">
       <header className="projects-header">
         <div><span className="projects-eyebrow"><Route size={15} aria-hidden="true" />Build your next chapter</span><h1>Roadmap</h1><p>One idea, one journey. Create a roadmap, unlock missions, and build with your team.</p></div>
-        <Link to="/roadmap/new" className="projects-button projects-button--primary"><Plus size={18} aria-hidden="true" />New project</Link>
+        <div className="roadmap-collection-actions"><JoinRoadmapTrigger className="projects-button">Join roadmap<ArrowRight size={16} aria-hidden="true" /></JoinRoadmapTrigger><Link to="/roadmap/new" className="projects-button projects-button--primary"><Plus size={18} aria-hidden="true" />New project</Link></div>
       </header>
 
       <nav className="projects-view-tabs" aria-label="Roadmap collection">
-        {[['my', 'My roadmaps'], ['joined', 'Joined roadmaps'], ['invitations', 'Invitations']].map(([value, label]) => <button type="button" key={value} aria-pressed={view === value} onClick={() => { setSearchParams(value === 'my' ? {} : { view: value }); setPage(1); }}>{label}{value === 'my' && <span>{projects.length}</span>}</button>)}
+        {[['my', 'My roadmaps'], ['joined', 'Joined roadmaps'], ['invitations', 'Invitations']].map(([value, label]) => <button type="button" key={value} aria-pressed={view === value} onClick={() => { setSearchParams(value === 'my' ? {} : { view: value }); }}>{label}{value === 'my' && <span>{projects.length}</span>}</button>)}
       </nav>
       {view === 'joined' ? <JoinedRoadmaps /> : view === 'invitations' ? <RoadmapInvitations /> : <>
       <div className="projects-section-heading"><h2 ref={headingRef} tabIndex={-1}>My projects <span>{projects.length}</span></h2><p>Your missions. Your momentum.</p></div>
       {notice && <p className="projects-feedback" role="status">{notice}</p>}
       {projects.length ? <>
-        <div className="projects-list" role="region" aria-label="Project list — scroll horizontally for all details and actions" tabIndex={0}>
+        <div className={`projects-controls${filtersExpanded ? ' is-expanded' : ''}`} role="search" aria-label="Search and filter projects">
+          <label className="projects-controls__search" htmlFor="project-search">Search projects
+            <span><Search size={18} aria-hidden="true" /><input id="project-search" type="search" placeholder="Search by name or domain" value={query} onChange={(event) => updateControl('q', event.target.value)} /></span>
+          </label>
+          <button type="button" className="projects-mobile-filters" aria-expanded={filtersExpanded} aria-controls="project-status project-domain project-sort" onClick={() => setFiltersExpanded(value => !value)}><SlidersHorizontal size={17} aria-hidden="true"/>Filters & sort{hasFilters && <span>Active</span>}</button>
+          <div className="projects-controls__field"><label htmlFor="project-status">Status</label><select id="project-status" value={status} onChange={(event) => updateControl('status', event.target.value)}><option value="">All statuses</option>{PROJECT_STATUSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+          <div className="projects-controls__field"><label htmlFor="project-domain">Domain</label><select id="project-domain" value={domain} onChange={(event) => updateControl('domain', event.target.value)}><option value="">All domains</option>{[...new Set([...domains, ...(domain ? [domain] : [])])].map((value) => <option key={value} value={value}>{value === UNSET_DOMAIN ? 'Domain not set yet' : value}</option>)}</select></div>
+          <div className="projects-controls__field"><label htmlFor="project-sort">Sort by</label><select id="project-sort" value={sort} onChange={(event) => updateControl('sort', event.target.value)}>{PROJECT_SORTS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+        </div>
+        <div className="projects-results-summary"><p role="status" aria-live="polite">{hasFilters ? `${results.total} of ${projects.length} projects match` : `${results.total} ${results.total === 1 ? 'project' : 'projects'} in your collection`}</p>{hasFilters && <button type="button" onClick={clearFilters}><X size={14} aria-hidden="true" />Clear filters</button>}</div>
+        {results.total ? <>
+        <div className="projects-list" role="region" aria-label="Project list" tabIndex={0}>
           <table className="projects-table">
             <caption className="projects-sr-only">Your projects, assessment progress, and available actions</caption>
             <colgroup><col /><col className="projects-table__status" /><col className="projects-table__progress" /><col className="projects-table__creator" /><col className="projects-table__date" /><col className="projects-table__actions" /></colgroup>
             <thead><tr><th scope="col">Project</th><th scope="col">Status</th><th scope="col">Progress</th><th scope="col">Created by</th><th scope="col">Created</th><th scope="col">Actions</th></tr></thead>
-            <tbody>{visibleProjects.map((project) => <ProjectRow key={project.id} project={project} onEdit={(item) => openDialog(item, 'edit')} onDelete={(item) => openDialog(item, 'delete')} />)}</tbody>
+            <tbody>{results.items.map((project) => <ProjectRow key={project.id} project={project} onEdit={(item) => openDialog(item, 'edit')} onDelete={(item) => openDialog(item, 'delete')} />)}</tbody>
           </table>
         </div>
         <p className="projects-scroll-hint">Scroll across to see all project details and actions.</p>
-        <nav className="projects-pagination" aria-label="Projects pagination">
-          <p role="status">Showing <strong>{start + 1}–{Math.min(start + PAGE_SIZE, projects.length)}</strong> of <strong>{projects.length}</strong> projects</p>
-          <div><button type="button" className="projects-button projects-pagination__arrow" aria-label="Previous page" disabled={currentPage <= 1} onClick={() => changePage(currentPage - 1)}><ChevronLeft size={18} aria-hidden="true" /></button><span aria-current="page">Page {currentPage} of {totalPages}</span><button type="button" className="projects-button projects-pagination__arrow" aria-label="Next page" disabled={currentPage >= totalPages} onClick={() => changePage(currentPage + 1)}><ChevronRight size={18} aria-hidden="true" /></button></div>
-        </nav>
+        <div className="projects-pagination">
+          <p>Showing <strong>{results.from}–{results.to}</strong> of <strong>{results.total}</strong> {results.total === 1 ? 'project' : 'projects'}</p>
+          <nav className="projects-page-numbers" aria-label="Projects pagination">
+            <button type="button" className="projects-button projects-pagination__arrow" disabled={results.page === 1} onClick={() => changePage(results.page - 1)} aria-label="Previous page"><ChevronLeft size={18} aria-hidden="true" /></button>
+            {paginationItems(results.page, results.pages).map((value) => typeof value === 'number' ? <button type="button" key={value} className="projects-button projects-pagination__number" aria-label={`Page ${value}`} aria-current={results.page === value ? 'page' : undefined} onClick={() => changePage(value)}>{value}</button> : <span key={value} className="projects-pagination__gap" aria-hidden="true">…</span>)}
+            <button type="button" className="projects-button projects-pagination__arrow" disabled={results.page === results.pages} onClick={() => changePage(results.page + 1)} aria-label="Next page"><ChevronRight size={18} aria-hidden="true" /></button>
+          </nav>
+        </div>
+        </> : <section className="projects-no-results" aria-labelledby="projects-no-results-title"><Search size={28} aria-hidden="true" /><h3 id="projects-no-results-title">No projects match your search</h3><p>Try another name, status, or domain.</p><button type="button" className="projects-button" onClick={clearFilters}>Clear search and filters</button></section>}
       </> : <section className="projects-empty" aria-labelledby="projects-empty-title">
         <span className="projects-empty__icon" aria-hidden="true"><FolderPlus size={36} /></span>
         <span className="projects-eyebrow">Your first project starts here</span>

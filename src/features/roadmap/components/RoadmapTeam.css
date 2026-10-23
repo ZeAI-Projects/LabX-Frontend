@@ -54,6 +54,49 @@
 .roadmap-invitation-actions { display: flex; gap: 8px; flex-shrink: 0; }
 .roadmap-invitation-status { color: #a8d5e0; font-size: .76rem; }
 .roadmap-collaboration-empty { padding: 30px 20px; border: 1px dashed #385371; border-radius: 10px; color: #98adc6; font-size: .83rem; line-height: 1.7; }
+.roadmap-team-toolbar, .roadmap-collection-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.roadmap-collection-actions { flex-shrink: 0; }
+.roadmap-team-access { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 16px; border: 1px solid #5e80a040; border-radius: 10px; background: #192d433b; margin: 18px 0; }
+.roadmap-team-access > span:first-child { color: #a2b4ce; font-size: .73rem; }
+.roadmap-team-access strong { display: block; margin-top: 5px; color: #dfebf7; font-size: .9rem; }
+.roadmap-team-access > span:last-child { display: flex; gap: 7px; align-items: center; color: #9cd7e4; font-size: .72rem; }
+.roadmap-team-owner { border-color: #c6a6634a; }
+.roadmap-team-member-heading small { display: inline-flex; align-items: center; gap: 5px; }
+.roadmap-team-assignment-title { margin: 19px 0 7px; font-size: .75rem; font-weight: 500; color: #b4c5db; }
+.roadmap-team-assignment-title > span { margin-left: 5px; color: #86d9e8; }
+.roadmap-team-mission-status { flex-shrink: 0; color: #a4c8dd; }
+.roadmap-count { font-size: .72em; font-weight: 500; color: #8cb1cc; margin-left: 8px; }
+.join-roadmap-page { max-width: 1200px; margin: 0 auto; min-width: 0; color: #d9e5f4; }
+.join-roadmap-back { display: inline-flex; align-items: center; gap: 8px; color: #a2b8d3; font-size: .8rem; margin-bottom: 20px; }
+.join-roadmap-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 28px; border: 1px solid #66598d50; border-radius: 18px; background: radial-gradient(ellipse at 0 0,#7654d122,transparent 65%),linear-gradient(125deg,#111c30,#13182b); }
+.join-roadmap-header .roadmap-team-kicker { display: inline-flex; align-items: center; gap: 8px; line-height: 1.6; }
+.join-roadmap-header h1 { margin: 12px 0 10px; font-size: clamp(1.65rem, 3vw, 2rem); letter-spacing: -.035em; }
+.join-roadmap-header p { color: #a4b5cc; font-size: .88rem; line-height: 1.7; margin: 0; max-width: 610px; }
+.join-roadmap-emblem { display: grid; place-items: center; flex: 0 0 80px; height: 80px; border: 1px solid #79d0dc33; border-radius: 22px; background: #75bfdd0c; color: #8dd9e4; }
+.join-roadmap-account { display: flex; align-items: center; gap: 13px; margin: 22px 0 30px; color: #80cddc; }
+.join-roadmap-account p { color: #a3b7cf; font-size: .8rem; line-height: 1.7; margin: 0; overflow-wrap: anywhere; min-width: 0; }
+.join-roadmap-account svg { flex-shrink: 0; }
+.join-roadmap-account strong { color: #d1e4ef; font-weight: 500; }
+.join-roadmap-account span { display: block; color: #899fbf; font-size: .73rem; }
+.join-roadmap-page > .roadmap-collaboration-list { margin-bottom: 32px; }
+.join-roadmap-help { border-top: 1px solid #41557355; padding-top: 20px; color: #8da5c2; font-size: .78rem; line-height: 1.8; }
+.join-roadmap-page a:focus-visible { outline: 2px solid #7fe6f6; outline-offset: 3px; }
+.roadmap-team-membership { display:flex; align-items:center; gap:5px; font-size:.66rem; color:#93cfb8; margin:10px 0 0; }
+.roadmap-team-portal-link { margin:4px 0 18px; border:0; background:none; padding:0; text-align:left; cursor:pointer; }
+.roadmap-team-invite-details { border:1px solid #4a69854a; border-radius:10px; overflow:hidden; }
+.roadmap-team-invite-details > summary { padding:15px; cursor:pointer; color:#aedce7; font-size:.83rem; }
+.roadmap-team-invite-details > .collab-form { border:0; border-radius:0; }
+.roadmap-team-assignment > .roadmap-assignment-instructions { display:block; margin-top:14px; }
+.roadmap-assignment-review { padding:16px; border:1px solid #9ab6de40; border-radius:8px; background:#0f1c2e; }
+.roadmap-assignment-review h4 { display:flex; align-items:center; gap:7px; color:#9bdbe7; margin:0 0 15px; font-size:.85rem; }
+.roadmap-assignment-review dl { margin:0; }
+.roadmap-assignment-review dl > div { margin-bottom:12px; }
+.roadmap-assignment-review dt { color:#8ea6c3; font-size:.68rem; margin-bottom:4px; }
+.roadmap-assignment-review dd { margin:0; color:#ccdced; font-size:.77rem; line-height:1.7; overflow-wrap:anywhere; white-space:pre-wrap; }
+.roadmap-assignment-review > p { font-size:.74rem; color:#d8c39d; line-height:1.7; }
+.roadmap-team-assigned-detail { display:block; font-size:.67rem; color:#819fbf; margin-top:5px; overflow-wrap:anywhere; }
+.roadmap-team-pending .collab-status { flex-shrink:0; max-width:50%; }
+.roadmap-team-dialog summary:focus-visible { outline:2px solid #8de5f0; outline-offset:-3px; }
 @media (max-width: 560px) {
   .roadmap-team-dialog { padding: 21px 17px; }
   .roadmap-team-invite { display: flex; flex-direction: column; }
@@ -63,4 +106,12 @@
   .roadmap-team-member { padding: 14px; }
   .roadmap-collaboration-list li { flex-direction: column; align-items: stretch; gap: 12px; }
   .roadmap-invitation-actions > button { flex: 1; }
+  .roadmap-invitation-actions { flex-wrap: wrap; }
+  .roadmap-team-access { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .roadmap-team-assigned li { align-items: flex-start; }
+  .roadmap-team-mission-status { max-width: 80px; text-align: right; }
+  .roadmap-collection-actions { width: 100%; }
+  .roadmap-collection-actions .projects-button { flex: 1; }
+  .join-roadmap-header { padding: 22px 20px; }
+  .join-roadmap-emblem { display: none; }
 }

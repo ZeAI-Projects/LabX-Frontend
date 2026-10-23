@@ -85,3 +85,65 @@
   .verification-resend { min-height: 44px; }
   .compact-auth-page .forgot-pass-link { display: inline-flex; align-items: center; min-height: 30px; }
 }
+
+/* Shared geometry keeps the brand panel stable across account screens. */
+.compact-auth-page { justify-content:flex-start; padding-top:24px; }
+.compact-auth-page .auth-top-hud { min-height:44px; margin-bottom:12px; }
+.compact-auth-page .gamified-card-shell { min-height:600px; align-items:flex-start; border-color:#7382c326; }
+.compact-auth-page .showcase-panel { height:600px; display:grid; grid-template-rows:240px 240px 1fr; padding:28px; align-self:flex-start; }
+.compact-auth-page .showcase-header { min-width:0; }
+.compact-auth-page .hologram-reactor-wrapper { align-self:center; }
+.compact-auth-page .auth-brand-note { align-self:end; font-size:.68rem; }
+.compact-auth-page .showcase-title { font-size:1.65rem; font-weight:650; letter-spacing:-.035em; line-height:1.25; }
+.compact-auth-page .showcase-desc { line-height:1.65; }
+.compact-auth-page .form-panel { min-height:600px; padding:28px 32px; }
+.compact-auth-page .form-title { font-size:1.5rem; font-weight:650; letter-spacing:-.035em; line-height:1.25; }
+.compact-auth-page .form-subtitle { line-height:1.65; }
+.compact-auth-page .hud-sound-toggle { gap:9px; min-height:38px; border:1px solid #64748b40; color:#a6b2c8; background:#11192bcc; }
+.compact-auth-page .hud-sound-toggle strong { color:#dce4f6; font-weight:600; }
+.compact-auth-page .hud-sound-toggle[aria-pressed="true"] { color:#89e3f5; border-color:#63dbf45c; background:#15334299; }
+.sound-switch { width:27px; height:16px; border-radius:20px; background:#35415b; padding:3px; }
+.sound-switch::after { content:''; display:block; width:10px; height:10px; border-radius:50%; background:#c2ccdd; transition:transform .2s ease; }
+[aria-pressed="true"] .sound-switch { background:#3860ba; }
+[aria-pressed="true"] .sound-switch::after { transform:translateX(11px); background:#9deffd; }
+@media(max-width:800px) {
+ .compact-auth-page .gamified-card-shell { min-height:0; }
+ .compact-auth-page .showcase-panel { display:block; width:100%; height:auto; padding:16px 26px; }
+ .compact-auth-page .form-panel { min-height:0; width:100%; padding:24px 26px; }
+ .compact-auth-page .auth-brand-note { display:none; }
+}
+@media(max-width:600px) {
+ .compact-auth-page { padding:12px; }
+ .compact-auth-page .form-panel { padding:20px 18px; }
+ .compact-auth-page .hud-sound-toggle { min-height:44px; }
+}
+
+
+/* Center the complete auth frame, including its controls, in the viewport. */
+.compact-auth-page { min-height:100svh; justify-content:center; padding:32px 20px; }
+.compact-auth-page .gamified-card-shell { flex-shrink:0; }
+.compact-auth-page .form-panel { justify-content:center; }
+.compact-auth-page .auth-mode-switch-tabs { flex-shrink:0; }
+.compact-auth-page.auth-mode-signin .form-panel { padding:36px 32px; }
+.compact-auth-page.auth-mode-signin .auth-mode-switch-tabs { position:static; margin:0 0 28px; }
+.compact-auth-page .gamified-field-label,.compact-auth-page .mode-tab-btn,.compact-auth-page .remember-terminal,.compact-auth-page .forgot-pass-link { font-size:.875rem; }
+.compact-auth-page .gamified-input { font-size:.9375rem; }
+.compact-auth-page .form-subtitle,.compact-auth-page .showcase-desc { font-size:.9375rem; }
+.compact-auth-page .compact-demo-note,.compact-password-hint { font-size:.8125rem; }
+@media(max-width:800px) {
+ .compact-auth-page { padding:24px 16px; }
+ .compact-auth-page.auth-mode-signin .form-panel { min-height:460px;padding:28px 26px; }
+}
+@media(max-width:600px) {
+ .compact-auth-page { padding:16px 12px; }
+ .compact-auth-page.auth-mode-signin .form-panel { padding-inline:18px; }
+ .compact-auth-page .gamified-input { font-size:16px; }
+}
+
+.compact-auth-page.auth-mode-signin .form-header { margin-bottom:24px; }
+.compact-auth-page.auth-mode-signin .compact-auth-fields { gap:20px; }
+.compact-auth-page.auth-mode-signin .compact-auth-actions { margin-top:24px; }
+
+/* OTP panels display only the six-digit code. */
+.auth-demo-notice:has(> output) { text-align:center; }
+.auth-demo-notice > output { margin:0;font-size:1.125rem;letter-spacing:.22em; }

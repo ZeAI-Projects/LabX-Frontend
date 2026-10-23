@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AlertCircle, ArrowLeft, ArrowRight, Shield, Volume2, VolumeX } from 'lucide-react';
+import { AlertCircle, ArrowLeft, ArrowRight, Shield } from 'lucide-react';
 import { useAuth } from '../../../hooks/use_auth.js';
 import { sessionStore } from '../../../services/storage/local_storage.js';
 import { HologramX } from '../components/gamified/HologramX';
@@ -8,33 +8,19 @@ import { ParticleNetwork } from '../components/gamified/ParticleNetwork';
 import { soundManager } from '../components/gamified/soundEffects';
 import { useAuthEffects } from '../components/gamified/useAuthEffects';
 import '../components/Register.css';
+import { SoundToggle } from '../components/AuthShell.jsx';
 import '../components/Recovery.css';
 
 export function PasswordRecoveryShell({ title, subtitle, step = 1, children }) {
-  const [soundActive, setSoundActive] = useState(soundManager.isEnabled);
 
   return (
-    <div className="gamified-auth-container password-recovery-container">
+    <div className={`gamified-auth-container compact-auth-page password-recovery-container${step === 2 ? " is-reset" : ""}`}>
       <ParticleNetwork />
       <div className="auth-top-hud">
         <Link className="recovery-exit-link" to="/register" onMouseEnter={soundManager.playHover}>
           <ArrowLeft size={14} aria-hidden="true" />Back to sign up
         </Link>
-        <button
-          type="button"
-          className="hud-sound-toggle"
-          title="Toggle SFX"
-          aria-pressed={soundActive}
-          onMouseEnter={soundManager.playHover}
-          onClick={() => {
-            const enabled = soundManager.toggle();
-            setSoundActive(enabled);
-            if (enabled) soundManager.playHover();
-          }}
-        >
-          {soundActive ? <Volume2 size={16} color="#38bdf8" /> : <VolumeX size={16} color="#64748b" />}
-          <span>SFX: {soundActive ? 'ONLINE' : 'MUTED'}</span>
-        </button>
+        <SoundToggle />
       </div>
       <div className="gamified-card-shell">
         <div className="card-laser-scanner" />
@@ -49,12 +35,7 @@ export function PasswordRecoveryShell({ title, subtitle, step = 1, children }) {
             <p className="showcase-desc">Recover access to your LabX account and pick up where you left off.</p>
           </div>
           <HologramX />
-          <div className="showcase-bottom-pill">
-            <div className="pill-left">
-              <div className="pill-shield-icon"><Shield size={16} /></div>
-              <span className="pill-text">One Ecosystem. Infinite Opportunities.</span>
-            </div>
-          </div>
+          <p className="auth-brand-note"><Shield size={14} aria-hidden="true" /><span>One Ecosystem. Infinite Opportunities.</span></p>
         </div>
         <div className="form-panel">
           <ol className="recovery-steps" aria-label="Password recovery progress">
@@ -122,7 +103,6 @@ export function ForgotPassword() {
 
   return (
     <PasswordRecoveryShell title="Forgot Password" subtitle="Enter the email address registered with your LabX account.">
-      <div className="auth-demo-notice"><p>Demo preview — no email is sent. Your six-digit code will appear on the next screen.</p></div>
       {error && <div id="recovery-email-error" className="auth-error-banner" role="alert"><AlertCircle size={17} /><span>{error}</span></div>}
       <form onSubmit={handleSubmit} aria-busy={loading} noValidate>
         <div className="gamified-field-group">

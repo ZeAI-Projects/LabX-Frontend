@@ -46,6 +46,10 @@ try {
   const returnToProjects = async () => { await page.locator('.assessment-project-back').click(); await list() }
   const signOut = async () => { await option('Sign out').click(); await at('/login') }
   const closeDialog = async () => { await page.keyboard.press('Escape'); await page.locator('dialog[open]').waitFor({ state: 'hidden' }) }
+  const countRows = async expected => {
+    await page.waitForFunction(value => document.querySelectorAll('.project-row').length === value, expected)
+    assert.equal(await page.locator('.project-row').count(), expected)
+  }
   const checkLayout = async (name, widths = [320, 390, 768, 1440]) => {
     for (const width of widths) {
       await page.setViewportSize({ width, height: width < 600 ? 844 : 1000 })
@@ -58,20 +62,12 @@ try {
           assert.ok(rowHeights.length > 0 && rowHeights.every((height) => height > 0 && height <= 100), `${name} uses compact project rows at ${width}px: ${rowHeights.join(', ')}`)
         }
         if (width < 600) {
-          const scroll = await page.locator('.projects-list').evaluate((element) => ({
-            clientWidth: element.clientWidth,
-            scrollWidth: element.scrollWidth,
-            overflowX: getComputedStyle(element).overflowX,
-          }))
-          assert.ok(['auto', 'scroll'].includes(scroll.overflowX), `${name} contains horizontal scrolling inside the project list`)
-          assert.ok(scroll.scrollWidth > scroll.clientWidth, `${name} keeps project columns scrollable on mobile`)
-          const didScroll = await page.locator('.projects-list').evaluate((element) => {
-            element.scrollLeft = element.scrollWidth
-            const moved = element.scrollLeft > 0
-            element.scrollLeft = 0
-            return moved
-          })
-          assert.equal(didScroll, true, `${name} lets mobile users reach the remaining project columns`)
+          const scroll = await page.locator('.projects-list').evaluate(el => ({ client:el.clientWidth, scroll:el.scrollWidth }))
+          assert.ok(scroll.scroll <= scroll.client + 1, 'Compact project rows need no horizontal scrolling')
+          const first = table.locator('tbody .project-row').first()
+          assert.equal(await first.getByRole('button', {name:/^Edit /}).isVisible(),true,'Edit stays accessible on mobile')
+          assert.equal(await first.getByRole('button', {name:/^Delete /}).isVisible(),true,'Delete stays accessible on mobile')
+          assert.equal(await first.getByRole('link').isVisible(),true,'Project primary action stays visible')
         }
       }
       await page.screenshot({ path: `${output}${name}-${width}.png`, fullPage: true, animations: 'disabled' })
@@ -92,7 +88,8 @@ try {
       await next()
     }
     await option('Problem clarity').click()
-    await option('Complete Assessment').click()
+    await option('Review Answers').click()
+    await page.getByRole('button', { name: 'Submit Assessment', exact: true }).click()
     await at(`${projectPath}/result`)
     await heading('Your assessment summary').waitFor()
     await page.getByText(domain, { exact: true }).waitFor()
@@ -106,9 +103,9 @@ try {
   await page.getByLabel('Password', { exact: true }).fill(DEMO_CREDENTIALS.password)
   await page.locator('button[type="submit"]').click()
   await at('/dashboard')
-  await page.getByRole('link', { name: 'View projects', exact: true }).click()
+  await page.locator('.labx-sidebar-nav').getByRole('link', { name: 'Roadmap', exact: true }).click()
   await list()
-  assert.equal(await page.locator('.project-row').count(), 0)
+  await countRows(0)
   assert.equal(await page.getByRole('dialog').count(), 0)
   await checkLayout('empty-projects')
   await page.getByRole('link', { name: 'New project', exact: true }).click()
@@ -125,12 +122,12 @@ try {
 
   // Keep different answers and steps for two unfinished projects.
   const safetyPath = await createProject('Safe Streets')
-  assert.equal(await option('Next Step').isDisabled(), true)
+  await option('Next Step').click(); await page.getByText('Please select an option before continuing.', { exact: true }).waitFor()
   await option('Women Safety & Social Impact').click()
   await next()
   await option('Individual consumers').click()
   await returnToProjects()
-  await row('Safe Streets').getByText('Demo Founder', { exact: true }).waitFor()
+  await row('Safe Streets').getByText('Founder', { exact: true }).waitFor()
   const healthPath = await createProject('Health Bridge')
   assert.equal(await option('Women Safety & Social Impact').getAttribute('aria-pressed'), 'false', 'New project has an independent assessment')
   await option('Healthcare & MedTech').click()
@@ -141,7 +138,7 @@ try {
   await returnToProjects()
   await page.reload()
   await list()
-  assert.equal(await page.locator('.project-row').count(), 2)
+  await countRows(2)
   await checkLayout('project-drafts')
 
   // Editing a draft changes the name while preserving its answers and step.
@@ -201,7 +198,8 @@ try {
     await next()
   }
   await option('Problem clarity').click()
-  await option('Complete Assessment').click()
+  await option('Review Answers').click()
+    await page.getByRole('button', { name: 'Submit Assessment', exact: true }).click()
   await at(`${healthPath}/result`)
   await page.getByText('Healthcare & MedTech', { exact: true }).waitFor()
   await go('/roadmap')
@@ -246,38 +244,69 @@ try {
   await page.reload()
   await list()
   await row('Health Bridge Launch').waitFor()
-  assert.equal(await page.locator('.project-row').count(), 1)
+  await countRows(1)
   await go(safetyPath)
   await heading('Project not found').waitFor()
   await page.getByRole('link', { name: 'All projects', exact: true }).click()
   await list()
 
-  // Eleven projects paginate into ten plus one, then deletion clamps the last page.
+  // Search, filters and sorting apply to the whole collection, ten projects per page.
   const extraProjects = new Map()
   for (let index = 3; index <= 12; index++) {
     const name = `Research Project ${index}`
     extraProjects.set(name, await createProject(name))
     await returnToProjects()
   }
-  await page.getByText('Page 1 of 2', { exact: true }).waitFor()
-  assert.equal(await page.locator('.project-row').count(), 10)
-  assert.equal(await option('Previous page').isDisabled(), true)
+  await countRows(10)
+  const pagination = page.getByRole('navigation', { name: 'Projects pagination' })
+  assert.equal(await pagination.count(), 1)
+  await pagination.getByRole('button', { name: 'Page 2', exact: true }).click()
+  await countRows(1)
+  assert.equal(await pagination.getByRole('button', { name: 'Page 2', exact: true }).getAttribute('aria-current'), 'page')
+  await page.reload()
+  await heading('Roadmap').waitFor()
+  assert.equal(await page.locator('.project-row').count(), 1, 'Current page survives refresh')
+  await page.getByRole('searchbox', { name: 'Search projects', exact: true }).fill('Research Project 12')
+  await row('Research Project 12').waitFor()
+  assert.equal(await page.locator('.project-row').count(), 1, 'Search finds projects across every page')
+  assert.equal(await pagination.getByRole('button', { name: 'Page 1', exact: true }).getAttribute('aria-current'), 'page')
+  await page.getByLabel('Status', { exact: true }).selectOption('ready')
+  await page.getByRole('heading', { name: 'No projects match your search' }).waitFor()
+  await option('Clear search and filters').click()
+  await page.getByLabel('Domain', { exact: true }).selectOption('Healthcare & MedTech')
+  await row('Health Bridge Launch').waitFor()
+  await countRows(1)
+  await option('Clear filters').click()
+  await page.getByLabel('Status', { exact: true }).selectOption('pending')
+  await page.waitForFunction(() => document.querySelectorAll('.project-row').length === 10)
+  await countRows(10)
+  await page.getByLabel('Sort by', { exact: true }).selectOption('name-asc')
+  await page.locator('.project-row').first().getByRole('heading', { name: 'Research Project 3', exact: true }).waitFor()
+  assert.equal(await page.locator('.project-row').first().getByRole('heading', { level: 2 }).innerText(), 'Research Project 3')
+  await page.getByLabel('Sort by', { exact: true }).selectOption('name-desc')
+  await page.locator('.project-row').first().getByRole('heading', { name: 'Research Project 12', exact: true }).waitFor()
+  assert.equal(await page.locator('.project-row').first().getByRole('heading', { level: 2 }).innerText(), 'Research Project 12')
+  await page.reload()
+  await heading('Roadmap').waitFor()
+  assert.equal(await page.getByLabel('Status', { exact: true }).inputValue(), 'pending')
+  assert.equal(await page.getByLabel('Sort by', { exact: true }).inputValue(), 'name-desc')
+  await option('Clear filters').click()
+  await page.getByLabel('Sort by', { exact: true }).selectOption('updated')
   await checkLayout('paginated-projects')
-  await option('Next page').click()
-  await page.getByText('Page 2 of 2', { exact: true }).waitFor()
-  assert.equal(await page.locator('.project-row').count(), 1)
-  assert.equal(await option('Next page').isDisabled(), true)
-  const finalPageName = await page.locator('.project-row').getByRole('heading', { level: 2 }).innerText()
+  await pagination.getByRole('button', { name: 'Next page', exact: true }).click()
+  await countRows(1)
+  const finalPageName = await page.locator('.project-row').last().getByRole('heading', { level: 2 }).innerText()
   await option(`Delete ${finalPageName}`).click()
   await deleteDialog().getByRole('button', { name: 'Delete project', exact: true }).click()
   await deleteDialog().waitFor({ state: 'hidden' })
-  assert.equal(await page.locator('.project-row').count(), 10, 'Deleting the only last-page project reveals the preceding page')
-  assert.equal(await page.getByText('Page 2 of 2', { exact: true }).count(), 0)
+  assert.equal(await page.locator('.project-row').count(), 10, 'Deleting the last record on page two returns to page one')
+  assert.equal(await pagination.getByRole('button', { name: 'Page 2', exact: true }).count(), 0)
+  assert.equal(await pagination.getByRole('button', { name: 'Page 1', exact: true }).getAttribute('aria-current'), 'page')
   const remainingName = await page.locator('.project-row').first().getByRole('heading', { level: 2 }).innerText()
   const remainingPath = extraProjects.get(remainingName) || healthPath
   await page.reload()
   await list()
-  assert.equal(await page.locator('.project-row').count(), 10)
+  await countRows(10)
 
   // Missing routes and another user's project IDs never expose project data.
   for (const suffix of ['', '/assessment', '/result']) {
@@ -296,12 +325,12 @@ try {
   await page.locator('button[type="submit"]').click()
   await at('/verify-email')
   const code = (await page.getByTestId('demo-signup-code').innerText()).trim()
-  await page.getByLabel('Six-digit code', { exact: true }).fill(code)
+  await page.getByLabel('Digit 1 of 6', { exact: true }).fill(code)
   await page.getByRole('button', { name: 'Verify email', exact: true }).click()
   await at('/roadmap/new')
   await page.getByRole('link', { name: 'All projects', exact: true }).click()
   await list()
-  assert.equal(await page.locator('.project-row').count(), 0)
+  await countRows(0)
   for (const suffix of ['', '/assessment', '/result']) {
     await go(`${remainingPath}${suffix}`)
     await heading('Project not found').waitFor()
@@ -321,16 +350,16 @@ try {
   await page.getByLabel('Password', { exact: true }).fill(DEMO_CREDENTIALS.password)
   await page.locator('button[type="submit"]').click()
   await at('/dashboard')
-  await page.getByRole('link', { name: 'View projects', exact: true }).click()
+  await page.locator('.labx-sidebar-nav').getByRole('link', { name: 'Roadmap', exact: true }).click()
   await list()
-  assert.equal(await page.locator('.project-row').count(), 10)
+  await countRows(10)
   assert.equal(await row('Independent Garden').count(), 0)
   await row(remainingName).waitFor()
 
   assert.deepEqual(errors, [], 'No browser runtime errors')
   assert.deepEqual(assetErrors, [], 'All assets are available locally')
   assert.deepEqual(network, [], 'No external or backend requests')
-  console.log('PASS: independent project assessments and resume, name-only edits, deletion and cancellation, eleven-project pagination and page clamp, creator metadata, account isolation, route guards, keyboard dialogs and layouts at 320/390/768/1440px.')
+  console.log('PASS: independent assessments, edits, deletion, search and combined filters, sorting, ten-project numbered pagination, refresh persistence, last-page deletion, account isolation and layouts at 320/390/768/1440px.')
 } catch (error) {
   await page?.screenshot({ path: `${output}failure.png`, fullPage: true, animations: 'disabled' }).catch(() => {})
   throw error

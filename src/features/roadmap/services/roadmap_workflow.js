@@ -1,5 +1,6 @@
 import { createSafeStorage, localStore } from '../../../services/storage/local_storage.js'
 import { createMockRoadmap } from './mock_roadmap.js'
+import { createMissionReviewActions, normalizeMissionWorkflows, visibleMissionWorkflows } from './mission_review.js'
 
 export const MAX_EVIDENCE_BYTES = 5 * 1024 * 1024
 export const MISSION_NOTES_MIN_LENGTH = 80
@@ -127,7 +128,7 @@ function flatten(roadmap) {
 }
 
 function emptyRecord(project) {
-  return { version: 1, ownerId: project.owner_id, projectId: project.id, submissionsByMilestone: {} }
+  return { version: 1, ownerId: project.owner_id, projectId: project.id, submissionsByMilestone: {}, missionWorkflowsById: {} }
 }
 
 function boundedPayload(payload) {
@@ -163,6 +164,7 @@ function normalizeRecord(project, record, catalog) {
   if (!isRecord(record) || record.version !== 1 || record.ownerId !== project.owner_id
     || record.projectId !== project.id || !isRecord(record.submissionsByMilestone)) return normalized
   const missions = flatten(catalog)
+  normalized.missionWorkflowsById = normalizeMissionWorkflows(record.missionWorkflowsById, missions, project)
   const stageNames = catalog.stages.map((stage) => stage.name)
   let next = 0
   while (next < missions.length) {
@@ -180,6 +182,9 @@ function normalizeRecord(project, record, catalog) {
       attempt: saved.attempt,
       status: saved.status,
       submittedAt: saved.submittedAt,
+      ...(validDate(saved.approvedAt) ? { approvedAt: saved.approvedAt } : {}),
+      ...(Number.isSafeInteger(saved.reviewVersion) ? { reviewVersion: saved.reviewVersion } : {}),
+      ...(cleanText(saved.evaluationJobId) ? { evaluationJobId: saved.evaluationJobId } : {}),
       submittedBy: saved.submittedBy,
       payload,
       notes: evaluation.notes,
@@ -240,13 +245,15 @@ export function createRoadmapSnapshot(project, record = null) {
     submissionsByMilestone: submissions,
     placement,
     simulationNotice: SIMULATION_NOTICE,
+    missionWorkflowsById: normalized.missionWorkflowsById,
   })
 }
 
 function visibleSnapshot(project, record, granted) {
   const snapshot = createRoadmapSnapshot(project, record)
-  if (granted.role === 'owner') return snapshot
   const visible = clone(snapshot)
+  visible.missionWorkflowsById = visibleMissionWorkflows(snapshot.missionWorkflowsById, granted)
+  if (granted.role === 'owner') return freeze(visible)
   const assigned = new Set(Array.isArray(granted.assignedMissionIds) ? granted.assignedMissionIds : [])
   assigned.delete('discover-l1-m1')
   visible.submissionsByMilestone = Object.fromEntries(Object.entries(visible.submissionsByMilestone)
@@ -294,7 +301,13 @@ export function createRoadmapStore({ storage = localStore, auth, getAccess, now 
     if (mission.state === 'completed') throw new Error('This mission is already approved.')
     if (mission.state !== 'active') throw new Error('Complete the active mission before submitting this mission.')
   }
+  const reviewActions = createMissionReviewActions({
+    local, auth, access, canSubmit, now, onApproved, announce, clone, freeze,
+    roadmapWorkflowKey, catalogFor, normalizeRecord, createRoadmapSnapshot, visibleSnapshot,
+    boundedPayload, evaluate,
+  })
   return {
+    ...reviewActions,
     read(projectId, ownerId, expectedUserId = auth?.getUser?.()?.id) {
       access(projectId, ownerId, expectedUserId)
       const record = local.readJSON(roadmapWorkflowKey(ownerId, projectId))
@@ -303,6 +316,10 @@ export function createRoadmapStore({ storage = localStore, auth, getAccess, now 
     },
     submitMission(projectId, ownerId, missionId, payload, expectedUserId = auth?.getUser?.()?.id) {
       const granted = access(projectId, ownerId, expectedUserId)
+      if (granted.role === 'member') return reviewActions.submitToFounder(projectId, ownerId, missionId, payload, expectedUserId)
+      if (granted.missionAssignments?.some((item) => item.missionId === missionId)) {
+        throw new Error('This mission is assigned to a member. Review their submission before uploading it for evaluation.')
+      }
       const key = roadmapWorkflowKey(ownerId, projectId)
       const before = local.readJSON(key)
       const catalog = catalogFor(granted.project)

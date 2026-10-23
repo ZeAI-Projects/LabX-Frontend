@@ -1,4 +1,4 @@
-import { Award, Bot, Calendar, Home, LogOut, Map, Trophy, User, Users } from 'lucide-react'
+import { Award, Bot, Calendar, Home, LogOut, Map, MessageCircle, Trophy, User, Users } from 'lucide-react'
 import { Link, NavLink } from 'react-router-dom'
 import labxLogo from '../../assets/images/labx-logo.png'
 import { soundManager } from '../../features/authentication/components/gamified/soundEffects.js'
@@ -21,6 +21,7 @@ export function Sidebar({ user, onSignOut }) {
       </div>
       <nav className="labx-sidebar-nav" aria-label="Main navigation">
         <SidebarItem to="/dashboard" icon={<Home size={18} />} label="Dashboard" />
+        <SidebarItem to="/chats" icon={<MessageCircle size={18} />} label="Chats" />
         {isFounder && <>
           <SidebarItem to="/roadmap" icon={<Map size={18} />} label="Roadmap" />
           <SidebarItem to="/leaderboard" icon={<Trophy size={18} />} label="Leaderboard" />

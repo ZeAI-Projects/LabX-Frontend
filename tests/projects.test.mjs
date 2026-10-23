@@ -72,7 +72,7 @@ test('one founder can keep independent assessments and drafts for multiple proje
   assert.equal(projects.find((entry) => entry.id === second.id).assessment_result.domain, 'Climate & Sustainability');
 });
 
-test('renaming a completed project preserves its answers and only the summary edit endpoint may change them', () => {
+test('renaming a completed project preserves its locked answers', () => {
   const app = fixture();
   const project = app.store.createProject('Initial name');
   const completed = app.store.completeProject(project.id, completeAnswers());
@@ -82,8 +82,8 @@ test('renaming a completed project preserves its answers and only the summary ed
   assert.equal(renamed.created_by, completed.created_by);
   assert.deepEqual(renamed.assessment_result, completed.assessment_result);
   assert.deepEqual(renamed.assessment_answers, completed.assessment_answers);
-  assert.throws(() => app.store.completeProject(project.id, completeAnswers(7)), /Edit answers from its summary/);
-  assert.throws(() => app.store.saveDraft(project.id, { version: ASSESSMENT_VERSION, step: 2, answers: { q1: 8 } }), /Edit answers from its summary/);
+  assert.throws(() => app.store.completeProject(project.id, completeAnswers(7)), /Submitted assessments cannot be edited/);
+  assert.throws(() => app.store.saveDraft(project.id, { version: ASSESSMENT_VERSION, step: 2, answers: { q1: 8 } }), /Submitted assessments cannot be edited/);
   assert.deepEqual(app.reload().listProjects()[0], renamed);
 });
 
@@ -254,52 +254,43 @@ test('real remembered-session changes are checked before a stale tab can save a 
 });
 
 
-test('summary edits update only the chosen answer and keep domain metadata in sync', () => {
+test('reviewed draft answers persist before submission and determine the final domain', () => {
   const app = fixture();
-  const project = app.store.createProject('Editable answers');
-  const completed = app.store.completeProject(project.id, completeAnswers());
-  const updated = app.store.updateAssessmentChoice(project.id, 'q8', 7, 1, alice.id);
-  assert.deepEqual(updated.assessment_answers, { ...completeAnswers(), q8: 7 });
-  assert.deepEqual(updated.assessment_result, completed.assessment_result);
-  assert.equal(updated.created_at, completed.created_at);
-  assert.equal(updated.assessment_completed, true);
-  const changedDomain = app.store.updateAssessmentChoice(project.id, 'q1', 2, 1, alice.id);
-  assert.equal(changedDomain.assessment_result.domain, 'Education');
-  assert.equal(changedDomain.assessment_result.guild, 'Education Guild');
-  assert.equal(changedDomain.assessment_result.stage, completed.assessment_result.stage);
-  assert.equal(changedDomain.assessment_result.level, completed.assessment_result.level);
-  assert.deepEqual(app.reload().listProjects()[0], changedDomain);
-  changedDomain.assessment_answers.q8 = 1;
-  assert.equal(app.reload().listProjects()[0].assessment_answers.q8, 7);
+  const project = app.store.createProject('Review before submitting');
+  app.store.saveDraft(project.id, { version: ASSESSMENT_VERSION, step: 8, answers: completeAnswers() }, alice.id);
+  const answers = { ...app.reload().listProjects()[0].draft.answers, q1: 2, q8: 7 };
+  app.store.saveDraft(project.id, { version: ASSESSMENT_VERSION, step: 1, answers }, alice.id);
+  const draft = app.reload().listProjects()[0];
+  assert.equal(draft.assessment_completed, false);
+  assert.deepEqual(draft.draft.answers, answers);
+  const completed = app.store.completeProject(project.id, draft.draft.answers, alice.id);
+  assert.equal(completed.assessment_result.domain, 'Education');
+  assert.deepEqual(completed.assessment_answers, answers);
+  assert.throws(() => app.reload().saveDraft(project.id, { version: ASSESSMENT_VERSION, step: 1, answers: completeAnswers() }, alice.id), /cannot be edited/);
 });
 
-test('summary edits reject invalid values, incomplete assessments, and older question sets', () => {
+test('submitted assessments reject edits without changing current or legacy records', () => {
   const app = fixture();
-  const project = app.store.createProject('Validation');
-  assert.throws(() => app.store.updateAssessmentChoice(project.id, 'q1', 2, null, alice.id), /Only completed assessments/);
+  const project = app.store.createProject('Locked summary');
   app.store.completeProject(project.id, completeAnswers());
-  const before = app.storage.getItem(projectsKey(alice.id));
-  for (const value of [null, 0, 99, '2', [2], 1.5]) {
-    assert.throws(() => app.store.updateAssessmentChoice(project.id, 'q1', value, 1, alice.id));
-    assert.equal(app.storage.getItem(projectsKey(alice.id)), before);
+  for (const legacy of [false, true]) {
+    if (legacy) {
+      const data = JSON.parse(app.storage.getItem(projectsKey(alice.id)));
+      delete data.projects[0].assessment_result.assessment_version;
+      app.storage.setItem(projectsKey(alice.id), JSON.stringify(data));
+    }
+    const before = app.storage.getItem(projectsKey(alice.id));
+    for (const value of [2, null, 0, 99, '2', [2], 1.5]) {
+      assert.throws(() => app.store.updateAssessmentChoice(project.id, 'q1', value, 1, alice.id), /cannot be edited/);
+      assert.equal(app.storage.getItem(projectsKey(alice.id)), before);
+    }
   }
-  assert.throws(() => app.store.updateAssessmentChoice(project.id, 'unknown', 2, 1, alice.id), /valid assessment question/);
-  const data = JSON.parse(before);
-  delete data.projects[0].assessment_result.assessment_version;
-  app.storage.setItem(projectsKey(alice.id), JSON.stringify(data));
-  assert.throws(() => app.store.updateAssessmentChoice(project.id, 'q1', 2, 1, alice.id), /current questions/);
 });
 
-test('summary edits merge independent changes, reject stale answers, and enforce account ownership', () => {
+test('the retired summary edit endpoint still enforces account ownership', () => {
   const app = fixture();
-  const project = app.store.createProject('Concurrent edits');
+  const project = app.store.createProject('Protected summary');
   app.store.completeProject(project.id, completeAnswers());
-  app.store.updateAssessmentChoice(project.id, 'q8', 7, 1, alice.id);
-  const staleTab = app.reload();
-  assert.throws(() => staleTab.updateAssessmentChoice(project.id, 'q8', 8, 1, alice.id), /changed in another tab/);
-  const merged = staleTab.updateAssessmentChoice(project.id, 'q2', 3, 2, alice.id);
-  assert.equal(merged.assessment_answers.q8, 7);
-  assert.equal(merged.assessment_answers.q2, 3);
   app.signIn(bob);
   assert.throws(() => app.store.updateAssessmentChoice(project.id, 'q1', 2, 1, alice.id), /account changed/);
   assert.throws(() => app.store.updateAssessmentChoice(project.id, 'q1', 2, 1, bob.id), /no longer available/);
@@ -309,7 +300,7 @@ test('summary edits merge independent changes, reject stale answers, and enforce
   assert.throws(() => app.store.updateAssessmentChoice(project.id, 'q1', 2, 1, alice.id), /log in/);
 });
 
-test('changing an assessment choice preserves approved roadmap missions and evidence', () => {
+test('a denied assessment edit preserves approved roadmap missions and evidence', () => {
   const app = fixture();
   const project = app.store.createProject('Progress stays saved');
   app.store.completeProject(project.id, completeAnswers());
@@ -325,10 +316,10 @@ test('changing an assessment choice preserves approved roadmap missions and evid
   assert.equal(progressed.completedCount, 1);
   const key = roadmapWorkflowKey(alice.id, project.id);
   const savedProgress = app.storage.getItem(key);
-  app.store.updateAssessmentChoice(project.id, 'q1', 2, 1, alice.id);
+  assert.throws(() => app.store.updateAssessmentChoice(project.id, 'q1', 2, 1, alice.id), /cannot be edited/);
   assert.equal(app.storage.getItem(key), savedProgress);
   const after = workflow.read(project.id, alice.id, alice.id);
-  assert.equal(after.domain, 'Education');
+  assert.equal(after.domain, progressed.domain);
   assert.equal(after.completedCount, progressed.completedCount);
   assert.equal(after.currentMilestoneId, progressed.currentMilestoneId);
   assert.deepEqual(after.submissionsByMilestone, progressed.submissionsByMilestone);

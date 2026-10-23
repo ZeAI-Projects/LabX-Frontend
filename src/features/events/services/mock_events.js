@@ -1,14 +1,14 @@
 import { createSafeStorage, localStore } from '../../../services/storage/local_storage.js'
 import { OPPORTUNITY_PREVIEWS } from './opportunity_previews.js'
 
-export const EVENT_CATEGORIES = ['Hackathon', 'Workshop', 'Webinar', 'Training', 'Incubator', 'Accelerator', 'Residency', 'Mentoring', 'Job', 'Internship', 'Grant', 'Funding opportunity', 'Pitch event', 'Sponsored challenge', 'Community event', 'Guild event', 'Opportunity', 'Announcement']
+export const EVENT_CATEGORIES = ['Hackathon', 'Workshop', 'Webinar', 'Training', 'Incubator', 'Accelerator', 'Residency', 'Mentoring', 'Job', 'Internship', 'Grant', 'Funding opportunity', 'Pitch event', 'Sponsored challenge', 'Community event', 'Guild event', 'Opportunity']
 export const EVENT_STORAGE_KEY = 'labx.demo.events.v1'
 export const EVENT_CHANGE_EVENT = 'labx:events-change'
 export const MAX_CERTIFICATE_BYTES = 1024 * 1024
 export const REPORT_REASONS = ['Incorrect or outdated information', 'Misleading listing', 'Inappropriate content', 'Other']
 
 const defaults = {
-  type: 'event', organizer: 'LabX Community · Demo', contact: 'Organizer contact is unavailable in this demo.',
+  type: 'event', organizer: 'LabX Community', contact: 'Organizer contact is not available.',
   timezone: 'Asia/Kolkata', format: 'Online', location: 'Online · meeting room available at the event',
   roles: ['founder', 'mentor'], eligibility: 'LabX founders and mentors', fee: 'Free', prize: null,
   sponsored: false, capacity: 100, available: 24,
@@ -22,15 +22,15 @@ export const MOCK_EVENTS = [
     description: 'Turn a meaningful problem into a working prototype with a weekend of building, mentor feedback, and a community showcase.',
     schedule: 'Day 1: team formation and problem framing. Day 2: prototype builds, mentor clinics, and a final showcase.',
     startsAt: '2026-10-20T09:00:00+05:30', endsAt: '2026-10-21T18:00:00+05:30', deadline: '2026-10-19T18:00:00+05:30',
-    format: 'Hybrid', location: 'Demo Innovation Hub, Bengaluru / online', capacity: 120, available: 38,
-    prize: 'Prototype feedback and a showcase slot · sample benefits', sponsored: true, sponsor: 'LabX Innovation Partners · Demo',
+    format: 'Hybrid', location: 'Innovation Hub, Bengaluru / online', capacity: 120, available: 38,
+    prize: 'Prototype feedback and a showcase slot · sample benefits', sponsored: true, sponsor: 'LabX Innovation Partners',
   },
   {
     id: 'customer-workshop', category: 'Workshop', title: 'Customer Discovery Masterclass',
     description: 'Practice interview techniques, test your assumptions, and leave with a focused plan for your next five customer conversations.',
     schedule: '10:00: discovery principles. 10:45: interview practice. 11:30: questions and next steps.',
     startsAt: '2026-10-18T10:00:00+05:30', endsAt: '2026-10-18T12:00:00+05:30', deadline: '2026-10-17T18:00:00+05:30',
-    organizer: 'LabX Learning Studio · Demo',
+    organizer: 'LabX Learning Studio',
   },
   {
     id: 'mentor-circle', category: 'Mentoring', title: 'Mentor Exchange Circle',
@@ -45,14 +45,14 @@ export const MOCK_EVENTS = [
     schedule: 'Application window ends 22 October. Sample review briefing takes place 28 October.',
     startsAt: '2026-10-28T11:00:00+05:30', endsAt: '2026-10-28T12:00:00+05:30', deadline: '2026-10-22T18:00:00+05:30',
     roles: ['founder'], eligibility: 'Founder accounts with an early-stage impact idea', capacity: null, available: null,
-    prize: 'Illustrative prototype support grant; no funding is awarded in this demo',
+    prize: 'Illustrative prototype support grant; funding is not awarded through this listing',
   },
   {
     id: 'residency-opportunity', category: 'Residency', title: 'Founder Residency Open House',
     description: 'Meet a sample venture studio team, explore the residency program, and learn how structured founder support could fit your next stage.',
     schedule: '14:00: studio introduction. 14:30: program walkthrough. 15:00: open questions.',
     startsAt: '2026-11-02T14:00:00+05:30', endsAt: '2026-11-02T16:00:00+05:30', deadline: '2026-10-30T18:00:00+05:30',
-    format: 'In person', location: 'Demo Venture Studio, Bengaluru', roles: ['founder'], eligibility: 'Founder accounts',
+    format: 'In person', location: 'Venture Studio, Bengaluru', roles: ['founder'], eligibility: 'Founder accounts',
   },
   {
     id: 'climate-sprint', category: 'Hackathon', title: 'Climate Sprint: Cohort Full',
@@ -73,13 +73,6 @@ export const MOCK_EVENTS = [
     description: 'A past community workshop exploring story structure, clear problem statements, and concise founder pitches.',
     schedule: '15:00: pitch structure. 15:30: practice rounds. 16:30: feedback.',
     startsAt: '2026-10-07T15:00:00+05:30', endsAt: '2026-10-07T17:00:00+05:30', deadline: '2026-10-06T18:00:00+05:30',
-  },
-  {
-    id: 'community-transmission', type: 'announcement', category: 'Announcement', title: 'October Community Transmission',
-    description: 'This month’s sample broadcast brings together new learning sessions, founder opportunities, and ways to meet the LabX community.',
-    schedule: 'Community bulletin · published 14 October 2026.',
-    startsAt: '2026-10-14T09:00:00+05:30', endsAt: '2026-10-31T23:59:00+05:30', deadline: null,
-    location: 'LabX community bulletin', capacity: null, available: null, fee: null,
   },
   ...OPPORTUNITY_PREVIEWS,
 ].map((event) => Object.freeze({ ...defaults, ...event }))
@@ -126,7 +119,7 @@ export function getRegistrationAvailability(event, user, registration, now = Dat
 export function selectEvents(events, {
   query = '', category = 'all', format = 'all', view = 'upcoming', broadcast = 'all', sort = 'soonest', myPeriod = 'all',
   dateFrom = '', dateTo = '', location = '', eligibility = 'all', fee = 'all', prizes = 'all', sponsored = 'all',
-} = {}, registrations = {}, now = Date.now(), user = null, outcomes = {}) {
+} = {}, registrations = {}, now = Date.now(), user = null, outcomes = {}, savedEvents = {}) {
   const search = query.trim().toLowerCase()
   return events.filter((event) => {
     const phase = eventPhase(event, now)
@@ -134,7 +127,7 @@ export function selectEvents(events, {
     // Announcements stay in the discovery feed throughout their publication window.
     const discoveryPhase = event.type === 'announcement' && phase === 'ongoing' ? 'upcoming' : phase
     const date = new Intl.DateTimeFormat('en-CA', { timeZone: event.timezone || 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(event.startsAt))
-    const visible = view === 'my'
+    const visible = view === 'saved' ? Boolean(savedEvents[event.id]) : view === 'my'
       ? Boolean(registrations[event.id]) && (myPeriod === 'all' || (myPeriod === 'completed' ? completed : !completed && phase === myPeriod))
       : view === 'completed' ? completed : discoveryPhase === view
     return (!search || `${event.title} ${event.organizer} ${event.description} ${event.category} ${event.location}`.toLowerCase().includes(search))
@@ -161,6 +154,7 @@ function certificateFor(value) {
   if (value === null || value === undefined) return null
   const types = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp']
   if (!isRecord(value) || !types.includes(value.type) || typeof value.name !== 'string'
+    // eslint-disable-next-line no-control-regex -- Reject control characters in uploaded filenames.
     || !value.name.trim() || value.name.length > 180 || /[\\/\u0000-\u001f]/.test(value.name)
     || !Number.isSafeInteger(value.size) || value.size < 1 || value.size > MAX_CERTIFICATE_BYTES
     || typeof value.dataUrl !== 'string' || value.dataUrl.length > Math.ceil(MAX_CERTIFICATE_BYTES / 3) * 4 + 80) {
@@ -234,12 +228,18 @@ export function createEventStore({ storage = localStore, now = Date.now, events 
         return []
       }
     }))
+    const savedEvents = Object.fromEntries(entries(data?.savedEvents).flatMap(([id, record]) => {
+      if (!events.some((event) => event.id === id && event.type === 'event') || !isRecord(record)
+        || record.eventId !== id || !isIsoDate(record.savedAt)) return []
+      return [[id, { eventId: id, savedAt: record.savedAt }]]
+    }))
     return {
       registrations,
       reports: Object.fromEntries(reports.map(([id, record]) => [id, {
         reason: record.reason, notes: record.notes, reportedAt: record.reportedAt,
       }])),
       outcomes,
+      savedEvents,
     }
   }
   function findEvent(id) {
@@ -247,8 +247,9 @@ export function createEventStore({ storage = localStore, now = Date.now, events 
     if (!event) throw new Error('This listing is unavailable.')
     return event
   }
-  function write(user, data) {
-    store.writeJSON(keyFor(user), data)
+  function write(user, data, strict = false) {
+    if (strict) store.writeJSONStrict(keyFor(user), data)
+    else store.writeJSON(keyFor(user), data)
     if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(EVENT_CHANGE_EVENT, { detail: { userId: user.id } }))
   }
   function requireAvailable(event, user, registration) {
@@ -257,6 +258,17 @@ export function createEventStore({ storage = localStore, now = Date.now, events 
   }
   return {
     read,
+    setSaved(user, eventId, saved) {
+      const event = findEvent(eventId)
+      const data = read(user)
+      if (event.type !== 'event') throw new Error('This listing is unavailable.')
+      if (typeof saved !== 'boolean') throw new Error('Choose whether to save this event.')
+      if (Boolean(data.savedEvents[eventId]) === saved) return data.savedEvents[eventId] ?? null
+      if (saved) data.savedEvents[eventId] = { eventId, savedAt: new Date(now()).toISOString() }
+      else delete data.savedEvents[eventId]
+      write(user, data, true)
+      return data.savedEvents[eventId] ?? null
+    },
     register(user, eventId) {
       const event = findEvent(eventId)
       const data = read(user)

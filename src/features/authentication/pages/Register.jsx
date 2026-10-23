@@ -164,7 +164,6 @@ export const Register = () => {
           </button>
         </div>
       </form>
-      <p className="compact-demo-note">Next, verify your email with a six-digit code. Demo preview — no email is sent.</p>
     </AuthShell>
   );
 };

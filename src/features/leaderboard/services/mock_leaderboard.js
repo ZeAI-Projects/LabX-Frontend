@@ -38,20 +38,20 @@ const domainStyles = {
   'Consumer Products': ['Consumer', '#f9a8d4'],
   'Manufacturing & Industry': ['Industry', '#fdba74'],
   'Retail & Commerce': ['Commerce', '#6ee7b7'],
-  'Other / Not listed': ['Other', '#94a3b8'],
-  'Not sure yet': ['Undecided', '#94a3b8'],
 }
 const domainNames = [
   ...Object.keys(legacyDomainStyles),
   ...SUPPORTED_DOMAIN_OPTIONS.filter((name) => !Object.hasOwn(legacyDomainStyles, name)),
 ]
 
+// Filter after assigning IDs so saved domain links keep their original meaning.
+const excludedDomains = new Set(['Other / Not listed', 'Not sure yet', 'Others / Not Sure Yet'])
 export const LEADERBOARD_DOMAINS = freeze(domainNames.map((name, index) => ({
   id: String(index + 1),
   name,
   shortName: domainStyles[name]?.[0] ?? name,
   color: domainStyles[name]?.[1] ?? '#94a3b8',
-})))
+})).filter(({ name }) => !excludedDomains.has(name)))
 
 const normalizeText = (value) => String(value ?? '').normalize('NFKD').replace(/\p{M}/gu, '').trim().replace(/\s+/g, ' ').toLowerCase()
 const compareText = (left, right) => left < right ? -1 : left > right ? 1 : 0
@@ -178,13 +178,34 @@ export function getLeaderboardSnapshot({ user = null, projects = [], scope = 'gl
   const current = currentFounder(user, projects, domain)
   const founders = SAMPLE_FOUNDERS.filter((founder) => founder.id !== current?.id)
   if (current) founders.push(current)
-  const scoped = requiresDomain ? [] : selectedScope === 'domain'
-    ? founders.filter((founder) => founder.domains.some((membership) => membership.id === domain.id))
-    : founders
-  const allRankings = rankFounders(scoped)
+  const domainBoards = new Map(LEADERBOARD_DOMAINS.map((entry) => [entry.id,
+    rankFounders(founders.filter((founder) => founder.domains.some((membership) => membership.id === entry.id))),
+  ]))
+  const globalRankings = rankFounders(founders).map((founder) => {
+    const domainRanks = founder.domains.map((membership) => ({
+      ...membership,
+      rank: domainBoards.get(membership.id).find((entry) => entry.id === founder.id).rank,
+    }))
+    const placement = domainRanks.find((entry) => entry.name === founder.domain)
+    return {
+      ...founder,
+      global_rank: founder.rank,
+      domain_rank: placement?.rank ?? null,
+      domain_ranks: domainRanks,
+      primary_domain: domainRanks[0] ?? null,
+    }
+  })
+  const allRankings = requiresDomain ? [] : selectedScope === 'domain'
+    ? rankFounders(globalRankings.filter((founder) => founder.domains.some((membership) => membership.id === domain.id)))
+    : globalRankings
   const query = normalizeText(search)
   const rankings = query ? allRankings.filter((founder) => normalizeText(`${founder.full_name} @${founder.username}`).includes(query)) : allRankings
   const userStanding = allRankings.find((founder) => founder.is_current_user) ?? null
+  const globalUserStanding = globalRankings.find((founder) => founder.is_current_user) ?? null
+  const standingDomain = domain ?? globalUserStanding?.primary_domain
+  const domainUserStanding = globalUserStanding && standingDomain
+    ? domainBoards.get(standingDomain.id)?.find((founder) => founder.is_current_user) ?? null
+    : null
   const nextPoints = userStanding
     ? allRankings.filter((founder) => founder.total_points > userStanding.total_points).at(-1)?.total_points
     : undefined
@@ -198,8 +219,16 @@ export function getLeaderboardSnapshot({ user = null, projects = [], scope = 'gl
     podium: allRankings.slice(0, 3),
     leader: allRankings[0] ?? null,
     userStanding,
+    globalUserStanding,
+    domainUserStanding: domainUserStanding ? { ...globalUserStanding, rank: domainUserStanding.rank, domain_rank: domainUserStanding.rank } : null,
     totalFounders: allRankings.length,
     matchedCount: rankings.length,
     nextRankGap: nextPoints === undefined ? null : nextPoints - userStanding.total_points + 1,
+    metrics: {
+      totalFounders: allRankings.length,
+      totalPoints: allRankings.reduce((sum, founder) => sum + founder.total_points, 0),
+      totalBadges: allRankings.reduce((sum, founder) => sum + founder.badges_count, 0),
+      leadingPoints: allRankings[0]?.total_points ?? 0,
+    },
   })
 }

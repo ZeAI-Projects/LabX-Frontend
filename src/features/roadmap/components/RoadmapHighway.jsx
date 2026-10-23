@@ -1,23 +1,24 @@
 import { useEffect, useRef } from 'react';
 import { ArrowRight, ArrowUp, Check, Flag, LocateFixed, LockKeyhole, Play, Sparkles, Trophy } from 'lucide-react';
 import { TierRankBadge } from '../../../components/common/TierRankBadge.jsx';
+import { RoadsideScenery } from './RoadsideScenery.jsx';
 import './RoadmapHighway.css';
 
-const ROW_HEIGHT = 330;
+const ROW_HEIGHT = 240;
 const TOP_SPACE = 120;
-const BOTTOM_SPACE = 240;
+const BOTTOM_SPACE = 200;
 const covered = (mission) => mission.state === 'completed' || mission.state === 'credited';
 const labels = { active: 'Active focus', completed: 'Conquered', credited: 'Placement credit', locked: 'Locked' };
 
 function roadGeometry(missions, mobile) {
   const points = missions.map((mission, index) => ({
     id: mission.id,
-    x: mobile ? index % 2 === 0 ? 90 : 190 : index % 2 === 0 ? 110 : 910,
+    x: mobile ? index % 2 === 0 ? 90 : 190 : index % 2 === 0 ? 80 : 940,
     y: TOP_SPACE + (missions.length - 1 - index) * ROW_HEIGHT + ROW_HEIGHT / 2,
   }));
   const first = points[0];
   const last = points.at(-1);
-  const startX = mobile ? 190 : 910;
+  const startX = mobile ? 190 : 940;
   const start = `M ${startX} ${first.y + 220} C ${startX} ${first.y + 100}, ${first.x} ${first.y + 140}, ${first.x} ${first.y}`;
   const segments = points.slice(1).map((point, index) => {
     const previous = points[index];
@@ -67,6 +68,8 @@ function scrollToCheckpoint(canvas, checkpointY, behavior = 'instant') {
 
 export function RoadmapHighway({ stage, canOpen, onOpen, isOwner, assignedMissionIds }) {
   const canvas = useRef(null);
+  const highway = useRef(null);
+  const previous = useRef(null);
   const missions = stage.levels.flatMap((level) => level.milestones);
   const desktop = roadGeometry(missions, false);
   const mobile = roadGeometry(missions, true);
@@ -76,26 +79,51 @@ export function RoadmapHighway({ stage, canOpen, onOpen, isOwner, assignedMissio
   const targetY = desktop.points[targetIndex].y;
   const activeId = active?.id ?? '';
 
-  // Start at the current checkpoint on the page; resizing never interrupts scrolling.
+  // Orient a newly opened roadmap once. Switching stages keeps the reader's place
+  // on the same full-length highway; only mission progress moves its checkpoint.
   useEffect(() => {
+    const prior = previous.current;
+    const changedStage = prior && prior.stageId !== stage.id;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const transition = changedStage && !reducedMotion
+      ? highway.current?.animate([{ opacity: .55 }, { opacity: 1 }], { duration: 240, easing: 'ease-out' })
+      : null;
+    if (changedStage) {
+      previous.current = { stageId: stage.id, activeId, targetY };
+      return () => transition?.cancel();
+    }
+    if (prior && prior.activeId === activeId && prior.targetY === targetY) return;
     const frame = requestAnimationFrame(() => {
-      if (!document.querySelector('dialog[open]')) scrollToCheckpoint(canvas.current, targetY);
+      previous.current = { stageId: stage.id, activeId, targetY };
+      if (document.querySelector('dialog[open]')) return;
+      if (stage.isUnlocked) scrollToCheckpoint(canvas.current, targetY);
     });
     return () => cancelAnimationFrame(frame);
-  }, [stage.id, activeId, targetY]);
+  }, [stage.id, stage.isUnlocked, activeId, targetY]);
 
   function findMission() {
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     scrollToCheckpoint(canvas.current, targetY, reducedMotion ? 'instant' : 'smooth');
   }
 
-  return <div className="rm-highway">
+  const completedInStage = missions.filter(mission => covered(mission)).length;
+  return <div className="rm-highway" ref={highway}>
+    <div className="rm-sticky-checkpoint" role="region" aria-label="Current stage navigation"><span className="rm-checkpoint-mark"><Flag size={16}/></span><div><strong>{stage.name}<span>Stage {stage.index + 1}</span></strong><small>{active ? 'Level ' + active.level + ' · ' + active.name : desktop.complete ? 'Stage covered' : 'Complete earlier stages to unlock'}</small></div><span className="rm-checkpoint-progress">{completedInStage}<small> / 15</small></span><button type="button" onClick={findMission} aria-label="Locate current checkpoint"><LocateFixed size={18}/></button></div>
+    <nav className="rm-level-nav" aria-label="Stage levels">{stage.levels.map((level,index)=>{
+      const done=level.milestones.every(covered);const ongoing=level.milestones.some(m=>m.state==='active');
+      const first=level.milestones.find(m=>m.state==='active') || level.milestones[0];
+      return <button key={index} type="button" style={{'--level-accent':['#a78bfa','#60a5fa','#2dd4bf','#fbbf24','#f472b6'][index]}} aria-label={'Level '+(index+1)+', '+(done?'completed':ongoing?'current':'locked')} aria-current={ongoing?'step':undefined}
+        onClick={()=>{const point=desktop.points.find(p=>p.id===first.id);scrollToCheckpoint(canvas.current,point.y,window.matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth');}}>
+        {done?<Check size={13}/>:ongoing?<Play size={12}/>:<LockKeyhole size={12}/>}<span>Level {index+1}</span>
+      </button>;
+    })}</nav>
     <div className="rm-highway-toolbar">
       <span><ArrowUp size={16} />Start below. Build your way up.</span>
       <button type="button" onClick={findMission}><LocateFixed size={15} />{active ? 'Find current mission' : desktop.complete ? 'View stage finish' : 'View stage start'}</button>
     </div>
     <div className="rm-highway-viewport" role="region" aria-label={`${stage.name} road map, starts at the bottom`} aria-describedby="roadmap-scroll-hint">
       <div ref={canvas} className="rm-highway-canvas" style={{ height }}>
+        <RoadsideScenery points={desktop.points} reached={desktop.reached} stageIndex={stage.index} />
         <RoadPath geometry={desktop} height={height} />
         <RoadPath geometry={mobile} height={height} mobile />
         <div className={`rm-highway-finish${desktop.complete ? ' is-complete' : ''}`}>
@@ -110,7 +138,7 @@ export function RoadmapHighway({ stage, canOpen, onOpen, isOwner, assignedMissio
             return <li key={mission.id} data-mission-id={mission.id} style={{ top: desktop.points[index].y }} className={`rm-highway-stop ${index % 2 === 0 ? 'is-left' : 'is-right'} is-${mission.state}`}>
               <button className="rm-highway-mission" type="button" disabled={!allowed} onClick={() => onOpen(mission)}
                 aria-label={`${mission.name}, Level ${mission.level}, Mission ${mission.order}, ${mission.state}`}>
-                <span className="rm-highway-node" data-road-node aria-hidden="true"><StateIcon size={26} fill={mission.state === 'active' ? 'currentColor' : 'none'} /></span>
+                <span className={`rm-highway-node${mission.order === 3 ? ' is-level-checkpoint' : ''}`} data-road-node aria-hidden="true"><StateIcon size={26} fill={mission.state === 'active' ? 'currentColor' : 'none'} /></span>
                 <span className="rm-highway-connector" aria-hidden="true" />
                 <span className="rm-highway-card">
                   <span className="rm-highway-card-head">

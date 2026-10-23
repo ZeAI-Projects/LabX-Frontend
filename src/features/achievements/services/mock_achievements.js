@@ -14,12 +14,12 @@ const freeze = (value) => {
 // Recognition uses approved submissions only. Placement and assessment results
 // never create completion records, and recognition does not award LabX Points.
 const BADGES = freeze([
-  { id: 'first-quest', name: 'First Steps', icon: 'flag', description: 'Your founder journey starts with one completed mission.', criteria: 'Submit 1 roadmap mission that passes the demo review.', metric: 'quests', target: 1 },
-  { id: 'quest-explorer', name: 'Quest Explorer', icon: 'compass', description: 'Turn your early ideas into completed work.', criteria: 'Submit 3 roadmap missions that pass the demo review.', metric: 'quests', target: 3 },
+  { id: 'first-quest', name: 'First Steps', icon: 'flag', description: 'Your founder journey starts with one completed mission.', criteria: 'Submit 1 roadmap mission that passes review.', metric: 'quests', target: 1 },
+  { id: 'quest-explorer', name: 'Quest Explorer', icon: 'compass', description: 'Turn your early ideas into completed work.', criteria: 'Submit 3 roadmap missions that pass review.', metric: 'quests', target: 3 },
   { id: 'milestone-maker', name: 'Milestone Maker', icon: 'mountain', description: 'Bring a complete level of work together.', criteria: 'Complete all 3 missions in one level with your own approved submissions.', metric: 'milestones', target: 1 },
-  { id: 'quest-momentum', name: 'Quest Momentum', icon: 'zap', description: 'Build momentum through consistent progress.', criteria: 'Submit 5 roadmap missions that pass the demo review.', metric: 'quests', target: 5 },
+  { id: 'quest-momentum', name: 'Quest Momentum', icon: 'zap', description: 'Build momentum through consistent progress.', criteria: 'Submit 5 roadmap missions that pass review.', metric: 'quests', target: 5 },
   { id: 'pathfinder', name: 'Pathfinder', icon: 'route', description: 'Create a path forward, one completed level at a time.', criteria: 'Complete 3 levels, each with all 3 missions approved from your own submissions.', metric: 'milestones', target: 3 },
-  { id: 'quest-champion', name: 'Quest Champion', icon: 'trophy', description: 'Grow your collection as your venture takes shape.', criteria: 'Submit 10 roadmap missions that pass the demo review.', metric: 'quests', target: 10 },
+  { id: 'quest-champion', name: 'Quest Champion', icon: 'trophy', description: 'Grow your collection as your venture takes shape.', criteria: 'Submit 10 roadmap missions that pass review.', metric: 'quests', target: 10 },
 ])
 
 const catalog = createMockRoadmap()
@@ -100,7 +100,7 @@ export function createAchievementStore({ storage = localStore } = {}) {
       const submission = validatedSnapshot.submissionsByMilestone[missionId]
       if (!completedIds.has(missionId) || !isRecord(submission) || submission.missionId !== missionId
         || submission.status !== 'approved' || submission.submittedBy !== user.id || !validDate(submission.submittedAt)) continue
-      const entry = activityFor(user, project, 'quests', missionId, submission.submittedAt)
+      const entry = activityFor(user, project, 'quests', missionId, validDate(submission.approvedAt) ? submission.approvedAt : submission.submittedAt)
       if (!entries.has(entry.id)) entries.set(entry.id, entry)
     }
     for (const level of levels) {

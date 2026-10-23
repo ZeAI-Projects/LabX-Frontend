@@ -4,6 +4,7 @@ import { ArrowRight, CheckCircle2, Coins, Compass, Flag, History, Lock, Mountain
 import { useAuth } from '../../../hooks/use_auth.js'
 import { ACHIEVEMENTS_CHANGE_EVENT, getAchievementsSnapshot } from '../services/mock_achievements.js'
 import '../components/AchievementsPage.css'
+import { Medal } from '../../../components/common/Medal.jsx'
 
 const badgeIcons = { flag: Flag, compass: Compass, mountain: Mountain, route: Route, zap: Zap, trophy: Trophy }
 const formatDate = (date) => new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(date))
@@ -86,7 +87,7 @@ export function AchievementsPage() {
         </div>
       </section>
 
-      <p className="achievements-demo-note">{isFounder ? <>{snapshot.isDemo ? 'This demo collection includes sample activity. ' : ''}Approved missions unlock badges in this browser. Placement credits do not count, and mission completion does not award LabX Points.</> : 'This is the founder achievement collection. Badges track approved founder missions and completed levels.'}</p>
+      <p className="achievements-demo-note">{isFounder ? <>Approved missions unlock badges in this browser. Placement credits do not count, and mission completion does not award LabX Points.</> : 'This is the founder achievement collection. Badges track approved founder missions and completed levels.'}</p>
 
       <section className="achievements-summary" aria-label="Achievement summary">
         <div><Coins size={20} /><span>LabX Points balance</span><strong>{pointsBalance.toLocaleString()}</strong></div>
@@ -95,6 +96,7 @@ export function AchievementsPage() {
         <div><Flag size={20} /><span>Level milestones</span><strong>{snapshot.completedMilestones}</strong></div>
       </section>
 
+      {nextAchievement && <Link className="achievement-next-checkpoint" to={isFounder ? '/roadmap' : '/events'}><span className="achievement-next-checkpoint__icon"><Medal icon={badgeIcons[nextAchievement.icon] || Trophy} earned={false} size={39}/></span><div><span>Your next unlock</span><strong>{nextAchievement.name}</strong><small>{nextAchievement.current} of {nextAchievement.target} {nextAchievement.metric === 'quests' ? 'approved missions' : 'level milestones'}</small></div><span className="achievement-next-checkpoint__progress" role="progressbar" aria-label="Next badge progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={nextAchievement.progress}><span style={{ width: nextAchievement.progress + '%' }}/></span><ArrowRight size={18}/></Link>}
       <div className="achievements-section-heading achievements-collection-heading"><h2>Your badges</h2><span>{earnedBadgeCount} of {badges.length} earned</span></div>
       <div className="achievements-filters" aria-label="Filter achievements">
         {filters.map(([value, label, count]) => <button key={value} type="button" aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}<span>{count}</span></button>)}
@@ -108,7 +110,7 @@ export function AchievementsPage() {
           {visible.map((badge) => (
             <article key={badge.id} className={`achievement-card ${badge.isEarned ? 'is-earned' : 'is-locked'}`} aria-labelledby={`badge-name-${badge.id}`}>
               <div className="achievement-card__top"><span className="achievement-card__state">{badge.isEarned ? <CheckCircle2 size={12} /> : <Lock size={11} />}{badge.isEarned ? 'Earned' : 'Locked'}</span><span className="achievement-card__category">{badge.metric === 'quests' ? 'MISSION' : 'MILESTONE'}</span></div>
-              <div className="achievement-card__medal" aria-hidden="true"><div className="achievement-card__icon"><BadgeIcon badge={badge} size={32} /></div><span /></div>
+              <div className="achievement-card__medal" aria-hidden="true"><Medal icon={badgeIcons[badge.icon] || Trophy} earned={badge.isEarned} tone={badge.metric === 'milestones' ? 'gold' : 'violet'} size={74}/></div>
               <h3 id={`badge-name-${badge.id}`}>{badge.name}</h3><p className="achievement-card__description">{badge.description}</p>
               <div className="achievement-card__criteria"><span>{badge.isEarned ? 'Achievement completed' : 'How to unlock'}</span><p>{badge.criteria}</p></div>
               <div className="achievements-progress__track" role="progressbar" aria-label={`${badge.name} collection progress`} aria-valuenow={badge.current} aria-valuemin={0} aria-valuemax={badge.target}><span style={{ width: `${badge.progress}%` }} /></div>
@@ -155,7 +157,7 @@ export function AchievementsPage() {
 
       {showHistory && <AchievementDialog labelledBy="achievement-history-title" onClose={() => setShowHistory(false)}>
         <span className="achievements-eyebrow"><History size={16} /> POINTS LEDGER</span><h2 id="achievement-history-title">Points History</h2>
-        <p>Available balance: <strong>{pointsBalance} LabX Points</strong></p><p>{snapshot.isDemo ? 'Illustrative demo transactions. Approved entries count toward the balance; pending entries do not.' : 'Only approved points transactions count toward your balance.'}</p>
+        <p>Available balance: <strong>{pointsBalance} LabX Points</strong></p><p>Only approved points transactions count toward your balance.</p>
         <Transactions entries={snapshot.transactions} /><p className="achievements-points__footnote">Entries are read-only. LabX Points have no cash value.</p>
       </AchievementDialog>}
     </div>

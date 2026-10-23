@@ -5,6 +5,7 @@ import { useAuth } from '../../../hooks/use_auth.js';
 import { sessionStore } from '../../../services/storage/local_storage.js';
 import { getRegistrationDestination } from '../../../utils/onboarding.js';
 import { AuthShell } from '../components/AuthShell';
+import { VerificationCodeInput } from '../components/VerificationCodeInput.jsx';
 import { soundManager } from '../components/gamified/soundEffects';
 import { useAuthEffects } from '../components/gamified/useAuthEffects';
 
@@ -100,19 +101,17 @@ export function VerifyEmail() {
         <>
           <div className="verification-account"><Mail size={17} aria-hidden="true" /><span>{verification.email}</span></div>
           <div className="auth-demo-notice verification-demo-notice">
-            <p>Demo preview — no email is sent. Use code <output className="verification-demo-code" data-testid="demo-signup-code" aria-label="Demo verification code">{verification.demoCode}</output>.</p>
+            <output className="verification-demo-code" data-testid="demo-signup-code" aria-label="Verification code">{verification.demoCode}</output>
           </div>
           {error && <div id="verify-email-error" className="auth-error-banner" role="alert"><AlertCircle size={16} aria-hidden="true" /><span>{error}</span></div>}
           {status && <p className="verification-status" role="status">{status}</p>}
           <form onSubmit={handleSubmit} aria-busy={busy} noValidate>
             <div className="gamified-field-group">
-              <label className="gamified-field-label" htmlFor="verification-code">Six-digit code<span className="required-mark" aria-hidden="true" /></label>
-              <input ref={codeInput} id="verification-code" name="code" type="text" inputMode="numeric"
-                autoComplete="one-time-code" className="gamified-input verification-code-input" required
-                maxLength={6} pattern="[0-9]{6}" disabled={busy} aria-invalid={Boolean(error)}
-                aria-describedby={`verification-hint${error ? ' verify-email-error' : ''}`} value={code}
-                onChange={(event) => { setCode(event.target.value.replace(/\D/g, '').slice(0, 6)); setError(''); }}
-                onFocus={soundManager.playFocus} placeholder="000000" />
+              <label className="gamified-field-label" id="signup-code-label" htmlFor="signup-code-0">Enter your 6-digit verification code<span className="required-mark" aria-hidden="true" /></label>
+              <VerificationCodeInput ref={codeInput} idPrefix="signup-code" labelId="signup-code-label"
+                value={code} disabled={busy} invalid={Boolean(error)}
+                describedBy={`verification-hint${error ? ' verify-email-error' : ''}`}
+                onChange={(value) => { setCode(value); setError(''); }} onFocus={soundManager.playFocus} />
               <p className="verification-hint" id="verification-hint">Codes expire after 10 minutes. Use your latest code.</p>
             </div>
             <div className="compact-auth-actions">

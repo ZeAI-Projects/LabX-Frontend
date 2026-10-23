@@ -4,7 +4,7 @@ import { ProfileAvatar, ProfileDialog, ProfileField } from './ProfileDialog.jsx'
 import { profileStore } from '../services/profile_store.js'
 import { readProfileFile } from '../services/profile_files.js'
 
-export const VISIBILITY_FIELDS = [
+const VISIBILITY_FIELDS = [
   ['bio', 'Bio'], ['city', 'City'], ['country', 'Country'], ['skills', 'Skills'], ['interests', 'Interests'],
   ['goals', 'Goals'], ['availability', 'Collaboration availability'], ['website', 'Website'], ['portfolio', 'Portfolio'],
   ['linkedin', 'LinkedIn'], ['public_email', 'Public contact email'], ['professional_background', 'Professional background'],

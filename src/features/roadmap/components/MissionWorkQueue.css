@@ -1,0 +1,19 @@
+.rm-work-queue { margin: 16px 0 22px; padding: 18px 20px; border: 1px solid #2a344a; border-radius: 16px; background: rgba(18, 26, 42, .92); }
+.rm-work-queue header { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.rm-work-queue h2 { font-size: 16px; color: #e0e7f3; margin: 5px 0 0; }
+.rm-work-count { color: #c1b2e5; border: 1px solid #443c60; border-radius: 20px; padding: 5px 10px; font-size: 11px; white-space: nowrap; }
+.rm-work-queue > p { font-size: 12px; line-height: 1.7; color: #9faec4; margin: 12px 0 0; }
+.rm-work-queue ul { list-style: none; padding: 0; margin: 12px 0 0; }
+.rm-work-queue li { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid #283246; }
+.rm-work-queue li > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.rm-work-queue li strong { display: block; font-size: 13px; color: #dfe7f4; }
+.rm-work-queue li small { display: block; margin-top: 5px; color: #91a3bd; font-size: 11px; line-height: 1.6; }
+.rm-work-status { color: #a9d6e5; font-size: 11px; max-width: 210px; line-height: 1.6; }
+.rm-work-queue button { flex: 0 0 auto; }
+@media (max-width: 640px) {
+  .rm-work-queue { padding: 14px; }
+  .rm-work-queue header { align-items: flex-start; flex-wrap: wrap; gap: 10px; }
+  .rm-work-queue li { flex-wrap: wrap; gap: 10px; }
+  .rm-work-queue li > div { flex-basis: 100%; }
+  .rm-work-status { flex: 1; max-width: none; }
+}

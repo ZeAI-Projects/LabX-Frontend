@@ -255,11 +255,12 @@ test('members can submit only assigned active missions and cannot submit the own
   assert.throws(() => app.submit('discover-l1-m2'), /not assigned/)
   app.assign(['discover-l1-m2'])
   const result = app.submit('discover-l1-m2')
-  assert.equal(result.submissionsByMilestone['discover-l1-m2'].submittedBy, member.id)
-  assert.equal(result.completedCount, 2)
+  assert.equal(result.missionWorkflowsById['discover-l1-m2'].versions[0].submittedBy, member.id)
+  assert.equal(result.missionWorkflowsById['discover-l1-m2'].status, 'submitted')
+  assert.equal(result.completedCount, 1)
   assert.throws(() => app.submit('discover-l1-m3'), /not assigned/)
   app.signIn(owner)
-  assert.equal(app.read().completedCount, 2)
+  assert.equal(app.read().completedCount, 1)
 })
 
 test('member reads and submission results redact other evidence while retaining shared progress', () => {
@@ -284,10 +285,10 @@ test('member reads and submission results redact other evidence while retaining 
   const serialized = JSON.stringify(before)
   assert.ok(!serialized.includes('OWNER INITIAL PRIVATE') && !serialized.includes('owner-private') && !serialized.includes('example.com/level'))
   const after = app.submit('validate-l2-m2')
-  assert.equal(after.completedCount, 3)
+  assert.equal(after.completedCount, 2)
   assert.equal(after.creditedCount, 17)
-  assert.deepEqual(Object.keys(after.submissionsByMilestone), ['validate-l2-m2'])
-  assert.equal(after.submissionsByMilestone['validate-l2-m2'].submittedBy, member.id)
+  assert.deepEqual(Object.keys(after.submissionsByMilestone), [])
+  assert.equal(after.missionWorkflowsById['validate-l2-m2'].versions[0].submittedBy, member.id)
   assert.deepEqual(after.placement.evidence, [])
   assert.ok(missions(after).filter((mission) => mission.id !== 'validate-l2-m2').every((mission) => mission.submission === null))
   app.assign([])
@@ -311,10 +312,9 @@ test('read and submit results use the latest assignment permissions before expos
   app.assign(['discover-l1-m3'])
   calls = 0
   app.onAccess(() => { if (++calls === 3) app.assign([]) })
-  const saved = app.submit('discover-l1-m3')
-  assert.equal(saved.completedCount, 3)
-  assert.deepEqual(saved.submissionsByMilestone, {})
-  assert.ok(missions(saved).every((mission) => mission.submission === null))
+  assert.throws(() => app.submit('discover-l1-m3'), /not assigned/)
+  assert.equal(app.read().completedCount, 2)
+  assert.deepEqual(app.read().missionWorkflowsById, {})
 })
 
 test('permission, account and assignment changes before a write prevent saving stale submissions', () => {

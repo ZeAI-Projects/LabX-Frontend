@@ -34,7 +34,7 @@ const DEMO_ACCOUNT = {
   user: {
     id: 'demo-founder',
     email: DEMO_CREDENTIALS.email,
-    full_name: 'Demo Founder',
+    full_name: 'Founder',
     username: 'founder',
     role: 'founder',
     avatar_url: '',
@@ -101,6 +101,7 @@ export function createMockAuthStore({
           ...account,
           user: {
             ...account.user,
+            full_name: account.user.id === DEMO_ACCOUNT.user.id && account.user.full_name === 'Demo Founder' ? 'Founder' : account.user.full_name,
             email,
             assessment_completed: completed,
             assessment_skipped: account.user.role === 'founder' && !completed && account.user.assessment_skipped === true,
@@ -202,7 +203,7 @@ export function createMockAuthStore({
 
   async function passwordVerifier(password, salt) {
     if (!crypto?.subtle) {
-      throw new Error('This demo needs a modern browser on localhost or HTTPS to create and check accounts.');
+      throw new Error('Use a modern browser on localhost or HTTPS to create and check accounts.');
     }
     // Salted digests avoid saving plaintext passwords. They are demo data, not server credentials.
     const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${salt}:${password}`));
@@ -314,6 +315,21 @@ export function createMockAuthStore({
       if (!account || account.user.role !== 'founder') return null;
       const { id, email, full_name, role } = account.user;
       return { id, email, full_name, role };
+    },
+
+    findRegisteredMemberById(memberIdInput, expectedUserId = activeUserId) {
+      const current = readSession()?.account.user;
+      if (!current || current.id !== expectedUserId || current.role !== 'founder') {
+        throw new Error('Your signed-in account changed. Sign in as a Founder to search members.');
+      }
+      const memberId = typeof memberIdInput === 'string' ? memberIdInput.trim() : '';
+      if (!memberId) throw new Error('Enter a Member ID.');
+      // Existing account IDs are case-sensitive. Never fall back to names or email.
+      const matches = [...readAccounts().values()].filter((account) => account.user.id === memberId
+        && account.user.role === 'founder');
+      if (matches.length !== 1) return null;
+      const { id, full_name, username, role } = matches[0].user;
+      return { id, full_name, ...(username ? { username } : {}), role };
     },
 
     async register(emailInput, password, nameInput, { role, rememberMe = true } = {}) {

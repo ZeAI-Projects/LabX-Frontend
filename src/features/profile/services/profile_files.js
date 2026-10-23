@@ -10,6 +10,7 @@ export function validateProfileFile(file, kind = 'avatar') {
   const types = kind === 'evidence' ? [...imageTypes, 'application/pdf'] : imageTypes
   if (!file || typeof file !== 'object' || Array.isArray(file)
     || !types.includes(file.type) || typeof file.name !== 'string' || !file.name.trim()
+    // eslint-disable-next-line no-control-regex -- Reject control characters in uploaded filenames.
     || file.name.length > 180 || /[\\/\u0000-\u001f]/.test(file.name)
     || !Number.isSafeInteger(file.size) || file.size < 1 || file.size > limit
     || typeof file.dataUrl !== 'string' || file.dataUrl.length > Math.ceil(limit / 3) * 4 + 80) {

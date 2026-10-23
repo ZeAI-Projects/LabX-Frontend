@@ -5,7 +5,10 @@ import { OnboardingLayout } from '../components/layout/OnboardingLayout.jsx'
 import { AppShell } from '../components/layout/AppShell.jsx'
 import { FeaturePlaceholder } from '../components/common/FeaturePlaceholder.jsx'
 import { useProjects } from '../features/projects/hooks/use_projects.js'
+import { ASSESSMENT_QUESTIONS, validateAssessmentStep } from '../features/assessment/services/mock_assessment.js'
+import { legacyJoinRoadmapUrl } from '../features/roadmap/services/join_roadmap_navigation.js'
 import { getLoginDestination } from '../utils/onboarding.js'
+import { getCompanionRoadmapRoute, getCompanionUrl } from '../features/companion/services/companion_navigation.js'
 
 const lazyPage = (load, name) => lazy(() => load().then((module) => ({ default: module[name] })))
 const IntroVideo = lazyPage(() => import('../features/authentication/pages/IntroVideo.jsx'), 'IntroVideo')
@@ -18,6 +21,7 @@ const ResetPassword = lazyPage(() => import('../features/authentication/pages/Re
 const AssessmentWizard = lazyPage(() => import('../features/assessment/pages/AssessmentWizard.jsx'), 'AssessmentWizard')
 const AssessmentResult = lazyPage(() => import('../features/assessment/pages/AssessmentResult.jsx'), 'AssessmentResult')
 const OnboardingComplete = lazyPage(() => import('../features/dashboard/pages/OnboardingComplete.jsx'), 'OnboardingComplete')
+const ChatsPage = lazyPage(() => import('../features/companion/pages/ChatsPage.jsx'), 'ChatsPage')
 const RoadmapPage = lazyPage(() => import('../features/roadmap/pages/RoadmapPage.jsx'), 'RoadmapPage')
 const AchievementsPage = lazyPage(() => import('../features/achievements/pages/AchievementsPage.jsx'), 'AchievementsPage')
 const LeaderboardPage = lazyPage(() => import('../features/leaderboard/pages/LeaderboardPage.jsx'), 'LeaderboardPage')
@@ -39,9 +43,14 @@ function ProtectedLayout() {
 }
 
 function ProtectedAppLayout() {
-  const { user, isAuthenticated } = useAuth()
+  const { isAuthenticated } = useAuth()
+  const location = useLocation()
   if (!isAuthenticated) return <Navigate to="/login" replace />
-  return <AppShell key={user.id}><Outlet /></AppShell>
+  const params = new URLSearchParams(location.search)
+  if (getCompanionRoadmapRoute(location.pathname) && params.has('companion')) {
+    return <Navigate to={getCompanionUrl({ ...location, projectId: params.get('project'), tab: params.get('companion'), prompt: params.get('prompt') })} replace />
+  }
+  return <AppShell><Outlet /></AppShell>
 }
 
 function FounderFeature() {
@@ -52,6 +61,17 @@ function FounderFeature() {
 function FounderOnly({ children }) {
   const { user } = useAuth()
   return user.role === 'founder' ? children : <Navigate to="/dashboard" replace />
+}
+
+function LegacyJoinRoadmapRoute() {
+  const { search, hash } = useLocation()
+  return <Navigate to={`${legacyJoinRoadmapUrl(search)}${hash}`} replace />
+}
+
+function LegacyCompanionRoute() {
+  const { search } = useLocation()
+  const params = new URLSearchParams(search)
+  return <Navigate to={getCompanionUrl({ projectId: params.get('project'), ownerId: params.get('owner'), chatId: params.get('chat'), tab: params.get('tab'), prompt: params.get('prompt') })} replace />
 }
 
 // Keep existing assessment bookmarks useful as assessments move under projects.
@@ -86,7 +106,8 @@ function ProjectRoute({ view }) {
       ? <Navigate to={`${base}/result`} replace />
       : <AssessmentWizard key={project.id} project={project} />
   }
-  if (!project.assessment_completed) return <Navigate to={`${base}/assessment`} replace />
+  const canReview = view === 'result' && ASSESSMENT_QUESTIONS.every((_, index) => !validateAssessmentStep(project.draft.answers, index + 1))
+  if (!project.assessment_completed && !canReview) return <Navigate to={`${base}/assessment`} replace />
   return view === 'result'
     ? <AssessmentResult key={project.id} project={project} result={project.assessment_result} />
     : <RoadmapPage key={project.id} project={project} />
@@ -133,9 +154,13 @@ export default function AppRouter() {
           <Route path="/q1" element={<Navigate to="/dashboard" replace />} />
           <Route path="/roadmap" element={<FounderOnly><ProjectsPage /></FounderOnly>} />
           <Route path="/roadmap/new" element={<FounderOnly><NewProjectPage /></FounderOnly>} />
+          <Route path="/join-roadmap" element={<FounderOnly><LegacyJoinRoadmapRoute /></FounderOnly>} />
+          <Route path="/roadmap/join" element={<FounderOnly><LegacyJoinRoadmapRoute /></FounderOnly>} />
           <Route path="/roadmap/joined/:ownerId/:projectId" element={<JoinedRoadmapRoute />} />
           <Route path="/roadmap/:projectId" element={<ProjectRoute view="roadmap" />} />
           <Route path="/dashboard" element={<OnboardingComplete />} />
+          <Route path="/chats" element={<ChatsPage />} />
+          <Route path="/companion" element={<LegacyCompanionRoute />} />
           <Route path="/achievements" element={<AchievementsPage />} />
           <Route path="/events" element={<EventsPage />} />
           <Route path="/profile" element={<ProfilePage />} />

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useProjects } from '../../projects/hooks/use_projects.js';
 import {
   ASSESSMENT_QUESTIONS, ASSESSMENT_QUESTION_COUNT, validateAssessmentStep,
@@ -27,7 +27,7 @@ const OPTION_ICONS = [
 ];
 
 export const AssessmentWizard = ({ project }) => {
-  const { saveDraft, completeProject } = useProjects();
+  const { saveDraft } = useProjects();
   const { step, answers, questionsUpdated } = project.draft;
   const question = ASSESSMENT_QUESTIONS[step - 1];
   const [submitting, setSubmitting] = useState(false);
@@ -35,6 +35,8 @@ export const AssessmentWizard = ({ project }) => {
   const submittingRef = useRef(false);
   const headingRef = useRef(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const reviewing = searchParams.get("review") === "1";
 
   function setDraft(update) {
     try {
@@ -61,7 +63,6 @@ export const AssessmentWizard = ({ project }) => {
     setSubmitting(true);
     setError('');
     try {
-      completeProject(project.id, answers);
       navigate(`/roadmap/${project.id}/result`, { replace: true });
     } catch (err) {
       setError(err.message || 'Unable to complete your assessment. Please try again.');
@@ -74,7 +75,7 @@ export const AssessmentWizard = ({ project }) => {
   const handleNext = () => {
     if (submittingRef.current) return;
     const validationError = validateAssessmentStep(answers, step);
-    if (validationError) return setError(validationError);
+    if (validationError) return setError('Please select an option before continuing.');
     setError('');
     if (step < ASSESSMENT_QUESTION_COUNT) setDraft((previous) => ({ ...previous, step: previous.step + 1 }));
     else handleSubmit();
@@ -83,7 +84,7 @@ export const AssessmentWizard = ({ project }) => {
   return (
     <div className="assessment-wizard">
       <Link className="assessment-project-back" to="/roadmap">&larr; All projects</Link>
-      <div style={{ marginBottom: '24px', textAlign: 'center' }}>
+      <div className="assessment-progress-header" style={{ marginBottom: '24px', textAlign: 'center' }}>
         <p className="assessment-project-name">{project.name}</p>
         <h1 ref={headingRef} tabIndex={-1} style={{ fontSize: '1.8rem', fontWeight: '800', marginBottom: '8px' }}>
           Founder Assessment
@@ -100,7 +101,7 @@ export const AssessmentWizard = ({ project }) => {
 
       <div className="glass-card assessment-card" key={step} aria-busy={submitting}>
         {error && (
-          <div role="alert" style={{ padding: '12px 16px', backgroundColor: 'rgba(239, 68, 68, 0.15)', color: 'var(--accent-red)', borderRadius: '8px', marginBottom: '20px', fontSize: '0.9rem' }}>
+          <div role="alert" className="assessment-validation">
             {error}
           </div>
         )}
@@ -118,6 +119,7 @@ export const AssessmentWizard = ({ project }) => {
           ))}
         </QuestionStep>
 
+
         <div className="assessment-controls" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '32px', paddingTop: '20px', borderTop: '1px solid var(--border-color)' }}>
           {step > 1 ? (
             <button type="button" className="btn btn-secondary" disabled={submitting}
@@ -125,14 +127,15 @@ export const AssessmentWizard = ({ project }) => {
               Back
             </button>
           ) : <div />}
+          {reviewing && <button type="button" className="assessment-return" onClick={() => navigate(`/roadmap/${project.id}/result`)}>Return to summary</button>}
           <button type="button" className="btn btn-primary" onClick={handleNext}
-            disabled={submitting || Boolean(validateAssessmentStep(answers, step))}>
-            {submitting ? 'Saving assessment...' : step === ASSESSMENT_QUESTION_COUNT ? 'Complete Assessment' : 'Next Step'}
+            disabled={submitting}>
+            {submitting ? 'Saving assessment...' : step === ASSESSMENT_QUESTION_COUNT ? 'Review Answers' : 'Next Step'}
             <ChevronRight size={18} aria-hidden="true" />
           </button>
         </div>
         <div className="assessment-skip">
-          <p>Your answers save to this project automatically. After finishing, you can review and edit your choices in the summary.</p>
+          <p>Your answers save to this project automatically. Review your choices before submitting your assessment.</p>
         </div>
       </div>
     </div>
@@ -145,7 +148,7 @@ const QuestionStep = ({ title, children, icon: QuestionIcon, step }) => (
       <div className="assessment-question__icon" aria-hidden="true"><QuestionIcon size={30} /><span /></div>
       <div>
         <span className="assessment-question__kicker">QUESTION {String(step).padStart(2, '0')}</span>
-        <h2 id={`assessment-question-${step}`}>{title}<span className="required-mark" aria-hidden="true" /></h2>
+        <h2 id={`assessment-question-${step}`}>{title}</h2>
         <p id={`assessment-required-${step}`}>Choose one option. An answer is required.</p>
       </div>
     </div>

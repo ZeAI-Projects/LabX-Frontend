@@ -58,7 +58,7 @@ export function Welcome() {
           </div>
         </section>
       </main>
-      <footer className="welcome-footer"><span>LabX by ZeAI</span><span>Demo preview · Accounts and verification are simulated.</span></footer>
+      <footer className="welcome-footer"><span>LabX by ZeAI</span></footer>
     </div>
   )
 }

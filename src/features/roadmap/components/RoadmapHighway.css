@@ -19,8 +19,8 @@
 .rm-highway-missions { list-style: none; margin: 0; padding: 0; }
 .rm-highway-stop { position: absolute; left: 0; width: 100%; height: 0; }
 .rm-highway-mission { position: absolute; top: 0; width: clamp(300px,28%,480px); height: 246px; padding: 0; border: none; background: transparent; color: #d9e6f6; text-align: left; transform: translateY(-50%); }
-.rm-highway-stop.is-left .rm-highway-mission { left: calc(11% + 76px); }
-.rm-highway-stop.is-right .rm-highway-mission { right: calc(9% + 76px); }
+.rm-highway-stop.is-left .rm-highway-mission { left: calc(8% + 76px); }
+.rm-highway-stop.is-right .rm-highway-mission { right: calc(6% + 76px); }
 .rm-highway-node { position: absolute; z-index: 1; top: 50%; display: grid; place-items: center; width: 96px; height: 96px; border: 3px solid #2f3d51; border-radius: 50%; background: #0c1422ed; color: #576b82; transform: translateY(-50%); }
 .rm-highway-node svg { width: 39px; height: 39px; stroke-width: 3.5px; }
 .rm-highway-stop.is-left .rm-highway-node { left: -124px; }
@@ -111,3 +111,75 @@
 }
 @container (max-width: 370px) { .rm-highway-card { padding: 14px 12px; } .rm-highway-card-head { gap: 5px; } .rm-highway-tier strong { font-size: .65rem; } .rm-highway-tier small { font-size: .48rem; } .rm-highway-status { padding: 4px; font-size: .43rem; max-width: 71px; } .rm-highway-status svg { display: none; } .rm-highway-title { font-size: .93rem; } .rm-highway-description { font-size: .69rem; } .rm-highway-card-footer > span { font-size: .53rem; } .rm-highway-card-footer > strong { font-size: .56rem; } }
 @media (prefers-reduced-motion: reduce) { .rm-highway-stop.is-active .rm-highway-node { animation: none; } .rm-highway-card { transition: none; } }
+
+.rm-highway-edge { stroke-width:58px; }.rm-highway-base,.rm-highway-lit { stroke-width:52px; }.rm-highway-glow { stroke-width:76px;opacity:.32;filter:blur(14px); }.rm-highway-lanes { stroke-width:3px;stroke-dasharray:10 14; }
+.rm-highway-mission { height:190px; }.rm-highway-card { padding:15px 17px;gap:8px; }.rm-highway-title { font-size:.95rem; }.rm-highway-description { font-size:.74rem; }.rm-highway-card-footer { padding-top:8px; }.rm-highway-card-footer>strong { font-size:.65rem; }
+.rm-highway-node { width:58px;height:58px; }.rm-highway-node svg { width:25px;height:25px; }.rm-highway-stop.is-left .rm-highway-node { left:-105px; }.rm-highway-stop.is-right .rm-highway-node { right:-105px; }.rm-highway-connector { width:47px; }.rm-highway-stop.is-left .rm-highway-connector { left:-47px; }.rm-highway-stop.is-right .rm-highway-connector { right:-47px; }
+@container(max-width:719px) { .rm-highway-node { width:38px;height:38px; }.rm-highway-node svg { width:18px;height:18px; }.rm-highway-stop.is-left .rm-highway-node,.rm-highway-stop.is-right .rm-highway-node { left:-50px;right:auto; }.rm-highway-stop.is-left .rm-highway-connector,.rm-highway-stop.is-right .rm-highway-connector { left:-12px;right:auto;width:13px; }.rm-highway-edge { stroke-width:32px; }.rm-highway-base,.rm-highway-lit { stroke-width:26px; }.rm-highway-glow { stroke-width:40px; }.rm-highway-title { font-size:.9rem; }.rm-highway-card { padding:13px; } }
+
+/* Small roadside habitats occupy the open side of each bend, below the route and cards. */
+.rm-roadside-scenery { position:absolute;inset:0;z-index:-2;overflow:hidden;pointer-events:none; }
+.rm-scenery-cluster { --scenery-light:#65cfe0;position:absolute;width:clamp(180px,22%,300px);height:120px;transform:translateY(-50%);opacity:.5;filter:drop-shadow(0 0 10px #2a9aaa30); }
+.rm-scenery-cluster.is-left { left:6%; }
+.rm-scenery-cluster.is-right { right:6%; }
+.rm-scenery-cluster.is-scene-grove { --scenery-light:#71d9b6; }
+.rm-scenery-cluster.is-scene-skyline { --scenery-light:#65cfe0; }
+.rm-scenery-cluster.is-scene-station { --scenery-light:#ebbc79; }
+.rm-scenery-cluster.is-scene-crystal { --scenery-light:#a9a0ec; }
+.rm-scenery-cluster.is-scene-transit { --scenery-light:#79b8f1; }
+.rm-scenery-cluster.is-scene-observatory { --scenery-light:#8dcce9; }
+.rm-scenery-cluster.is-lit { opacity:.84;filter:drop-shadow(0 0 14px #5acde64d); }
+.rm-scenery-cluster svg { display:block;width:100%;height:100%;overflow:visible; }
+.rm-scenery-ground { fill:#122e3c;opacity:.55; }
+.rm-scenery-platform { fill:#102637;stroke:var(--scenery-light);stroke-opacity:.42;stroke-width:1.5; }
+.rm-scenery-circuit { fill:none;stroke:var(--scenery-light);stroke-width:2;stroke-dasharray:7 11;opacity:.7; }
+.rm-scenery-trunk,.rm-scenery-branches { fill:none;stroke:var(--scenery-light);stroke-width:2;stroke-linecap:round;stroke-linejoin:round; }
+.rm-scenery-trunk { stroke-width:3; }
+.rm-scenery-crown { fill:#153a4b;stroke:var(--scenery-light);stroke-width:1.7;stroke-linejoin:round; }
+.rm-scenery-facet { fill:#347994;opacity:.28; }
+.rm-scenery-beacon { fill:#9feeff;filter:drop-shadow(0 0 5px var(--scenery-light)); }
+.rm-scenery-building-face { fill:#132b3f;stroke:var(--scenery-light);stroke-opacity:.7;stroke-width:1.5; }
+.rm-scenery-building-side { fill:#102234; }
+.rm-scenery-roof,.rm-scenery-antenna { fill:none;stroke:var(--scenery-light);stroke-width:1.6;stroke-linecap:round; }
+.rm-scenery-window { fill:var(--scenery-light);opacity:.8; }
+.rm-scenery-drone { fill:#123448;stroke:var(--scenery-light);stroke-width:1.6;stroke-linecap:round; }
+.rm-scenery-drone circle { fill:#a7f1ff;stroke:none;filter:drop-shadow(0 0 4px var(--scenery-light)); }
+.rm-scenery-terrain { fill:none;stroke:var(--scenery-light);stroke-width:1.5;stroke-opacity:.55; }
+.rm-scenery-fireflies circle { fill:var(--scenery-light);filter:drop-shadow(0 0 5px var(--scenery-light)); }
+.rm-scenery-pylon { fill:none;stroke:var(--scenery-light);stroke-width:2.2;stroke-linejoin:round; }
+.rm-scenery-panel { fill:#15364b;stroke:var(--scenery-light);stroke-width:1.6; }
+.rm-scenery-reactor-halo { fill:#183344;stroke:var(--scenery-light);stroke-width:2;stroke-opacity:.7; }
+.rm-scenery-reactor-ring { fill:none;stroke:var(--scenery-light);stroke-width:2.4; }
+.rm-scenery-reactor-core { fill:#234b58;stroke:var(--scenery-light);stroke-width:2.4;filter:drop-shadow(0 0 8px var(--scenery-light)); }
+.rm-scenery-reactor-bolt { fill:var(--scenery-light); }
+.rm-scenery-crystal-body { fill:#28344d;stroke:var(--scenery-light);stroke-width:1.8;stroke-linejoin:round; }
+.rm-scenery-crystal-facet { fill:#807ab7;opacity:.26; }
+.rm-scenery-crystal-vein { fill:none;stroke:var(--scenery-light);stroke-width:1.3;stroke-opacity:.75; }
+.rm-scenery-crystal-arc { fill:none;stroke:var(--scenery-light);stroke-width:1.4;stroke-dasharray:4 11;stroke-opacity:.65; }
+.rm-scenery-transit-rail { fill:none;stroke:var(--scenery-light);stroke-width:2.3;stroke-linecap:round; }
+.rm-scenery-transit-tower { fill:#152d41;stroke:var(--scenery-light);stroke-width:1.7;stroke-linejoin:round; }
+.rm-scenery-transit-window { fill:none;stroke:var(--scenery-light);stroke-width:2; }
+.rm-scenery-pod-body { fill:#18384c;stroke:var(--scenery-light);stroke-width:2; }
+.rm-scenery-pod-window { fill:var(--scenery-light);opacity:.32; }
+.rm-scenery-observatory-dome { fill:#152d3e;stroke:var(--scenery-light);stroke-width:2; }
+.rm-scenery-observatory-grid { fill:none;stroke:var(--scenery-light);stroke-width:1.2;stroke-opacity:.55; }
+.rm-scenery-observatory-tower { fill:none;stroke:var(--scenery-light);stroke-width:2; }
+.rm-scenery-dish { fill:#173c50;stroke:var(--scenery-light);stroke-width:2;stroke-linecap:round; }
+@keyframes rm-scenery-sway { 0%,100% { transform:rotate(-1.5deg); } 50% { transform:rotate(1.5deg); } }
+@keyframes rm-scenery-drift { 0%,100% { transform:translate(0,0); } 50% { transform:translate(11px,-4px); } }
+@keyframes rm-scenery-twinkle { 0%,100% { opacity:.35; } 50% { opacity:1; } }
+@keyframes rm-scenery-current { to { stroke-dashoffset:-36; } }
+@keyframes rm-scenery-orbit { 0%,100% { transform:scale(.92);opacity:.58; } 50% { transform:scale(1.06);opacity:1; } }
+@keyframes rm-scenery-commute { 0%,100% { transform:translateX(-12px); } 50% { transform:translateX(12px); } }
+@media(prefers-reduced-motion:no-preference) {
+  .rm-scenery-canopy { transform-box:fill-box;transform-origin:50% 95%;animation:rm-scenery-sway 5.5s ease-in-out infinite;animation-delay:var(--scenery-delay); }
+  .rm-scenery-drone { animation:rm-scenery-drift 6.8s ease-in-out infinite;animation-delay:var(--scenery-delay); }
+  .rm-scenery-window-glint,.rm-scenery-beacon,.rm-scenery-fireflies { animation:rm-scenery-twinkle 3.6s ease-in-out infinite;animation-delay:var(--scenery-delay); }
+  .rm-scenery-circuit { animation:rm-scenery-current 7s linear infinite; }
+  .rm-scenery-reactor-ring,.rm-scenery-reactor-core { transform-box:fill-box;transform-origin:center;animation:rm-scenery-orbit 4.8s ease-in-out infinite;animation-delay:var(--scenery-delay); }
+  .rm-scenery-pod { animation:rm-scenery-commute 7.2s ease-in-out infinite;animation-delay:var(--scenery-delay); }
+  .rm-scenery-crystal-arc { animation:rm-scenery-current 8s linear infinite; }
+  .rm-scenery-dish { transform-box:fill-box;transform-origin:50% 95%;animation:rm-scenery-sway 6.5s ease-in-out infinite;animation-delay:var(--scenery-delay); }
+}
+@container(max-width:900px) { .rm-scenery-cluster { width:190px;opacity:.36; } .rm-scenery-cluster.is-lit { opacity:.64; } }
+@container(max-width:719px) { .rm-roadside-scenery { display:none; } }

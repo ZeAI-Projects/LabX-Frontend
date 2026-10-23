@@ -1,0 +1,73 @@
+.join-roadmap-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(980px, calc(100vw - 40px));
+  max-width: none;
+  max-height: min(900px, calc(100dvh - 48px));
+  padding: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  border: 1px solid #405674;
+  border-radius: 20px;
+  background: #101a2b;
+  color: #d9e5f4;
+  box-shadow: 0 24px 100px #000a;
+}
+.join-roadmap-dialog::backdrop { background: #020713ba; backdrop-filter: blur(7px); }
+.join-roadmap-dialog[open] { animation: join-roadmap-enter 180ms ease-out; }
+.join-roadmap-dialog *, .join-roadmap-dialog *::before, .join-roadmap-dialog *::after { box-sizing: border-box; }
+.join-roadmap-dialog-heading {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 23px 26px 20px;
+  border-bottom: 1px solid #40567475;
+  background: #111e30f5;
+  backdrop-filter: blur(12px);
+}
+.join-roadmap-dialog-heading > div { min-width: 0; }
+.join-roadmap-dialog-heading .roadmap-team-kicker { display: inline-flex; align-items: center; gap: 7px; }
+.join-roadmap-dialog-heading h2 { margin: 8px 0 6px; font-size: 1.5rem; letter-spacing: -.025em; }
+.join-roadmap-dialog-heading p { margin: 0; color: #9fb3cb; font-size: .8rem; line-height: 1.6; }
+.join-roadmap-dialog-heading button { flex-shrink: 0; }
+.join-roadmap-dialog :is(button, a, summary):focus-visible { outline: 2px solid #8de5f0; outline-offset: 3px; }
+.join-roadmap-dialog-body { padding: 0 26px 24px; }
+.join-roadmap-dialog .join-roadmap-account { margin: 18px 0; padding: 12px 14px; border: 1px solid #80cddd22; border-radius: 10px; background: #80cddd08; }
+.join-roadmap-dialog .join-roadmap-account strong { margin-left: 8px; }
+.join-roadmap-dialog .collab-navigation { margin: 18px 0 22px; scroll-margin-top: 140px; }
+.join-roadmap-dialog .collab-section { margin-top: 0; }
+.join-roadmap-dialog .collab-opportunities { grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
+.join-roadmap-dialog .collab-opportunities { grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); }
+.join-roadmap-dialog .collab-section-heading > .roadmap-team-button { flex-shrink: 0; }
+.collab-founder > .sq-card { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px 22px; align-items: center; margin: 20px 0; }
+.collab-founder > .sq-card .sq-card-heading { grid-column: 1; grid-row: 1; justify-content: flex-start; flex-wrap: wrap; }
+.collab-founder > .sq-card > p { grid-column: 1; grid-row: 2; margin: 0; }
+.collab-founder > .sq-card .sq-card-stats { grid-column: 2; grid-row: 1 / span 2; margin: 0; gap: 18px; }
+.collab-founder > .sq-card > .sq-primary { grid-column: 3; grid-row: 1 / span 2; width: auto; }
+.join-roadmap-dialog .join-roadmap-help { margin: 18px 0 0; padding-top: 14px; font-size: .7rem; }
+.join-roadmap-dialog .cw-overview { border-radius: 11px; }
+.join-roadmap-dialog .cw-overview > summary { font-size: .8rem; padding: 14px 16px; }
+@keyframes join-roadmap-enter { from { opacity: 0; transform: translateY(10px) scale(.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (max-width: 800px) {
+  .collab-founder > .sq-card { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .collab-founder > .sq-card :is(.sq-card-heading, .sq-card-stats), .collab-founder > .sq-card > :is(p, .sq-primary) { grid-column: 1; grid-row: auto; }
+  .collab-founder > .sq-card .sq-card-stats { gap: 26px; }
+}
+@media (max-width: 600px) {
+  .join-roadmap-dialog { width: calc(100vw - 16px); max-height: calc(100dvh - 20px); border-radius: 15px; scrollbar-gutter: auto; }
+  .join-roadmap-dialog-heading { padding: 18px 16px 15px; gap: 10px; }
+  .join-roadmap-dialog-heading h2 { font-size: 1.25rem; }
+  .join-roadmap-dialog-heading p { font-size: .73rem; }
+  .join-roadmap-dialog-body { padding: 0 14px 18px; }
+  .join-roadmap-dialog .join-roadmap-account { padding: 10px; gap: 9px; }
+  .join-roadmap-dialog .join-roadmap-account strong { display: block; margin-left: 0; }
+  .join-roadmap-dialog .collab-navigation button { min-width: 0; overflow-wrap: anywhere; }
+  .join-roadmap-dialog .collab-section-heading > .roadmap-team-button { flex-shrink: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .join-roadmap-dialog[open] { animation: none; } }

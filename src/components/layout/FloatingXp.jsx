@@ -10,9 +10,11 @@ export const FloatingXp = ({ points = 0 }) => {
   const [decodedLabel, setDecodedLabel] = useState('LabX Coins');
   const [decodedUnit, setDecodedUnit] = useState('Coins');
   const visible = open || hovered || focused;
+  const reducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const animate = visible && !reducedMotion;
 
   useEffect(() => {
-    if (!visible || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!animate) return;
     const symbols = '0123456789ABCDEF#%';
     const started = performance.now();
     const scramble = () => {
@@ -30,7 +32,7 @@ export const FloatingXp = ({ points = 0 }) => {
       if (scramble()) window.clearInterval(timer);
     }, 45);
     return () => window.clearInterval(timer);
-  }, [visible, value]);
+  }, [animate, value]);
 
   return (
   <button type="button" className={`floating-xp ${visible ? 'floating-xp--open' : ''}`}
@@ -56,8 +58,8 @@ export const FloatingXp = ({ points = 0 }) => {
       <span className="floating-xp__base" />
     </span>
     <span className="floating-xp__readout" aria-hidden="true">
-      <span className="floating-xp__label">{decodedLabel}</span>
-      <span className="floating-xp__amount"><strong style={{ minWidth: `${value.length}ch` }}>{decoded}</strong><span>{decodedUnit}</span></span>
+      <span className="floating-xp__label">{animate ? decodedLabel : 'LabX Coins'}</span>
+      <span className="floating-xp__amount"><strong style={{ minWidth: `${value.length}ch` }}>{animate ? decoded : value}</strong><span>{animate ? decodedUnit : 'Coins'}</span></span>
     </span>
   </button>
 );

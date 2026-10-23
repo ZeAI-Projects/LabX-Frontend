@@ -121,3 +121,90 @@
 @media (prefers-reduced-motion: reduce) {
   .rm-reference .pubg-tier-crest-container { transition: none !important; }
 }
+
+.rm-reference { max-width:1440px;margin:0 auto;background:radial-gradient(ellipse at 45% 35%,#3e346b19,transparent 60%),repeating-linear-gradient(0deg,transparent,transparent 63px,#8eb9df04 64px),#0a0e1a; }
+.rm-project-bar { padding-inline:20px; }.rm-domain-header { padding:20px;gap:12px; }.rm-domain-title h2 { font-size:clamp(1.3rem,2vw,1.85rem); }.rm-domain-title .rm-eyebrow { font-size:.65rem; }
+.rm-coverage-pill { font-size:.7rem;padding:9px 14px; }.rm-map-navigation { margin-inline:20px; }
+.rm-reference .rm-stage-nav { gap:8px; }.rm-reference .rm-stage-tab { min-height:65px;padding:8px 10px;border-radius:11px; }
+.rm-stage-banner { padding:20px 12px 16px;gap:8px; }.rm-stage-pill { padding:7px 22px 7px 12px;gap:10px;border-width:1px;box-shadow:0 0 24px color-mix(in srgb,var(--stage-color) 12%,transparent); }
+.rm-stage-pill h3 { font-size:1.1rem; }.rm-stage-pill>div>span { font-size:.6rem; }.rm-stage-pill>span { transform:scale(.8);margin:-5px; }
+.rm-level-nav { display:flex;justify-content:center;gap:7px;flex-wrap:wrap;padding:0 12px 12px; }
+.rm-level-nav button { display:flex;align-items:center;gap:6px;padding:7px 10px;min-height:36px;border:1px solid color-mix(in srgb,var(--level-accent) 25%,transparent);color:var(--level-accent);background:color-mix(in srgb,var(--level-accent) 7%,#0c1220);border-radius:7px;font-size:.68rem; }
+.rm-level-nav [aria-current] { box-shadow:inset 0 -2px var(--level-accent);border-color:var(--level-accent); }
+@media(max-width:600px) { .rm-project-bar,.rm-domain-header { padding-inline:12px; }.rm-map-navigation { margin-inline:12px; }.rm-level-nav { gap:5px; }.rm-level-nav button { min-height:44px;padding:7px; }.rm-stage-pill h3 { font-size:.95rem; } }
+
+/* Stage overview composition follows the supplied progression-map reference. */
+.rm-reference { background:radial-gradient(ellipse at 42% 420px,#16455538,transparent 620px),linear-gradient(#8ca8cf07 1px,transparent 1px),linear-gradient(90deg,#8ca8cf07 1px,transparent 1px),#080d18;background-size:auto,72px 72px,72px 72px,auto; }
+.rm-domain-header { padding-block:26px; }
+.rm-domain-title .rm-eyebrow { font-size:.8125rem; }
+.rm-domain-title h2 { font-size:clamp(1.75rem,2.5vw,2.5rem); }
+.rm-coverage-pill { font-size:.875rem;padding:12px 20px; }
+.rm-reference .rm-stage-nav { gap:10px; }
+.rm-reference .rm-stage-tab { grid-template-columns:36px minmax(0,1fr) auto;gap:8px;min-height:76px;padding:10px 12px;border-radius:14px;background:#0c1521a8; }
+.rm-reference .rm-stage-card-title small { font-size:.75rem;margin-bottom:3px; }
+.rm-reference .rm-stage-card-title strong { font-size:.9375rem;line-height:1.3; }
+.rm-reference .rm-stage-card-status { font-size:.6875rem; }
+.rm-reference .rm-stage-tab.is-current { background:#13314170;box-shadow:0 0 32px #56c9e118; }
+.rm-reference .rm-stage-tab.is-completed,.rm-reference .rm-stage-tab.is-credited { background:linear-gradient(125deg,#17363480,#18263b80);box-shadow:0 0 28px #4edba00b; }
+.rm-reference .rm-stage-tab.is-locked { background:#090e18a3;border-color:#28324655; }
+.rm-mission-launch { min-height:40px;font-size:.875rem; }
+.rm-stage-banner { padding:28px 20px 24px;gap:10px; }
+.rm-stage-pill { min-height:82px;gap:14px;padding:9px 24px 9px 16px;border-width:2px;background:#0b1220;box-shadow:0 0 65px color-mix(in srgb,var(--stage-color) 19%,transparent); }
+.rm-stage-pill > span { transform:none;margin:0; }
+.rm-stage-pill > div > span { font-size:.75rem;letter-spacing:.13em;margin-bottom:4px; }
+.rm-stage-pill h3 { font-size:clamp(1.1rem,1.6vw,1.35rem);line-height:1.2; }
+.rm-stage-tally { font-size:.875rem; }
+.rm-level-nav { padding-bottom:12px;gap:6px; }
+.rm-level-nav button { font-size:.8125rem;min-height:34px;padding:6px 10px; }
+@container roadmap-page (max-width:1200px) {
+ .rm-reference .rm-stage-tab { grid-template-columns:32px minmax(0,1fr);gap:3px 8px;padding:10px; }
+ .rm-reference .rm-stage-card-status { grid-column:2;justify-content:flex-start; }
+ .rm-reference .rm-stage-card-title strong { font-size:.9375rem; }
+ .rm-stage-crest { grid-row:1/3; }
+}
+@media(max-width:600px) {
+ .rm-reference { background-size:auto,48px 48px,48px 48px,auto; }
+ .rm-reference .rm-stage-tab { flex-basis:148px;min-height:76px;border-radius:12px; }
+ .rm-domain-header { padding-block:20px; }.rm-coverage-pill { font-size:.8125rem;padding:10px 12px; }
+ .rm-stage-banner { padding:22px 12px 18px;gap:10px; }
+ .rm-stage-pill { min-height:72px;gap:10px;padding:8px 14px; }
+ .rm-stage-pill h3 { font-size:clamp(.95rem,4vw,1.25rem); }
+ .rm-stage-pill > div > span { font-size:.75rem; }
+ .rm-stage-pill .pubg-tier-crest-container { width:38px!important;height:50px!important; }
+ .rm-stage-pill .pubg-tier-crest-container svg { width:38px;height:50px; }
+ .rm-stage-tally { display:block;font-size:.8125rem; }
+ .rm-level-nav button { font-size:.8125rem;min-height:40px;padding:6px 9px; }
+}
+
+/* Every stage shares the same readable highway and status footprint. */
+.rm-reference .rm-stage-context {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 96px;
+  margin: 0 20px 18px;
+  padding: 16px 18px;
+  border: 1px solid #335063;
+  border-radius: 12px;
+  background: #10233188;
+  color: #aeddec;
+  transition: border-color .24s ease, background-color .24s ease;
+}
+.rm-stage-context.is-locked { border-color: #51456f; background: #201c3288; color: #c8b7ef; }
+.rm-stage-context-icon { display: grid; place-items: center; }
+.rm-stage-context strong { display: block; color: #e6edf8; font-size: .875rem; }
+.rm-stage-context p { margin: 5px 0 0; color: #9aadc4; font-size: .8125rem; line-height: 1.6; }
+.rm-stage-context .rm-button { white-space: nowrap; min-height: 40px; }
+.rm-reference .rm-stage-pill { transition: border-color .24s ease, box-shadow .24s ease; }
+@container roadmap-page (max-width: 760px) {
+  .rm-reference .rm-stage-context { grid-template-columns: 26px minmax(0, 1fr); min-height: 158px; padding: 14px; }
+  .rm-stage-context .rm-button { grid-column: 2; justify-self: start; }
+}
+@media (max-width: 600px) {
+  .rm-reference .rm-stage-context { margin-inline: 12px; }
+  .rm-stage-context .rm-button { font-size: .75rem; padding-inline: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rm-reference .rm-stage-context, .rm-reference .rm-stage-pill { transition: none; }
+}

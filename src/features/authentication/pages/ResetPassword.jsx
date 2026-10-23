@@ -7,6 +7,7 @@ import { soundManager } from '../components/gamified/soundEffects';
 import { useAuthEffects } from '../components/gamified/useAuthEffects';
 import { validatePassword } from '../validation/auth_validation.js';
 import { PasswordRecoveryShell } from './ForgotPassword';
+import { VerificationCodeInput } from '../components/VerificationCodeInput.jsx';
 
 const RECOVERY_KEY = 'labx_password_recovery';
 
@@ -121,7 +122,7 @@ export function ResetPassword() {
   };
 
   return (
-    <PasswordRecoveryShell title="Enter OTP" subtitle="One more step to start your LabX journey." step={2}>
+    <PasswordRecoveryShell title="Reset your password" subtitle="Enter your 6-digit verification code, then choose a new password." step={2}>
       {!recovery ? (
         <>
           <div className="auth-error-banner" role="alert"><AlertCircle size={17} /><span>Enter your registered email first to request a six-digit code.</span></div>
@@ -136,35 +137,14 @@ export function ResetPassword() {
             <Link className="login-link" to="/forgot-password" onClick={() => sessionStore.removeItem(RECOVERY_KEY)}>Change email</Link>
           </div>
           <div className="auth-demo-notice recovery-demo-notice">
-            <p>Demo preview — no email is sent. Use code <output className="recovery-demo-code" data-testid="demo-reset-code" aria-label="Demo verification code">{recovery.demoCode}</output>.</p>
+            <output className="recovery-demo-code" data-testid="demo-reset-code" aria-label="Verification code">{recovery.demoCode}</output>
           </div>
           {error && <div id="reset-error" className="auth-error-banner" role="alert"><AlertCircle size={17} /><span>{error.message}</span></div>}
           {resendMessage && <p className="recovery-status" role="status">{resendMessage}</p>}
           <form onSubmit={handleSubmit} aria-busy={busy} noValidate>
             <div className="gamified-field-group">
-              <label className="gamified-field-label" htmlFor="reset-code">Six-digit code<span className="required-mark" aria-hidden="true" /></label>
-              <input
-                ref={codeInput}
-                id="reset-code"
-                name="code"
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                className="gamified-input recovery-code-input"
-                required
-                maxLength={6}
-                pattern="[0-9]{6}"
-                disabled={busy}
-                aria-invalid={error?.field === 'code'}
-                aria-describedby={`recovery-code-hint${error?.field === 'code' ? ' reset-error' : ''}`}
-                value={code}
-                onChange={(event) => {
-                  setCode(event.target.value.replace(/\D/g, '').slice(0, 6));
-                  if (error?.field === 'code') setError(null);
-                }}
-                onFocus={soundManager.playFocus}
-                placeholder="000000"
-              />
+              <label className="gamified-field-label" id="reset-code-label" htmlFor="reset-code-0">Enter your 6-digit verification code<span className="required-mark" aria-hidden="true" /></label>
+              <VerificationCodeInput ref={codeInput} labelId="reset-code-label" value={code} disabled={busy} invalid={error?.field === 'code'} describedBy={`recovery-code-hint${error?.field === 'code' ? ' reset-error' : ''}`} onChange={value => { setCode(value); if (error?.field === 'code') setError(null); }} onFocus={soundManager.playFocus}/>
               <div className="recovery-code-help">
                 <p className="auth-field-hint" id="recovery-code-hint">Codes expire after 10 minutes. Use your latest code.</p>
                 <button type="button" className="login-link recovery-resend" disabled={busy} onClick={handleResend}>

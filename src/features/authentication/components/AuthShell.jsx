@@ -10,7 +10,6 @@ import './AuthShell.css';
 export function AuthShell({ mode, title, subtitle, busy = false, children }) {
   const navigate = useNavigate();
   const signingIn = mode === 'signin';
-  const [soundActive, setSoundActive] = useState(soundManager.isEnabled);
 
   const switchMode = (destination) => {
     if (busy) return;
@@ -19,19 +18,10 @@ export function AuthShell({ mode, title, subtitle, busy = false, children }) {
   };
 
   return (
-    <div className="gamified-auth-container compact-auth-page">
+    <div className={`gamified-auth-container compact-auth-page auth-mode-${mode}`}>
       <ParticleNetwork />
       <div className="auth-top-hud">
-        <button type="button" className="hud-sound-toggle" title="Toggle SFX"
-          aria-pressed={soundActive} onMouseEnter={soundManager.playHover}
-          onClick={() => {
-            const enabled = soundManager.toggle();
-            setSoundActive(enabled);
-            if (enabled) soundManager.playHover();
-          }}>
-          {soundActive ? <Volume2 size={15} /> : <VolumeX size={15} />}
-          <span>SFX: {soundActive ? 'ONLINE' : 'MUTED'}</span>
-        </button>
+        <SoundToggle />
       </div>
       <div className="gamified-card-shell">
         <div className="card-laser-scanner" />
@@ -49,7 +39,7 @@ export function AuthShell({ mode, title, subtitle, busy = false, children }) {
           <p className="auth-brand-note"><Shield size={14} aria-hidden="true" /><span>One Ecosystem. Infinite Opportunities.</span></p>
         </div>
         <div className="form-panel">
-          <nav className="auth-mode-switch-tabs" aria-label="Account access">
+          {mode !== 'verify' && <nav className="auth-mode-switch-tabs" aria-label="Account access">
             <button type="button" className={`mode-tab-btn ${mode === 'signup' ? 'active' : ''}`}
               aria-current={mode === 'signup' ? 'page' : undefined} disabled={busy}
               onClick={() => mode === 'signup' ? soundManager.playHover() : switchMode('/register')}
@@ -62,7 +52,7 @@ export function AuthShell({ mode, title, subtitle, busy = false, children }) {
               onMouseEnter={soundManager.playHover}>
               Sign in
             </button>
-          </nav>
+          </nav>}
           <div className="form-header">
             <h2 className="form-title">{title}</h2>
             <p className="form-subtitle">{subtitle}</p>
@@ -72,4 +62,13 @@ export function AuthShell({ mode, title, subtitle, busy = false, children }) {
       </div>
     </div>
   );
+}
+
+export function SoundToggle() {
+  const [enabled, setEnabled] = useState(soundManager.isEnabled);
+  return <button type="button" className="hud-sound-toggle" aria-label="Sound effects" aria-pressed={enabled}
+    onClick={() => { const next = soundManager.toggle(); setEnabled(next); if (next) soundManager.playHover(); }}>
+    {enabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
+    <span>Sound <strong>{enabled ? 'On' : 'Off'}</strong></span><span className="sound-switch" aria-hidden="true" />
+  </button>;
 }

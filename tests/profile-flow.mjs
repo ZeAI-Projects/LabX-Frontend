@@ -84,7 +84,7 @@ try {
     await page.locator('button[type="submit"]').click()
     await page.waitForURL(`${origin}/verify-email`)
     const code = (await page.getByTestId('demo-signup-code').innerText()).trim()
-    await page.getByLabel('Six-digit code', { exact: true }).fill(code)
+    await page.getByLabel('Digit 1 of 6', { exact: true }).fill(code)
     await button('Verify email').click()
     await page.waitForURL(`${origin}${role === 'founder' ? '/roadmap/new' : `/onboarding/${role}`}`)
   }
@@ -230,7 +230,7 @@ try {
   await application.getByRole('button', { name: 'Submit application', exact: true }).click()
   await application.waitFor({ state: 'hidden' })
 
-  const simulator = page.locator('details').filter({ has: page.locator('summary').filter({ hasText: 'Demo review simulator' }) })
+  const simulator = page.locator('details').filter({ has: page.locator('summary').filter({ hasText: 'Review simulator' }) })
   const openSimulator = async () => {
     if (!await simulator.evaluate((node) => node.open)) await simulator.locator('summary').click()
   }

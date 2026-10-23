@@ -1,0 +1,5 @@
+Illustrative stock photography for the existing sample event listings; these are not photos of the listed LabX events.
+collaboration.jpg: https://images.unsplash.com/photo-1519389950473-47ba0277781c
+conference.jpg: https://images.unsplash.com/photo-1540575467063-178a50c2df87
+Source: Unsplash. License: https://unsplash.com/license
+Downloaded at 800px width, JPEG quality 80. Images are bundled locally; no remote image requests are made by the app.

@@ -1,7 +1,7 @@
 import { createSafeStorage, localStore } from '../../../services/storage/local_storage.js';
 import { mockAuth } from '../../authentication/services/mock_auth.js';
 import { createEmptyDraft, draftKey, normalizeAssessmentDraft, readAssessmentDraft } from '../../assessment/services/assessment_draft.js';
-import { ASSESSMENT_QUESTIONS, ASSESSMENT_VERSION, evaluateAssessment, normalizeDraftAnswers } from '../../assessment/services/mock_assessment.js';
+import { evaluateAssessment, normalizeDraftAnswers } from '../../assessment/services/mock_assessment.js';
 
 export const projectsKey = (userId) => `labx:projects:v1:${encodeURIComponent(userId)}`;
 
@@ -30,7 +30,7 @@ function normalizeProject(value, ownerId) {
     id: value.id,
     name: value.name.trim(),
     owner_id: ownerId,
-    created_by: value.created_by,
+    created_by: ownerId === 'demo-founder' && value.created_by === 'Demo Founder' ? 'Founder' : value.created_by,
     created_at: value.created_at,
     updated_at: value.updated_at,
     assessment_completed: completed,
@@ -133,7 +133,7 @@ export function createProjectStore({
   }
 
   function requireIncomplete(project) {
-    if (project.assessment_completed) throw new Error('This assessment is complete. Edit answers from its summary.');
+    if (project.assessment_completed) throw new Error('Submitted assessments cannot be edited.');
   }
 
   return {
@@ -178,21 +178,8 @@ export function createProjectStore({
     },
 
     updateAssessmentChoice(id, questionKey, choice, expectedChoice, expectedUserId = activeUserId) {
-      return updateProject(id, expectedUserId, (project) => {
-        if (!project.assessment_completed || project.assessment_result?.assessment_version !== ASSESSMENT_VERSION) {
-          throw new Error('Only completed assessments with the current questions can be edited.');
-        }
-        if (!ASSESSMENT_QUESTIONS.some((question) => question.key === questionKey)) {
-          throw new Error('Choose a valid assessment question.');
-        }
-        if (project.assessment_answers?.[questionKey] !== expectedChoice) {
-          throw new Error('This answer changed in another tab. Refresh the summary and try again.');
-        }
-        const answers = { ...project.assessment_answers, [questionKey]: choice };
-        const result = evaluateAssessment(answers);
-        project.assessment_answers = clone(normalizeDraftAnswers(answers));
-        project.assessment_result = { ...project.assessment_result, domain: result.domain, guild: result.guild };
-      });
+      // Guard older tabs that still expose the former post-submission editor.
+      return updateProject(id, expectedUserId, () => { throw new Error('Submitted assessments cannot be edited.'); });
     },
 
     completeProject(id, answers, expectedUserId = activeUserId) {

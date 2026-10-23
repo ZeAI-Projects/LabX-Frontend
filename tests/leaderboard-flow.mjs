@@ -12,7 +12,7 @@ const output = fileURLToPath(new URL('../test-results/leaderboard/', import.meta
 const origin = 'http://127.0.0.1:5189'
 const demoUser = {
   id: 'demo-founder',
-  full_name: 'Demo Founder',
+  full_name: 'Founder',
   username: 'founder',
   email: 'founder@labx.demo',
   role: 'founder',
@@ -59,16 +59,21 @@ try {
 
   const go = (path) => page.goto(`${origin}${path}`)
   const at = (path) => page.waitForURL(`${origin}${path}`)
-  const heading = () => page.getByRole('heading', { name: 'Leaderboard', exact: true, level: 1 })
+  const heading = () => page.getByRole('heading', { name: 'LabX Leaderboard', exact: true, level: 1 })
   const rankings = () => page.getByRole('table', { name: 'Founder rankings', exact: true })
   const row = (name) => rankings().getByRole('row', { name, exact: true })
   const search = () => page.getByLabel('Search founders by name', { exact: true })
   const standing = () => page.getByRole('region', { name: 'Your standing', exact: true })
-  const previous = () => page.getByRole('button', { name: 'Previous page', exact: true })
-  const next = () => page.getByRole('button', { name: 'Next page', exact: true })
   const submit = () => page.locator('button[type="submit"]').click()
   const snapshot = (user = demoUser, options = {}) => getLeaderboardSnapshot({ user, projects: [], scope: 'global', ...options })
   const numberFrom = (text) => Number(text.replace(/[^\d]/g, ''))
+  const assertMetrics = async (expected) => {
+    const metrics = page.getByRole('region', { name: `${expected.scope === 'global' ? 'Global' : 'Domain'} leaderboard metrics`, exact: true })
+    await metrics.waitFor()
+    for (const [label, key] of [['founders', 'totalFounders'], ['points', 'totalPoints'], ['badges', 'totalBadges'], ['leading', 'leadingPoints']]) {
+      assert.equal(numberFrom(await metrics.locator(`[data-metric="${label}"]`).innerText()), expected.metrics[key], `${expected.scope}: ${key}`)
+    }
+  }
 
   const assertRows = async (expected, description) => {
     assert.ok(expected.length > 0, `${description} has expected rows`)
@@ -90,6 +95,8 @@ try {
       const domainLabel = LEADERBOARD_DOMAINS.find((domain) => domain.name === expected[index].domain)?.shortName || expected[index].domain
       assert.equal((await founderRow.locator('[data-label="Domain"]').innerText()).trim(), domainLabel, `${description}: founder domain`)
       assert.equal(numberFrom(await founderRow.locator('[data-label="Badges"]').innerText()), expected[index].badges_count, `${description}: founder badge count`)
+      assert.equal((await founderRow.locator('[data-label="Global Rank"]').innerText()).trim(), `#${expected[index].global_rank}`, `${description}: global rank stays comparable`)
+      assert.equal((await founderRow.locator('[data-label="Domain Rank"]').innerText()).trim(), expected[index].domain_rank === null ? 'Not ranked' : `#${expected[index].domain_rank}`, `${description}: domain rank uses the displayed domain`)
       await founderRow.getByRole('button', { name: `View founder: ${expected[index].full_name}`, exact: true }).waitFor()
     }
   }
@@ -99,6 +106,9 @@ try {
     const dialog = page.getByRole('dialog', { name: founder.full_name, exact: true })
     await dialog.waitFor()
     await dialog.getByRole('button', { name: 'Close founder details', exact: true }).waitFor()
+    const rankPair = dialog.locator('.lb-rank-pair')
+    assert.match(await rankPair.innerText(), new RegExp(`Global Rank\\s+#${founder.global_rank}\\b`))
+    assert.match(await rankPair.innerText(), new RegExp(`Domain Rank\\s+${founder.domain_rank === null ? 'Not ranked' : '#' + founder.domain_rank}\\b`))
     assert.equal(await dialog.evaluate((element) => element.contains(document.activeElement)), true, 'Opening founder details moves focus into the dialog')
     for (let index = 0; index < 4; index += 1) {
       await page.keyboard.press('Tab')
@@ -150,7 +160,7 @@ try {
     await at('/verify-email')
     const code = (await page.getByTestId('demo-signup-code').innerText()).trim()
     assert.match(code, /^\d{6}$/)
-    await page.getByLabel('Six-digit code', { exact: true }).fill(code)
+    await page.getByLabel('Digit 1 of 6', { exact: true }).fill(code)
     await page.getByRole('button', { name: 'Verify email', exact: true }).click()
     await at(role === 'founder' ? '/roadmap/new' : `/onboarding/${role}`)
     return page.evaluate(({ key, emailAddress }) => JSON.parse(localStorage.getItem(key) || '[]').find((account) => account.user.email === emailAddress)?.user, {
@@ -176,9 +186,12 @@ try {
   assert.equal(tiedFounders[0].rank, tiedFounders[1].rank, 'Equal points share competition ranks')
   assert.equal(global.totalFounders, 25, 'Global board includes 24 sample founders and the current founder once')
   assert.equal(global.userStanding.total_points, 450)
-  await assertRows(global.rankings.slice(0, 10), 'Global page 1')
-  assert.equal(await previous().isDisabled(), true)
-  assert.equal(await next().isEnabled(), true)
+  await assertMetrics(global)
+  assert.match(await standing().innerText(), /Global Rank\s+#\d+/)
+  assert.match(await standing().innerText(), /Domain Rank\s+Not ranked/)
+  assert.doesNotMatch(await page.locator('.lb-page').innerText(), /All[- ]Time Rank/i)
+  await assertRows(global.rankings.slice(3), 'Global page 1')
+  assert.equal(await page.getByRole('navigation', { name: 'Leaderboard pages' }).count(), 0)
   for (const founder of global.podium) {
     const podium = page.getByRole('button', { name: `Rank ${founder.rank}: ${founder.full_name}. View founder details`, exact: true })
     await podium.waitFor()
@@ -190,28 +203,20 @@ try {
   await checkLayout('global')
 
   await openDetails(page.getByRole('button', { name: 'View top founder', exact: true }), global.leader, { screenshot: true })
-  const tableTrigger = row(global.rankings[0].full_name).getByRole('button', { name: `View founder: ${global.rankings[0].full_name}`, exact: true })
-  await openDetails(tableTrigger, global.rankings[0])
+  const tableTrigger = row(global.rankings[3].full_name).getByRole('button', { name: `View founder: ${global.rankings[3].full_name}`, exact: true })
+  await openDetails(tableTrigger, global.rankings[3])
   await tableTrigger.click()
-  const leaderDialog = page.getByRole('dialog', { name: global.leader.full_name, exact: true })
+  const leaderDialog = page.getByRole('dialog', { name: global.rankings[3].full_name, exact: true })
   await leaderDialog.getByRole('button', { name: 'Close founder details', exact: true }).click()
   await leaderDialog.waitFor({ state: 'hidden' })
   assert.equal(await tableTrigger.evaluate((element) => element === document.activeElement), true, 'Close button restores trigger focus')
 
-  // Pagination preserves the exact global order and never omits the highlighted top three.
-  const pages = Math.ceil(global.rankings.length / 10)
-  for (let index = 1; index < pages; index += 1) {
-    await next().click()
-    await assertRows(global.rankings.slice(index * 10, index * 10 + 10), `Global page ${index + 1}`)
-  }
-  assert.equal(await next().isDisabled(), true)
-  for (let index = pages - 1; index > 0; index -= 1) await previous().click()
-  await assertRows(global.rankings.slice(0, 10), 'Returning to page 1')
+  // The full list follows the podium without duplicating the top three.
+  await assertRows(global.rankings.slice(3), 'All remaining founders')
   await page.getByRole('button', { name: 'Find my rank', exact: true }).click()
-  await row('Demo Founder').waitFor()
-  assert.match(await row('Demo Founder').locator('[data-label="Domain"]').innerText(), /Domain not set/i)
-  const ownIndex = global.rankings.findIndex((entry) => entry.id === demoUser.id)
-  await assertRows(global.rankings.slice(Math.floor(ownIndex / 10) * 10, Math.floor(ownIndex / 10) * 10 + 10), 'Find my rank jumps to the containing page')
+  await row('Founder').waitFor()
+  assert.match(await row('Founder').locator('[data-label="Domain"]').innerText(), /Domain not set/i)
+  await assertRows(global.rankings.slice(3), 'Find my rank keeps all rows available')
 
   // Search applies only on submission and does not recalculate a matching founder's rank.
   const target = global.rankings.find((entry) => entry.rank > 3 && entry.rank < 10)
@@ -220,46 +225,53 @@ try {
   assert.equal(await rankings().locator('tbody > tr').count(), beforeSearch, 'Typing a search does not replace submitted results')
   await page.getByRole('button', { name: 'Search', exact: true }).click()
   await assertRows(snapshot(demoUser, { search: target.full_name }).rankings, 'Submitted global search')
+  await assertMetrics(global)
   assert.equal(await page.getByRole('button', { name: /^Rank \d+: .*\. View founder details$/ }).count(), 0, 'Search hides the podium')
   await search().fill('NoSuchFounder-987654321')
   await page.getByRole('button', { name: 'Search', exact: true }).click()
   await page.getByRole('heading', { name: 'No founders found', exact: true }).waitFor()
   await page.getByRole('button', { name: 'Clear search', exact: true }).click()
   assert.equal(await search().inputValue(), '')
-  await assertRows(global.rankings.slice(0, 10), 'Clearing search resets page and results')
+  await assertRows(global.rankings.slice(3), 'Clearing search resets page and results')
 
   // A domain selection is explicit; each arena gets its own leaders and ranks.
-  await page.getByRole('button', { name: 'By domain', exact: true }).click()
+  await page.getByRole('button', { name: 'Domain', exact: true }).click()
   await page.getByRole('heading', { name: 'Choose your arena', exact: true }).waitFor()
   assert.equal(await rankings().count(), 0)
-  const domainSelect = page.getByLabel('Global domain', { exact: true })
+  const domainSelect = page.getByLabel('Domain', { exact: true })
   assert.equal(await domainSelect.inputValue(), '')
   assert.equal(await domainSelect.locator('option').count(), LEADERBOARD_DOMAINS.length + 1)
+  assert.doesNotMatch(await domainSelect.innerText(), /Other|Not sure/i)
   for (const domain of LEADERBOARD_DOMAINS) {
     await domainSelect.selectOption(String(domain.id))
     const scoped = snapshot(demoUser, { scope: 'domain', domainId: String(domain.id) })
+    await assertMetrics(scoped)
     if (Number(domain.id) > 12) {
       assert.equal(scoped.totalFounders, 0, 'New domains do not fabricate sample founders')
       await page.getByRole('heading', { name: 'No founders found', exact: true }).waitFor()
       continue
     }
     assert.equal(scoped.totalFounders, 2, `Domain ${domain.id} has its two sample founders`)
-    await assertRows(scoped.rankings, `Domain ${domain.id}`)
+    assert.equal(await rankings().locator('tbody > tr').count(), 0, 'Two founders are already on the podium')
     await openDetails(page.getByRole('button', { name: 'View top founder', exact: true }), scoped.leader)
   }
   const lastDomain = LEADERBOARD_DOMAINS[11]
-  await domainSelect.selectOption(lastDomain.id)
+  await go(`/leaderboard?scope=domain&domain=${lastDomain.id}`)
+  await heading().waitFor()
+  assert.equal(await domainSelect.inputValue(), lastDomain.id, 'Dashboard domain links select the matching board')
   const scoped = snapshot(demoUser, { scope: 'domain', domainId: String(lastDomain.id) })
-  await checkLayout('domain')
+  assert.equal(await page.locator('.lb-podium-card').count(), 2)
   const scopedTarget = scoped.rankings.at(-1)
   await search().fill(scopedTarget.full_name)
   await page.getByRole('button', { name: 'Search', exact: true }).click()
   await assertRows(snapshot(demoUser, { scope: 'domain', domainId: String(lastDomain.id), search: scopedTarget.full_name }).rankings, 'Domain search preserves domain rank')
+  await assertMetrics(scoped)
+  await checkLayout('domain-search')
   await page.getByRole('button', { name: 'Clear search', exact: true }).click()
   await domainSelect.selectOption('')
   await page.getByRole('heading', { name: 'Choose your arena', exact: true }).waitFor()
   await page.getByRole('button', { name: 'Global', exact: true }).click()
-  await assertRows(global.rankings.slice(0, 10), 'Returning to global restores all founders')
+  await assertRows(global.rankings.slice(3), 'Returning to global restores all founders')
   await page.reload()
   await heading().waitFor()
   await page.getByRole('button', { name: '450 LabX Coins', exact: true }).waitFor()
@@ -280,10 +292,10 @@ try {
   assert.match(await row(newFounder.full_name).locator('[data-label="Domain"]').innerText(), /Domain not set/i)
   assert.equal(numberFrom(await row(newFounder.full_name).locator('[data-label="LabX Points"]').innerText()), 0)
   assert.equal(await row(newFounder.full_name).locator('td').first().innerText(), `#${fresh.userStanding.rank}`)
-  await page.getByRole('button', { name: 'By domain', exact: true }).click()
+  await page.getByRole('button', { name: 'Domain', exact: true }).click()
   await page.getByRole('heading', { name: 'Choose your arena', exact: true }).waitFor()
-  await page.getByLabel('Global domain', { exact: true }).selectOption(String(LEADERBOARD_DOMAINS[0].id))
-  await assertRows(snapshot(newFounder, { scope: 'domain', domainId: String(LEADERBOARD_DOMAINS[0].id) }).rankings, 'New founder can browse an arena without joining it')
+  await page.getByLabel('Domain', { exact: true }).selectOption(String(LEADERBOARD_DOMAINS[0].id))
+  assert.equal(await page.locator('.lb-podium-card').count(), 2, 'New founder can browse an arena without joining it')
   assert.equal(await row(newFounder.full_name).count(), 0)
   await signOut()
 
@@ -303,7 +315,7 @@ try {
   assert.deepEqual(httpErrors, [], 'All local assets are available')
   assert.deepEqual(externalRequests, [], 'No remote requests')
   assert.deepEqual(backendRequests, [], 'No backend requests')
-  console.log('PASS: global and all supported domain rankings, shared ties, scoped search, empty/reset states, founder details and focus, pagination/find rank, zero-point founder, role guards, responsive tables, reduced motion and local-only assets.')
+  console.log('PASS: global and all supported domain rankings, shared ties, scoped search, empty/reset states, founder details and focus, continuous rankings/find rank, zero-point founder, role guards, responsive tables, reduced motion and local-only assets.')
 } catch (error) {
   await page?.screenshot({ path: `${output}failure.png`, fullPage: true, animations: 'disabled' }).catch(() => {})
   throw error

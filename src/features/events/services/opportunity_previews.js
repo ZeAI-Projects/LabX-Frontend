@@ -61,7 +61,7 @@ export const OPPORTUNITY_PREVIEWS = [
     description: 'Practice a concise venture pitch and collect constructive feedback from mentors and investors.',
     schedule: '17:00: introductions. 17:15: founder pitches. 18:15: feedback.',
     startsAt: '2026-11-09T17:00:00+05:30', endsAt: '2026-11-09T19:00:00+05:30', deadline: '2026-11-08T18:00:00+05:30',
-    format: 'Hybrid', location: 'Demo Community Studio, Chennai / online',
+    format: 'Hybrid', location: 'Community Studio, Chennai / online',
     prize: 'Peer feedback and a sample showcase mention', ...allRoles,
   },
   {
@@ -69,7 +69,7 @@ export const OPPORTUNITY_PREVIEWS = [
     description: 'Develop an accessible urban service concept in this illustrative sponsor-supported design challenge.',
     schedule: '09:00: briefing. 10:00: team work. 16:00: presentations.',
     startsAt: '2026-11-10T09:00:00+05:30', endsAt: '2026-11-10T17:00:00+05:30', deadline: '2026-11-09T18:00:00+05:30',
-    sponsored: true, sponsor: 'LabX Innovation Partners · Demo',
+    sponsored: true, sponsor: 'LabX Innovation Partners',
     prize: 'Illustrative design award; no cash prize in this preview',
   },
   {
@@ -77,7 +77,7 @@ export const OPPORTUNITY_PREVIEWS = [
     description: 'Meet other founders, mentors and investors for a relaxed community conversation about work in progress.',
     schedule: '18:00: introductions. 18:30: small-group conversations.',
     startsAt: '2026-11-11T18:00:00+05:30', endsAt: '2026-11-11T20:00:00+05:30', deadline: '2026-11-10T18:00:00+05:30',
-    format: 'In person', location: 'Demo Community Hub, Bengaluru', ...allRoles,
+    format: 'In person', location: 'Community Hub, Bengaluru', ...allRoles,
   },
   {
     id: 'guild-build-session', category: 'Guild event', title: 'AI Guild: Build Together',

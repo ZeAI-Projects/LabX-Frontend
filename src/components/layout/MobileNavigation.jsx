@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { Award, Bell, Bot, Calendar, Home, LogOut, Map, Menu, Trophy, User, Users, X } from 'lucide-react'
+import { Award, Bell, Bot, Calendar, Home, LogOut, Map, Menu, MessageCircle, Trophy, User, Users, X } from 'lucide-react'
 import './MobileNavigation.css'
 import { ProfileAvatar } from '../common/ProfileAvatar.jsx'
 
@@ -9,11 +9,11 @@ const sharedLinks = [
   ['/profile', 'Profile', User], ['/notifications', 'Notifications', Bell],
 ]
 const founderLinks = [
-  ['/dashboard', 'Dashboard', Home], ['/roadmap', 'Roadmap', Map],
+  ['/dashboard', 'Dashboard', Home], ['/chats', 'Chats', MessageCircle], ['/roadmap', 'Roadmap', Map],
   ['/leaderboard', 'Leaderboard', Trophy], ['/guild', 'Guilds', Bot],
   ['/social', 'Social', Users], ...sharedLinks,
 ]
-const memberLinks = [['/dashboard', 'Dashboard', Home], ...sharedLinks]
+const memberLinks = [['/dashboard', 'Dashboard', Home], ['/chats', 'Chats', MessageCircle], ...sharedLinks]
 
 export function MobileNavigation({ user, onSignOut }) {
   const { pathname } = useLocation()

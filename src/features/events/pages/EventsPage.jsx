@@ -1,17 +1,20 @@
+import collaborationPhoto from '../assets/collaboration.jpg'
+import conferencePhoto from '../assets/conference.jpg'
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { ArrowLeft, ArrowUpRight, Award, Bell, Bookmark, Calendar, CheckCircle2, ChevronDown, Clock, Copy, Download, ExternalLink, FileCheck2, Flag, MapPin, Megaphone, Radio, Search, SlidersHorizontal, Sparkles, Ticket, Trophy, Upload, Users, X } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, Award, Bell, Bookmark, BookmarkCheck, Calendar, CheckCircle2, ChevronDown, Clock, Copy, Download, ExternalLink, FileCheck2, Flag, MapPin, Radio, Search, SlidersHorizontal, Sparkles, Ticket, Trophy, Upload, Users, X } from 'lucide-react'
 import { useAuth } from '../../../hooks/use_auth.js'
 import { EVENT_CATEGORIES, EVENT_CHANGE_EVENT, MAX_CERTIFICATE_BYTES, MOCK_EVENTS, REPORT_REASONS, eventPhase, eventStore, getRegistrationAvailability, getSafeEventLink, getTrackingStatus, selectEvents } from '../services/mock_events.js'
 import '../components/EventsPage.css'
+import { EventArtwork } from '../components/EventArtwork.jsx'
 
 const INITIAL_FILTERS = {
-  query: '', category: 'all', format: 'all', broadcast: 'all', sort: 'soonest', myPeriod: 'all',
+  query: '', category: 'all', format: 'all', sort: 'soonest', myPeriod: 'all',
   dateFrom: '', dateTo: '', location: '', eligibility: 'all', fee: 'all', prizes: 'all', sponsored: 'all',
 }
 const ADVANCED_FILTERS = ['dateFrom', 'dateTo', 'location', 'eligibility', 'fee', 'prizes', 'sponsored']
 const CERTIFICATE_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
-const VIEW_NAMES = { upcoming: 'Upcoming broadcasts', ongoing: 'Happening now', my: 'My Events & opportunity tracker', completed: 'Completed participation', past: 'Past broadcasts' }
+const VIEW_NAMES = { upcoming: 'Upcoming broadcasts', ongoing: 'Happening now', saved: 'Saved broadcasts', my: 'My Events & opportunity tracker', completed: 'Completed participation', past: 'Past broadcasts' }
 const PAGE_SIZE = 9
 
 function formatDate(value) {
@@ -65,7 +68,7 @@ function OutcomeSummary({ outcome, onEdit, onCopy, copying }) {
   </section>
 }
 
-function EventDialog({ event, user, registration, outcome, now, onClose, onChanged, onViewMyEvents }) {
+function EventDialog({ event, user, registration, outcome, saved, now, onClose, onChanged, onViewMyEvents }) {
   const dialogRef = useRef(null)
   const headingRef = useRef(null)
   const errorRef = useRef(null)
@@ -145,6 +148,15 @@ function EventDialog({ event, user, registration, outcome, now, onClose, onChang
     } catch (err) { fail(err) }
   }
 
+  function toggleSaved() {
+    try {
+      eventStore.setSaved(user, event.id, !saved)
+      onChanged()
+      setError('')
+      setNotice(saved ? 'Removed from Saved.' : 'Added to Saved. Revisit it anytime from the Saved tab.')
+    } catch (err) { fail(err) }
+  }
+
   function register(e) {
     e.preventDefault()
     try {
@@ -152,7 +164,7 @@ function EventDialog({ event, user, registration, outcome, now, onClose, onChang
       onChanged()
       setPanel('details')
       setError('')
-      setNotice('Registration confirmed in this demo. Your event is saved in My Events.')
+      setNotice('Your event is saved in My Events.')
       focusHeading()
     } catch (err) { fail(err) }
   }
@@ -176,7 +188,7 @@ function EventDialog({ event, user, registration, outcome, now, onClose, onChang
       onChanged()
       setPanel('details')
       setError('')
-      setNotice('Report saved in this demo. It has not been sent to the organizer.')
+      setNotice('Report saved locally. It has not been sent to the organizer.')
       focusHeading()
     } catch (err) { fail(err) }
   }
@@ -255,7 +267,7 @@ function EventDialog({ event, user, registration, outcome, now, onClose, onChang
       `Participation: ${outcome.participation === 'attended' ? 'Attended' : 'Completed'}`,
       outcome.notes && `Notes: ${outcome.notes}`,
       outcome.award && `Award / result: ${outcome.award}`,
-      'Self-reported participation · LabX demo',
+      'Self-reported participation · LabX',
     ].filter(Boolean).join('\n')
     try {
       await navigator.clipboard.writeText(summary)
@@ -281,18 +293,19 @@ function EventDialog({ event, user, registration, outcome, now, onClose, onChang
         {notice && <p className="events-feedback" role="status">{notice}</p>}
         {panel === 'details' && <>
           <p className="events-dialog__description">{event.description}</p>
+          <div className="events-save-action"><button type="button" className="events-button events-save-button" aria-pressed={saved} aria-label={`${saved ? 'Remove saved event' : 'Save event'}: ${event.title}`} onClick={toggleSaved}>{saved ? <BookmarkCheck size={17} aria-hidden="true" /> : <Bookmark size={17} aria-hidden="true" />}{saved ? 'Saved' : 'Save event'}</button><p className="events-note">{saved ? 'In your Saved broadcasts.' : 'Save for later, without registering.'}</p></div>
           {event.sponsored && <p className="events-sponsored"><Sparkles size={16} aria-hidden="true" /><span>Sponsored by {event.sponsor}. This is a sample sponsored listing.</span></p>}
           <EventFacts event={event} />
           <section className="events-schedule" aria-labelledby="event-schedule"><h3 id="event-schedule">Schedule</h3><p>{event.schedule}</p></section>
           {event.requirements && <section className="events-schedule" aria-labelledby="event-requirements"><h3 id="event-requirements">What you need</h3>{Array.isArray(event.requirements) ? <ul>{event.requirements.map((item) => <li key={item}>{item}</li>)}</ul> : <p>{event.requirements}</p>}</section>}
           {event.format !== 'In person' && event.type !== 'announcement' && <p className="events-note">This sample listing does not provide a live meeting room.</p>}
           {registration && <section className="events-registration" aria-label="Your registration">
-            <div className="events-registration__heading"><span className="events-section-icon">{confirmed ? <CheckCircle2 size={21} aria-hidden="true" /> : <Clock size={21} aria-hidden="true" />}</span><div><h3>{confirmed ? 'Registered' : 'Registration pending'}</h3><p>{confirmed ? external ? 'External confirmation · Self-reported' : 'Demo registration confirmed' : 'Continue the external registration preview below.'}</p></div><span className="events-tag events-tag--green">{trackingStatus}</span></div>
+            <div className="events-registration__heading"><span className="events-section-icon">{confirmed ? <CheckCircle2 size={21} aria-hidden="true" /> : <Clock size={21} aria-hidden="true" />}</span><div><h3>{confirmed ? 'Registered' : 'Registration pending'}</h3><p>{confirmed ? external ? 'External confirmation · Self-reported' : 'Registration saved' : 'Continue the external registration preview below.'}</p></div><span className="events-tag events-tag--green">{trackingStatus}</span></div>
             <p className="events-registration__date">Saved {formatDate(registration.registeredAt)} IST</p>
             {registration.confirmationReference && <p className="events-note">Your reference: <strong>{registration.confirmationReference}</strong></p>}
             {confirmed && <>
               <label className="events-reminder"><input type="checkbox" checked={Boolean(registration.reminder)} disabled={past} onChange={toggleReminder} /><Bell size={17} aria-hidden="true" />Save a reminder for this event</label>
-              <p className="events-note">{past ? 'This event has ended. Reminder preferences are read-only.' : 'Reminders are saved as a preference in this demo; no messages are sent.'}</p>
+              <p className="events-note">{past ? 'This event has ended. Reminder preferences are read-only.' : 'Reminder preferences are saved locally; notifications are not connected yet.'}</p>
             </>}
             <div className="events-inline-actions">
               <button type="button" className="events-button" onClick={onViewMyEvents}><Bookmark size={15} aria-hidden="true" />View My Events</button>
@@ -303,7 +316,7 @@ function EventDialog({ event, user, registration, outcome, now, onClose, onChang
           {outcome && confirmed && <OutcomeSummary outcome={outcome} onEdit={() => showPanel('participation')} onCopy={copyParticipation} copying={copying} />}
           {!confirmed && event.type !== 'announcement' && <div className="events-register-action">
             <button type="button" className="events-button events-button--primary" disabled={!availability.allowed} onClick={startRegistration}>{external && availability.allowed ? <ExternalLink size={16} aria-hidden="true" /> : <Ticket size={16} aria-hidden="true" />}{availability.label}</button>
-            {!availability.allowed ? <p className="events-note">{availability.label === 'Not eligible' ? `This listing is for ${event.eligibility.toLowerCase()}.` : 'Registration is unavailable for this listing.'}</p> : <p className="events-note">{external ? 'External registration preview. Your saved confirmation is self-reported; no real payment is processed.' : 'Registration is saved locally for this demo. It does not reserve a real place.'}</p>}
+            {!availability.allowed ? <p className="events-note">{availability.label === 'Not eligible' ? `This listing is for ${event.eligibility.toLowerCase()}.` : 'Registration is unavailable for this listing.'}</p> : <p className="events-note">{external ? 'External registration preview. Your saved confirmation is self-reported; no real payment is processed.' : 'Registration is saved locally. It does not reserve a place with the organizer.'}</p>}
           </div>}
           <footer className="events-dialog__footer"><button type="button" className="events-text-button" onClick={() => showPanel('report')}><Flag size={15} aria-hidden="true" />Report listing</button><button type="button" className="events-button" onClick={onClose}>Close</button></footer>
         </>}
@@ -317,11 +330,11 @@ function EventDialog({ event, user, registration, outcome, now, onClose, onChang
         {panel === 'external' && <form onSubmit={confirmExternal}>
           <p className="events-dialog__description">{event.title}</p>
           <ol className="events-external-steps">
-            <li><span className="events-step-number" aria-hidden="true">01</span><div><h3>Preview the external destination</h3><p>These sample links open a demo destination. They cannot register you or accept payment.</p><div className="events-inline-actions">
-              {availability.allowed && registrationUrl ? <a className="events-button" href={registrationUrl} target="_blank" rel="noopener noreferrer">Open External Link<ExternalLink size={15} aria-hidden="true" /><span className="events-sr-only"> · demo preview, opens a new tab</span></a> : <span className="events-note">The external registration preview is unavailable.</span>}
+            <li><span className="events-step-number" aria-hidden="true">01</span><div><h3>Preview the external destination</h3><p>These links open a sample destination. They cannot register you or accept payment.</p><div className="events-inline-actions">
+              {availability.allowed && registrationUrl ? <a className="events-button" href={registrationUrl} target="_blank" rel="noopener noreferrer">Open External Link<ExternalLink size={15} aria-hidden="true" /><span className="events-sr-only"> · opens a new tab</span></a> : <span className="events-note">The external registration preview is unavailable.</span>}
               {availability.allowed && paymentUrl && <a className="events-button" href={paymentUrl} target="_blank" rel="noopener noreferrer">Open payment preview<ExternalLink size={15} aria-hidden="true" /><span className="events-sr-only"> · opens a new tab</span></a>}
             </div></div></li>
-            <li><span className="events-step-number" aria-hidden="true">02</span><div><h3>Record your confirmation</h3><p>Enter a sample reference to try the tracker. This is your own record, not verification from the organizer or a payment provider.</p><label className="events-field"><span>Confirmation reference<span className="events-required" aria-hidden="true">*</span></span><input aria-label="Confirmation reference" value={reference} onChange={(e) => setReference(e.target.value)} maxLength={120} required placeholder="e.g. DEMO-REGISTRATION-01" /></label></div></li>
+            <li><span className="events-step-number" aria-hidden="true">02</span><div><h3>Record your confirmation</h3><p>Enter a sample reference to try the tracker. This is your own record, not verification from the organizer or a payment provider.</p><label className="events-field"><span>Confirmation reference<span className="events-required" aria-hidden="true">*</span></span><input aria-label="Confirmation reference" value={reference} onChange={(e) => setReference(e.target.value)} maxLength={120} required placeholder="e.g. REGISTRATION-01" /></label></div></li>
           </ol>
           {!availability.allowed && <p className="events-note">{availability.label}. A new confirmation cannot be recorded.</p>}
           <div className="events-dialog__actions"><button type="button" className="events-button" onClick={() => showPanel('details')}><ArrowLeft size={15} aria-hidden="true" />Back</button><button type="submit" className="events-button events-button--primary" disabled={!availability.allowed || !reference.trim()}>Save external confirmation</button></div>
@@ -349,7 +362,7 @@ function EventDialog({ event, user, registration, outcome, now, onClose, onChang
           <p className="events-dialog__description">Flag <strong>{event.title}</strong> for review.</p>
           <label className="events-field"><span>Reason<span className="events-required" aria-hidden="true">*</span></span><select aria-label="Reason" value={reason} onChange={(e) => setReason(e.target.value)} required><option value="">Select a reason</option>{REPORT_REASONS.map((item) => <option key={item}>{item}</option>)}</select></label>
           <label className="events-field">Additional details (optional)<textarea aria-label="Additional details (optional)" rows={4} value={reportNotes} onChange={(e) => setReportNotes(e.target.value)} maxLength={500} placeholder="Tell us what needs attention" /></label>
-          <p className="events-note">The report is saved locally for this demo. It is not submitted to moderators or the organizer.</p>
+          <p className="events-note">The report is saved locally. It is not submitted to moderators or the organizer.</p>
           <div className="events-dialog__actions"><button type="button" className="events-button" onClick={() => showPanel('details')}><ArrowLeft size={15} aria-hidden="true" />Back</button><button type="submit" className="events-button events-button--primary" disabled={!reason}>Save report</button></div>
         </form>}
       </div>
@@ -357,23 +370,24 @@ function EventDialog({ event, user, registration, outcome, now, onClose, onChang
   )
 }
 
-function EventCard({ event, registration, outcome, user, now, onSelect }) {
+function EventCard({ event, registration, outcome, saved, user, now, onSelect, onSave }) {
   const availability = getRegistrationAvailability(event, user, registration, now)
   const phase = eventPhase(event, now)
   const trackingStatus = getTrackingStatus(event, registration, outcome, now)
-  const announcement = event.type === 'announcement'
-  const status = registration ? trackingStatus : phase === 'past' ? 'Expired · Event ended' : announcement ? 'Community transmission' : availability.allowed ? 'Registration open' : availability.label
-  return <article className={`events-card${announcement ? ' events-card--transmission' : ''}${outcome ? ' events-card--completed' : ''}`} aria-labelledby={`event-title-${event.id}`}>
+  const status = registration ? trackingStatus : phase === 'past' ? 'Expired · Event ended' : availability.allowed ? 'Registration open' : availability.label
+  return <article className={`events-card${outcome ? ' events-card--completed' : ''}`} aria-labelledby={`event-title-${event.id}`}>
     <div className="events-card__visual">
-      <span className={`events-tag${announcement ? ' events-tag--purple' : ''}`}>{announcement ? <Megaphone size={13} aria-hidden="true" /> : <Calendar size={13} aria-hidden="true" />}{event.category}</span>
-      <div className="events-card__signal" aria-hidden="true">{announcement ? <Radio /> : outcome ? <Trophy /> : <Sparkles />}</div>
+      <EventArtwork category={event.category}/>
+      <img className="events-card__photo" src={["Workshop","Hackathon","Training","Mentoring"].includes(event.category) ? collaborationPhoto : conferencePhoto} alt="" loading="lazy" decoding="async" onError={event=>{event.currentTarget.hidden=true}} />
+      <span className="events-tag"><Calendar size={13} aria-hidden="true" />{event.category}</span>
+
       <time className="events-date-chip" dateTime={event.startsAt} aria-label={formatDate(event.startsAt)}><span>{datePart(event.startsAt, { month: 'short' })}</span><strong>{datePart(event.startsAt, { day: '2-digit' })}</strong></time>
       {event.sponsored && <span className="events-sponsored-tag"><Sparkles size={11} aria-hidden="true" />Sponsored</span>}
+      <div className="events-card__story"><h3 id={`event-title-${event.id}`}>{event.title}</h3><p className="events-card__description">{event.description}</p></div>
     </div>
     <div className="events-card__body">
       <p className="events-card__organizer">{event.organizer}</p>
-      <h3 id={`event-title-${event.id}`}>{event.title}</h3>
-      <p className="events-card__description">{event.description}</p>
+
       <dl className="events-card-facts">
         <div><dt><Calendar size={14} aria-hidden="true" /><span className="events-sr-only">Starts</span></dt><dd>{formatDate(event.startsAt)} IST</dd></div>
         <div><dt><MapPin size={14} aria-hidden="true" /><span className="events-sr-only">Location</span></dt><dd>{event.format} · {event.location}</dd></div>
@@ -381,7 +395,7 @@ function EventCard({ event, registration, outcome, user, now, onSelect }) {
         <div><dt><Users size={14} aria-hidden="true" /><span className="events-sr-only">Eligibility</span></dt><dd>{event.eligibility}</dd></div>
       </dl>
       {(event.fee || event.prize) && <div className="events-card__benefits">{event.fee && <span><Ticket size={13} aria-hidden="true" />{event.fee}</span>}{event.prize && <span className="events-card__prize"><Trophy size={13} aria-hidden="true" />{event.prize}</span>}</div>}
-      <div className="events-card__footer"><span className={`events-status${registration?.status === 'registered' ? ' events-status--registered' : ''}${outcome ? ' events-status--completed' : ''}`}>{outcome ? <Trophy size={14} aria-hidden="true" /> : registration?.status === 'registered' ? <CheckCircle2 size={14} aria-hidden="true" /> : <span className={`events-status-dot${phase === 'ongoing' ? ' events-status-dot--live' : ''}`} />}{status}{registration?.reminder && phase !== 'past' && <Bell size={14} aria-label="Reminder saved" role="img" />}</span><button type="button" className="events-button" aria-label={`View details: ${event.title}`} onClick={() => onSelect(event)}>View Details<ArrowUpRight size={15} aria-hidden="true" /></button></div>
+      <div className="events-card__footer"><span className={`events-status${registration?.status === 'registered' ? ' events-status--registered' : ''}${outcome ? ' events-status--completed' : ''}`}>{outcome ? <Trophy size={14} aria-hidden="true" /> : registration?.status === 'registered' ? <CheckCircle2 size={14} aria-hidden="true" /> : <span className={`events-status-dot${phase === 'ongoing' ? ' events-status-dot--live' : ''}`} />}{status}{registration?.reminder && phase !== 'past' && <Bell size={14} aria-label="Reminder saved" role="img" />}</span><div className="events-card__actions"><button type="button" className="events-button events-save-button" aria-pressed={saved} aria-label={`${saved ? 'Remove saved event' : 'Save event'}: ${event.title}`} onClick={() => onSave(event, !saved)}>{saved ? <BookmarkCheck size={16} aria-hidden="true" /> : <Bookmark size={16} aria-hidden="true" />}{saved ? 'Saved' : 'Save'}</button><button type="button" className="events-button" aria-label={`View details: ${event.title}`} onClick={() => onSelect(event)}>View Details<ArrowUpRight size={15} aria-hidden="true" /></button></div></div>
     </div>
   </article>
 }
@@ -389,6 +403,7 @@ function EventCard({ event, registration, outcome, user, now, onSelect }) {
 function EventsContent({ user }) {
   const [searchParams, setSearchParams] = useSearchParams()
   const [saved, setSaved] = useState(() => eventStore.read(user))
+  const [saveFeedback, setSaveFeedback] = useState(null)
   const [filterValues, setFilters] = useState(INITIAL_FILTERS)
   const [expandedFilters, setExpandedFilters] = useState(false)
   const [pagination, setPagination] = useState({ key: '', count: PAGE_SIZE })
@@ -399,17 +414,28 @@ function EventsContent({ user }) {
   const visibleLimit = pagination.key === filterKey ? pagination.count : PAGE_SIZE
   const selected = MOCK_EVENTS.find((event) => event.id === searchParams.get('event')) ?? null
   const outcomes = saved.outcomes ?? {}
-  const filtered = selectEvents(MOCK_EVENTS, filters, saved.registrations, now, user, outcomes)
+  const savedEvents = saved.savedEvents ?? {}
+  const savedCount = Object.keys(savedEvents).length
+  const filtered = selectEvents(MOCK_EVENTS, filters, saved.registrations, now, user, outcomes, savedEvents)
   const registrations = MOCK_EVENTS.filter((event) => saved.registrations[event.id])
   const totalRegistrations = registrations.length
   const completedCount = registrations.filter((event) => outcomes[event.id]).length
-  const activeReminders = registrations.filter((event) => saved.registrations[event.id].reminder && eventPhase(event, now) !== 'past').length
   const activeListings = MOCK_EVENTS.filter((event) => event.type !== 'announcement' && eventPhase(event, now) !== 'past').length
   const advancedCount = ADVANCED_FILTERS.filter((key) => filters[key] !== INITIAL_FILTERS[key]).length
 
   function refresh() {
     setSaved(eventStore.read(user))
     setNow(Date.now())
+  }
+
+  function saveEvent(event, nextSaved) {
+    try {
+      eventStore.setSaved(user, event.id, nextSaved)
+      refresh()
+      setSaveFeedback({ text: `${event.title} ${nextSaved ? 'added to Saved.' : 'removed from Saved.'}`, error: false })
+    } catch (err) {
+      setSaveFeedback({ text: err.message || 'This event could not be saved. Please try again.', error: true })
+    }
   }
 
   function setFilter(key, value) {
@@ -468,13 +494,13 @@ function EventsContent({ user }) {
       <section className="events-hero" aria-labelledby="events-showcase-title">
         <div className="events-hero__copy"><span className="events-eyebrow"><span className="events-live-dot" />Global Broadcast Network</span><h2 id="events-showcase-title">Showcase Events <span>&amp; Keynotes</span></h2><p>Your next connection. Your next breakthrough. Explore learning sessions, founder opportunities, and community broadcasts.</p><span className="events-demo-note">Sample listings · your registrations and activity stay on this browser.</span></div>
         <div className="events-broadcast-art" aria-hidden="true"><span /><span /><span /><div><Radio size={38} /></div><i className="events-broadcast-art__satellite"><Sparkles size={15} /></i></div>
-        <div className="events-broadcasts" role="group" aria-label="Broadcast type">{[['all', 'All Broadcasts', Radio], ['event', 'Showcase Events', Calendar], ['announcement', 'Transmissions', Megaphone]].map(([value, label, Icon]) => <button type="button" className={`events-button${filters.broadcast === value ? ' events-button--primary' : ''}`} key={value} aria-pressed={filters.broadcast === value} onClick={() => setFilter('broadcast', value)}><Icon size={16} aria-hidden="true" />{label}</button>)}</div>
       </section>
       <section className="events-metrics" aria-label="Your event overview">
-        {[[Radio, activeListings, 'Live & upcoming'], [Bookmark, totalRegistrations, 'Saved to My Events'], [Trophy, completedCount, 'Participation records'], [Bell, activeReminders, 'Reminder preferences']].map(([Icon, count, label]) => <div key={label}><span className="events-metric-icon"><Icon size={20} aria-hidden="true" /></span><dl><dt>{label}</dt><dd>{count}</dd></dl></div>)}
+        {[[Radio, activeListings, 'Live & upcoming'], [Bookmark, savedCount, 'Saved broadcasts'], [Ticket, totalRegistrations, 'My registrations'], [Trophy, completedCount, 'Participation records']].map(([Icon, count, label]) => <div key={label}><span className="events-metric-icon"><Icon size={20} aria-hidden="true" /></span><dl><dt>{label}</dt><dd>{count}</dd></dl></div>)}
       </section>
-      <div className="events-view-row"><nav className="events-views" aria-label="Event views">{[['upcoming', 'Upcoming'], ['ongoing', 'Ongoing'], ['my', `My Events (${totalRegistrations})`], ['completed', 'Completed'], ['past', 'Past']].map(([value, label]) => <button type="button" key={value} aria-pressed={filters.view === value} onClick={() => setFilter('view', value)}>{value === 'my' && <Bookmark size={14} aria-hidden="true" />}{value === 'completed' && <CheckCircle2 size={14} aria-hidden="true" />}{label}</button>)}</nav></div>
-      <section className="events-filter-panel" aria-label="Find events">
+      <div className="events-view-row"><nav className="events-views" aria-label="Event views">{[['upcoming', 'Upcoming'], ['ongoing', 'Ongoing'], ['saved', `Saved (${savedCount})`], ['my', `My Events (${totalRegistrations})`], ['completed', 'Completed'], ['past', 'Past']].map(([value, label]) => <button type="button" key={value} aria-pressed={filters.view === value} onClick={() => setFilter('view', value)}>{value === 'saved' && <Bookmark size={14} aria-hidden="true" />}{value === 'my' && <Ticket size={14} aria-hidden="true" />}{value === 'completed' && <CheckCircle2 size={14} aria-hidden="true" />}{label}</button>)}</nav></div>
+      {saveFeedback && <p className={`events-feedback${saveFeedback.error ? ' events-feedback--error' : ''}`} role={saveFeedback.error ? 'alert' : 'status'}>{saveFeedback.text}</p>}
+      <section className={`events-filter-panel${expandedFilters ? ' is-expanded' : ''}`} aria-label="Find events">
         <div className="events-filters">
           <label className="events-field events-search">Search events<span><Search size={18} aria-hidden="true" /><input type="search" value={filters.query} placeholder="Search events, organizers, opportunities…" onChange={(e) => setFilter('query', e.target.value)} /></span></label>
           <label className="events-field">Category<select aria-label="Category" value={filters.category} onChange={(e) => setFilter('category', e.target.value)}><option value="all">All categories</option>{EVENT_CATEGORIES.map((item) => <option key={item}>{item}</option>)}</select></label>
@@ -493,12 +519,13 @@ function EventsContent({ user }) {
           <p className="events-note">Date filters use the listing start date in India Standard Time, including both selected dates.</p>
         </div>
       </section>
-      {filters.view === 'my' && <div className="events-my-period"><div><span className="events-eyebrow"><Bookmark size={14} aria-hidden="true" />Your opportunity tracker</span><p>Follow registrations, reminder preferences, and participation in one place.</p></div><label className="events-field">My Events period<select aria-label="My Events period" value={filters.myPeriod} onChange={(e) => setFilter('myPeriod', e.target.value)}><option value="all">All saved events</option><option value="upcoming">Upcoming only</option><option value="ongoing">Ongoing only</option><option value="past">Past only</option><option value="completed">Completed only</option></select></label></div>}
+      {filters.view === 'my' && <div className="events-my-period"><div><span className="events-eyebrow"><Ticket size={14} aria-hidden="true" />Your opportunity tracker</span><p>Follow registrations, reminder preferences, and participation in one place.</p></div><label className="events-field">My Events period<select aria-label="My Events period" value={filters.myPeriod} onChange={(e) => setFilter('myPeriod', e.target.value)}><option value="all">All registrations</option><option value="upcoming">Upcoming only</option><option value="ongoing">Ongoing only</option><option value="past">Past only</option><option value="completed">Completed only</option></select></label></div>}
+      {filters.view === 'saved' && <p className="events-saved-intro">Your saved broadcasts, including past events. Saving an event does not register you.</p>}
       <div className="events-results-heading"><h3>{VIEW_NAMES[filters.view]}</h3><p className="events-count" role="status">{filtered.length} {filtered.length === 1 ? 'listing' : 'listings'}{filters.view === 'my' ? ' in My Events' : ''}</p></div>
-      {filtered.length === 0 ? <section className="events-empty"><span className="events-empty__icon">{filters.view === 'completed' ? <Trophy size={34} aria-hidden="true" /> : <Calendar size={34} aria-hidden="true" />}</span><h3>{filters.view === 'my' ? 'No saved events match this view' : filters.view === 'completed' ? 'Your next achievement starts here' : 'No broadcasts found'}</h3><p>{filters.view === 'my' ? 'Register for an event to find it here, or adjust your filters.' : filters.view === 'completed' ? 'After a registered event starts, record your participation from its details. Your results and certificates will appear here.' : 'Try another category, format, or search. Check Ongoing for events happening now and Past for older listings.'}</p></section> : <div className="events-grid">{filtered.slice(0, visibleLimit).map((event) => <EventCard key={event.id} event={event} registration={saved.registrations[event.id]} outcome={outcomes[event.id]} user={user} now={now} onSelect={selectEvent} />)}</div>}
+      {filtered.length === 0 ? <section className="events-empty"><span className="events-empty__icon">{filters.view === 'saved' ? <Bookmark size={34} aria-hidden="true" /> : filters.view === 'completed' ? <Trophy size={34} aria-hidden="true" /> : <Calendar size={34} aria-hidden="true" />}</span><h3>{filters.view === 'saved' ? savedCount ? 'No saved broadcasts match your filters' : 'Save an event for later' : filters.view === 'my' ? 'No registrations match this view' : filters.view === 'completed' ? 'Your next achievement starts here' : 'No broadcasts found'}</h3><p>{filters.view === 'saved' ? savedCount ? 'Clear or adjust your filters to revisit your saved events.' : 'Use Save on any event broadcast. Your collection will appear here whenever you return.' : filters.view === 'my' ? 'Register for an event to find it here, or adjust your filters.' : filters.view === 'completed' ? 'After a registered event starts, record your participation from its details. Your results and certificates will appear here.' : 'Try another category, format, or search. Check Ongoing for events happening now and Past for older listings.'}</p></section> : <div className="events-grid">{filtered.slice(0, visibleLimit).map((event) => <EventCard key={event.id} event={event} registration={saved.registrations[event.id]} outcome={outcomes[event.id]} saved={Boolean(savedEvents[event.id])} user={user} now={now} onSelect={selectEvent} onSave={saveEvent} />)}</div>}
       {filtered.length > visibleLimit && <div className="events-show-more"><p className="events-note">Showing {visibleLimit} of {filtered.length} listings</p><button type="button" className="events-button" onClick={() => setPagination({ key: filterKey, count: visibleLimit + PAGE_SIZE })}>Show more broadcasts<ChevronDown size={16} aria-hidden="true" /></button></div>}
       <p className="events-page-footnote"><Radio size={13} aria-hidden="true" />Sample broadcast network · All times in IST · No real registrations, payments, or messages</p>
-      {selected && <EventDialog key={selected.id} event={selected} user={user} registration={saved.registrations[selected.id]} outcome={outcomes[selected.id]} now={now} onClose={() => selectEvent(null)} onChanged={refresh} onViewMyEvents={viewMyEvents} />}
+      {selected && <EventDialog key={selected.id} event={selected} user={user} registration={saved.registrations[selected.id]} outcome={outcomes[selected.id]} saved={Boolean(savedEvents[selected.id])} now={now} onClose={() => selectEvent(null)} onChanged={refresh} onViewMyEvents={viewMyEvents} />}
     </div>
   )
 }

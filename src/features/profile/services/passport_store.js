@@ -14,9 +14,9 @@ const validDate = (value) => typeof value === 'string' && Number.isFinite(Date.p
 const limits = { legal_name: 120, city: 100, country: 100, project_id: 512, venture_name: 120, founder_role: 120, founder_story: 3000 }
 const required = new Set(['legal_name', 'country', 'venture_name', 'founder_role', 'founder_story'])
 const actionLabels = {
-  start_review: 'Demo review started', request_info: 'More information requested', mark_eligible: 'Demo eligibility confirmed',
-  schedule_interview: 'Demo interview scheduled', record_interview: 'Demo interview recorded', approve: 'Demo passport approved',
-  reject: 'Demo application rejected', mark_renewal_due: 'Demo renewal requested',
+  start_review: 'review started', request_info: 'More information requested', mark_eligible: 'eligibility confirmed',
+  schedule_interview: 'interview scheduled', record_interview: 'interview recorded', approve: 'passport approved',
+  reject: 'application rejected', mark_renewal_due: 'renewal requested',
 }
 const transitions = {
   start_review: { from: ['submitted'], to: 'under_review' },
@@ -143,8 +143,8 @@ export function createPassportStore({ storage = localStore, auth = mockAuth, now
     actor(userId)
     const application = read(userId)
     const transition = Object.hasOwn(transitions, action) ? transitions[action] : null
-    if (!transition || !transition.from.includes(application.status)) throw new Error('That demo review action is unavailable for this application status.')
-    if (!isRecord(payload)) throw new Error('Enter the demo review details.')
+    if (!transition || !transition.from.includes(application.status)) throw new Error('That review action is unavailable for this application status.')
+    if (!isRecord(payload)) throw new Error('Enter the review details.')
     let reason = profileText(payload.reason ?? '', 'Review reason', 2000, ['request_info', 'reject'].includes(action))
     const next = { ...application, status: transition.to }
     if (action === 'request_info' || action === 'reject') next.feedback = reason
@@ -170,8 +170,8 @@ export function createPassportStore({ storage = localStore, auth = mockAuth, now
   function beginRenewal(userId) {
     actor(userId)
     const application = read(userId)
-    if (application.status !== 'renewal_due') throw new Error('A renewal can begin after it is marked due in the demo review.')
-    if (application.cycle >= 1000) throw new Error('This demo application has reached its renewal limit.')
+    if (application.status !== 'renewal_due') throw new Error('A renewal can begin after it is marked due during review.')
+    if (application.cycle >= 1000) throw new Error('This application has reached its renewal limit.')
     return write(userId, {
       ...application, status: 'draft', cycle: application.cycle + 1,
       form: { ...application.form, consent: false }, feedback: '', interview: null,

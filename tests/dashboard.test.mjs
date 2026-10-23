@@ -3,9 +3,10 @@ import test from 'node:test'
 import { getDashboardSnapshot } from '../src/features/dashboard/services/dashboard_snapshot.js'
 import { ASSESSMENT_VERSION, createEmptyAnswers, DOMAIN_OPTIONS, evaluateAssessment } from '../src/features/assessment/services/mock_assessment.js'
 import { MOCK_EVENTS } from '../src/features/events/services/mock_events.js'
+import { createRoadmapSnapshot } from '../src/features/roadmap/services/roadmap_workflow.js'
 
 const now = Date.parse('2026-10-20T04:30:00Z')
-const demo = { id: 'demo-founder', role: 'founder', full_name: 'Demo Founder', total_points: 900000 }
+const demo = { id: 'demo-founder', role: 'founder', full_name: 'Founder', total_points: 900000 }
 const fresh = { id: 'new-founder', role: 'founder', full_name: 'New Founder', total_points: 900000 }
 const answers = { q1: 1, q2: 1, q3: 1, q4: 1, q5: 1, q6: 1, q7: 1, q8: 1 }
 const project = (id, overrides = {}) => ({
@@ -28,6 +29,41 @@ const readyProject = (id, overrides = {}) => project(id, {
 })
 const registration = (eventId, overrides = {}) => ({
   eventId, status: 'registered', registeredAt: '2026-10-01T12:00:00Z', reminder: false, ...overrides,
+})
+
+function submittedProject(submittedAt, status = 'approved', submittedBy = demo.id) {
+  const own = readyProject('daily-mission')
+  own.roadmap_snapshot = createRoadmapSnapshot(own, {
+    version: 1, ownerId: demo.id, projectId: own.id,
+    submissionsByMilestone: {
+      'discover-l1-m1': {
+        missionId: 'discover-l1-m1', attempt: 1, status, submittedBy, submittedAt,
+        payload: { notes: status === 'approved' ? 'We interviewed the intended users, documented their needs, and compared our findings with existing alternatives.' : 'Too short.', url: 'https://example.test/evidence', file: null },
+      },
+    },
+  })
+  return own
+}
+
+test('dashboard progress follows approved work without treating roadmap missions as Daily Quest', () => {
+  const own = submittedProject('2026-10-19T19:00:00Z')
+  const initial = getDashboardSnapshot({ user: demo, projects: [readyProject('ready')], now })
+  const completed = getDashboardSnapshot({ user: demo, projects: [own], now })
+  assert.equal(Object.hasOwn(initial, 'dailyQuest'), false, 'Side quests have their own independent store')
+  assert.equal(completed.projects[0].roadmap.completedCount, 1)
+  assert.equal(completed.projects[0].roadmap.totalCount - completed.projects[0].roadmap.completedCount, 74)
+  assert.equal(completed.achievements.pointsBalance, initial.achievements.pointsBalance)
+  assert.equal(getDashboardSnapshot({ user: demo, projects: [own], now: Date.parse('2026-10-20T18:30:00Z') }).projects[0].roadmap.completedCount, 1, 'Roadmap progress never resets with daily side quests')
+})
+
+test('dashboard remaining work excludes rejected work and other accounts', () => {
+  const rejected = submittedProject('2026-10-20T04:00:00Z', 'rejected')
+  const foreign = { ...submittedProject('2026-10-20T04:00:00Z'), owner_id: 'another-founder' }
+  const snapshot = getDashboardSnapshot({ user: demo, projects: [rejected, foreign], now })
+  assert.equal(snapshot.projectCount, 1)
+  assert.equal(snapshot.projects[0].roadmap.completedCount, 0)
+  assert.equal(snapshot.projects[0].roadmap.totalCount, 75)
+  assert.deepEqual(getDashboardSnapshot({ user: fresh, projects: [rejected, foreign], now }).projects, [])
 })
 
 test('demo account rewards match achievements and leaderboard without granting project completions', () => {

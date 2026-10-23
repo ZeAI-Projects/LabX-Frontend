@@ -631,6 +631,50 @@
   gap: 12px;
 }
 
+.app-shell .labx-navbar.labx-navbar--compact {
+  display: flex;
+  justify-content: flex-end;
+  min-height: 44px;
+  margin-bottom: 8px;
+  padding: 0;
+  border-bottom: 0;
+}
+
+@media (min-width: 901px) {
+  .app-shell .founder-world--dashboard > .labx-navbar--compact {
+    height: 0;
+    min-height: 0;
+    margin: 0;
+  }
+  .founder-world--dashboard > .labx-navbar--compact > .labx-navbar-actions {
+    position: absolute;
+    top: 8px;
+    right: 0;
+  }
+  .app-shell .founder-world--dashboard .db-header {
+    min-height: 64px;
+    padding-right: 120px;
+  }
+}
+
+/* Use each screen's own title, with utilities alongside it when space allows. */
+@media (min-width: 1101px) {
+  .app-shell :is(.founder-world--chats, .founder-world--leaderboard, .founder-world--roadmap:has(.projects-header)) > .labx-navbar--compact {
+    height: 0;
+    min-height: 0;
+    margin: 0;
+  }
+  :is(.founder-world--chats, .founder-world--leaderboard, .founder-world--roadmap:has(.projects-header)) > .labx-navbar--compact > .labx-navbar-actions {
+    position: absolute;
+    top: 8px;
+    right: 0;
+  }
+  .app-shell .founder-world :is(.chats-page-header, .projects-header, .lb-header) {
+    min-height: 64px;
+    padding-right: 120px;
+  }
+}
+
 .labx-title-line {
   width: 3px;
   height: 31px;

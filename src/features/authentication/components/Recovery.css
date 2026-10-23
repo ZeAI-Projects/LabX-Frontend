@@ -181,3 +181,22 @@
     align-items: center;
   }
 }
+
+.password-recovery-container .auth-top-hud { justify-content:space-between; }
+.password-recovery-container .recovery-steps { min-height:36px; margin:0 0 20px; align-items:center; }
+.password-recovery-container .form-header { margin-bottom:20px; }
+.password-recovery-container .gamified-field-group { margin-bottom:18px; gap:7px; }
+.password-recovery-container .auth-demo-notice { margin:0 0 18px; padding:10px 12px; font-size:.74rem; line-height:1.6; }
+.password-recovery-container .auth-field-hint { font-size:.72rem; line-height:1.6; margin-top:3px; }
+.password-recovery-container .btn-warp-create { width:100%; margin-top:8px; }
+.password-recovery-container .form-footer-login { margin-top:20px; padding-top:16px; }
+.password-recovery-container .recovery-account { margin:0 0 16px; }
+
+@media(min-width:801px) {
+ .password-recovery-container.is-reset form { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 14px; }
+ .password-recovery-container.is-reset form > .gamified-field-group:first-child,.password-recovery-container.is-reset form > button { grid-column:1/-1; }
+ .password-recovery-container.is-reset .recovery-steps { margin-bottom:14px;min-height:28px; }
+ .password-recovery-container.is-reset .form-header { margin-bottom:14px; }
+ .password-recovery-container.is-reset .gamified-field-group { margin-bottom:12px; }
+ .password-recovery-container.is-reset .form-footer-login { margin-top:14px;padding-top:10px; }
+}
