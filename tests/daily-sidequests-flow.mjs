@@ -34,21 +34,24 @@ try {
   page.on('response', (response) => { if (response.status() >= 400) networkErrors.push(`${response.status()} ${response.url()}`) })
   await page.clock.setFixedTime(new Date('2026-10-23T18:29:00Z'))
   const button = (name) => page.getByRole('button', { name, exact: true })
+  const coinStatButton = () => button('View LabX Coins in Daily Quests')
   const popup = () => page.getByRole('dialog', { name: 'Daily Quests', exact: true })
   const response = () => popup().getByRole('textbox', { name: 'Your quest response', exact: true })
   const questStat = () => page.locator('.db-statistics [data-dashboard-stat="Daily Quests"]')
   const assertQuestStat = async completed => {
     assert.equal(await button('Open daily quests').count(), 1, 'Dashboard has one Daily Quests entry point')
+    assert.equal(await coinStatButton().count(), 1, 'The LabX Coins card also opens Daily Quests')
     assert.equal(await page.locator('.db-statistics').getByRole('button', { name: 'Open daily quests', exact: true }).count(), 1, 'The statistics card opens Daily Quests')
-    assert.equal(await page.locator('[data-dashboard-stat="LabX Points"]').count(), 0, 'Daily Quests replaces the LabX Points statistic')
+    assert.equal(await page.locator('[data-dashboard-stat="LabX Points"]').count(), 1, 'LabX Points remains a separate dashboard statistic')
+    assert.equal(await page.locator('[data-dashboard-stat="LabX Coins"]').count(), 1, 'Lifetime Daily Quest coins have their own dashboard statistic')
     assert.equal(await page.locator('.db-dashboard-columns .sq-card').count(), 0, 'There is no duplicate lower Daily Quests card')
     assert.equal(await questStat().innerText(), `${completed} / 3`, 'The statistics card reflects saved daily completion')
   }
-  const open = async () => { await page.locator('.db-statistics').getByRole('button', { name: 'Open daily quests', exact: true }).click(); await popup().waitFor() }
-  const close = async () => {
+  const open = async (trigger = button('Open daily quests')) => { await trigger.click(); await popup().waitFor() }
+  const close = async (trigger = button('Open daily quests')) => {
     await page.keyboard.press('Escape')
     await popup().waitFor({ state: 'hidden' })
-    assert.equal(await button('Open daily quests').evaluate((element) => element === document.activeElement), true, 'Escape restores keyboard focus to the popup opener')
+    assert.equal(await trigger.evaluate((element) => element === document.activeElement), true, 'Escape restores keyboard focus to the popup opener')
   }
   const signIn = async (email = DEMO_CREDENTIALS.email, password = DEMO_CREDENTIALS.password) => {
     await page.goto(`${origin}/login`)
@@ -74,13 +77,21 @@ try {
     const { getMockPointsBalance } = await import('/src/features/achievements/services/mock_achievements.js')
     return getMockPointsBalance({ id: 'demo-founder', role: 'founder' })
   })
+  const sideQuestCoinBalance = () => page.evaluate(async () => {
+    const { getSideQuestCoinTotal } = await import('/src/features/dashboard/services/daily_side_quests.js')
+    return getSideQuestCoinTotal({ id: 'demo-founder', role: 'founder' })
+  })
 
   await signIn()
   assert.equal(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches), true)
   const baseCoins = await coinAmount()
+  assert.equal(await page.locator('[data-dashboard-stat="LabX Coins"]').innerText(), String(await sideQuestCoinBalance()))
   const pointsBefore = await pointsBalance()
   const unrelatedBefore = await unrelatedStorage()
   await assertQuestStat(0)
+  assert.equal(await page.locator('[data-dashboard-stat="LabX Coins"]').innerText(), String(await sideQuestCoinBalance()))
+  await open(coinStatButton())
+  await close(coinStatButton())
   for (const width of [320, 390, 1440]) {
     await page.setViewportSize({ width, height: width < 600 ? 844 : 1000 })
     await page.evaluate(() => document.fonts.ready)
@@ -114,6 +125,7 @@ try {
   await popup().getByRole('status').filter({ hasText: '5 sample LabX coins added' }).waitFor()
   await close()
   await expectCoins(baseCoins + 5)
+  assert.equal(await page.locator('[data-dashboard-stat="LabX Coins"]').innerText(), String(await sideQuestCoinBalance()), 'The dashboard coin KPI refreshes from the side-quest total')
   await assertQuestStat(1)
   assert.equal(await pointsBalance(), pointsBefore, 'Coin rewards do not change LabX Points')
   assert.deepEqual(await unrelatedStorage(), unrelatedBefore, 'Side quests do not alter roadmap, achievement, profile, or other app storage')

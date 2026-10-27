@@ -132,9 +132,10 @@ function DailySideQuestSession({ user, variant }) {
   }
 
   return <>
-    {variant === 'stat' ? <button className="db-stat db-tone-gold db-daily-quest" type="button" aria-label="Open daily quests" aria-haspopup="dialog" onClick={openQuests}>
+    {variant === 'stat' || variant === 'coin-stat' ? <button className={`db-stat db-tone-gold ${variant === 'coin-stat' ? 'db-coin-stat' : 'db-daily-quest'}`} type="button" aria-label={variant === 'coin-stat' ? 'View LabX Coins in Daily Quests' : 'Open daily quests'} aria-haspopup="dialog" onClick={openQuests}>
       <span className="db-stat-icon"><Target size={19} aria-hidden="true" /></span>
-      <span className="db-daily-quest-copy"><span>Daily Quests</span><strong data-dashboard-stat="Daily Quests">{snapshot.completedCount} / {snapshot.totalCount}</strong><small>Completed today · {snapshot.availableCoins} coins left</small><span className="db-daily-quest-link">Open quests<ArrowRight size={15} aria-hidden="true" /></span></span>
+      <span className="db-daily-quest-copy"><span>{variant === 'coin-stat' ? 'LabX Coins' : 'Daily Quests'}</span><strong data-dashboard-stat={variant === 'coin-stat' ? 'LabX Coins' : 'Daily Quests'}>{variant === 'coin-stat' ? snapshot.earnedCoins.toLocaleString('en-IN') : `${snapshot.completedCount} / ${snapshot.totalCount}`}</strong><small>{variant === 'coin-stat' ? 'Lifetime Daily Quest rewards' : `Completed today · ${snapshot.availableCoins} coins left`}</small></span>
+      <span className="db-daily-quest-link">{variant === 'coin-stat' ? 'View coin rewards' : 'Open quests'}<ArrowRight size={15} aria-hidden="true" /></span>
     </button> : <section className="sq-card" aria-labelledby={titleId}>
       <div className="sq-card-heading"><h2 id={titleId}><Target size={19} aria-hidden="true" />Daily Quests</h2><span className="sq-sample">Sample quests</span></div>
       <p>Small side quests. Extra LabX coins.</p>

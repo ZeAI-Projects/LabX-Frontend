@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, ArrowUpRight, Award, CalendarDays, Check, CheckCircle2, CircleDashed, Compass, Flag, Folder, GraduationCap, LockKeyhole, Mountain, Rocket, Route, Shield, Sparkles, Target, Trophy, Users, Zap } from 'lucide-react'
+import { ArrowRight, ArrowUpRight, Award, CalendarDays, Check, CheckCircle2, Coins, Compass, Flag, GraduationCap, LockKeyhole, Mountain, Rocket, Route, Shield, Sparkles, Target, Trophy, Users, Zap } from 'lucide-react'
 import { useAuth } from '../../../hooks/use_auth.js'
 import { useProjects } from '../../projects/hooks/use_projects.js'
 import { EVENT_CHANGE_EVENT, eventStore } from '../../events/services/mock_events.js'
@@ -14,7 +14,6 @@ import '../components/Dashboard.css'
 const stageNames = ['Discover', 'Validate', 'Build', 'Launch', 'Grow']
 const stageIcons = [Compass, Target, Zap, Rocket, Trophy]
 const badgeIcons = { flag: Flag, compass: Compass, mountain: Mountain, route: Route, zap: Zap, trophy: Trophy }
-const shortDate = (value) => new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' }).format(new Date(value))
 const number = (value) => (value ?? 0).toLocaleString('en-IN')
 const isCovered = (mission) => ['completed', 'credited'].includes(mission.state)
 
@@ -37,6 +36,10 @@ function Stat({ icon: Icon, label, value, note, tone = 'cyan' }) {
   </div>
 }
 
+function StatLink({ to, ...props }) {
+  return <Link className="db-stat-link" to={to}><Stat {...props} /></Link>
+}
+
 function FounderProgress({ project, firstName }) {
   const roadmap = project?.roadmap
   const completed = roadmap?.completedCount || 0
@@ -51,18 +54,30 @@ function FounderProgress({ project, firstName }) {
     <div className="db-progress-ring" style={{ '--progress': percent + '%' }} aria-hidden="true"><strong>{percent}<small>%</small></strong><span>{roadmap ? 'covered' : 'setup'}</span></div>
     <div className="db-overview-copy"><span className="db-eyebrow">Welcome back, {firstName}</span><h2>{project?.name || 'Your progress starts here'}</h2>
       <p>{roadmap ? (roadmap.isComplete ? 'Every mission is covered. Your completed work is saved.' : stageNames[roadmap.currentStageIndex] + ' · Level ' + roadmap.currentLevel + ' · ' + roadmap.domain) : project?.assessmentCompleted ? 'Your assessment is saved. Review the result to check your starting point.' : project ? 'Complete your assessment to unlock your project roadmap.' : 'Create a project in Roadmap to start tracking your journey.'}</p>
-      {roadmap ? <><Progress value={covered} max={total} label="Roadmap progress" /><p className="db-next-mission">{roadmap.isComplete ? 'Roadmap complete' : 'Up next: ' + (project.currentMilestone?.name || 'Your next mission')}</p></> : project && !project.assessmentCompleted ? <><Progress value={answered} max={questions} label="Assessment progress" /><p className="db-next-mission">{answered} of {questions} questions answered · {questions - answered} left</p></> : null}
+      {roadmap ? <p className="db-next-mission">{roadmap.isComplete ? 'Roadmap complete' : 'Up next: ' + (project.currentMilestone?.name || 'Your next mission')}</p> : project && !project.assessmentCompleted ? <><Progress value={answered} max={questions} label="Assessment progress" /><p className="db-next-mission">{answered} of {questions} questions answered · {questions - answered} left</p></> : null}
     </div>
     <dl className="db-progress-breakdown"><div><dt>Completed missions</dt><dd data-dashboard-stat="Completed missions">{number(completed)}</dd></div><div><dt>Missions remaining</dt><dd data-dashboard-stat="Missions remaining">{roadmap ? number(remaining) : '—'}</dd></div><div><dt>Placement credits</dt><dd data-dashboard-stat="Placement credits">{number(credited)}</dd></div></dl>
   </section>
 }
 
-function ProjectJourney({ project, projects }) {
+function ProjectJourney({ project, projects, onProjectChange }) {
   const roadmap = project?.roadmap
   const levelsCovered = roadmap?.stages.flatMap((stage) => stage.levels).filter((level) => level.milestones.every(isCovered)).length || 0
   const stagesCovered = roadmap?.stages.filter((stage) => stage.levels.every((level) => level.milestones.every(isCovered))).length || 0
   return <section className="db-panel db-journey" aria-label="Project journey">
-    <SectionTitle icon={Route} title="Roadmap overview"><TextLink to={project?.href || '/roadmap'}>{project ? project.action : 'Open Roadmap'}</TextLink></SectionTitle>
+    <div className="db-section-title db-journey-title">
+      <h2><Route size={17} aria-hidden="true" />Roadmap overview</h2>
+      <div className="db-roadmap-controls">
+        <div className="db-roadmap-picker">
+          <label htmlFor="dashboard-roadmap">Select Roadmap</label>
+          <select id="dashboard-roadmap" value={project?.id || ''} disabled={!projects.length} onChange={(event) => onProjectChange(event.target.value)}>
+            {projects.length ? projects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>) : <option value="">No projects available</option>}
+          </select>
+        </div>
+        <span className="db-roadmap-status" aria-live="polite">{project?.roadmap ? 'Roadmap ready' : project?.assessmentCompleted ? 'Placement unavailable' : project ? 'Assessment pending' : 'No projects'}</span>
+        <TextLink to={project?.href || '/roadmap'}>{project ? project.action : 'Open Roadmap'}</TextLink>
+      </div>
+    </div>
     <div className="db-coverage-summary"><span><strong>{levelsCovered} / {roadmap ? 25 : 0}</strong> levels covered</span><span><strong>{stagesCovered} / {roadmap ? 5 : 0}</strong> stages covered</span></div>
     {roadmap ? <ol className="db-stage-summary" aria-label="Roadmap stages">{roadmap.stages.map((stage, index) => {
       const Icon = stageIcons[index]
@@ -71,9 +86,6 @@ function ProjectJourney({ project, projects }) {
       const status = covered === missions.length ? 'Covered' : stage.isCurrent ? 'Current' : stage.isUnlocked ? 'Available' : 'Locked'
       return <li key={stage.name} className={stage.isCurrent ? 'is-current' : ''}><span className="db-stage-summary-icon"><Icon size={17} aria-hidden="true" /></span><div><div className="db-stage-summary-label"><strong>{stage.name}</strong><span>{status} · {covered}/{missions.length}</span></div><Progress value={covered} max={missions.length} label={stage.name + ' missions covered'} /></div></li>
     })}</ol> : <p className="db-overview-empty">{project?.assessmentCompleted ? 'Roadmap placement is unavailable for this saved assessment.' : project ? 'Your five-stage roadmap appears after the assessment.' : 'No roadmap yet. Your stages, levels, and mission progress will appear here.'}</p>}
-    <div className="db-project-heading"><h3>Your projects <span>{projects.length}</span></h3><span className="db-project-caption">{projects.filter((item) => item.roadmap).length} ready</span></div>
-    {projects.length ? <ul className="db-project-list">{projects.slice(0, 3).map((item) => <li key={item.id} className={item.id === project?.id ? 'is-selected' : ''}><span className="db-project-icon"><Folder size={16} aria-hidden="true" /></span><div><strong title={item.name}>{item.name}</strong><span>{item.roadmap ? stageNames[item.roadmap.currentStageIndex] + ' · Level ' + item.roadmap.currentLevel : item.assessmentCompleted ? 'Placement unavailable' : item.answeredCount + ' of ' + item.totalQuestions + ' questions answered'}</span></div><span className="db-project-percentage">{item.roadmap ? item.roadmap.progressPercent + '%' : 'Setup'}</span></li>)}</ul> : <p className="db-overview-empty">No projects created.</p>}
-    {projects.length > 3 && <p className="db-footnote">Showing your 3 most recently updated projects. Use the active project selector to see another.</p>}
     {roadmap && <p className="db-footnote">Coverage includes completed missions and placement credits. Credits are shown separately from submitted work.</p>}
   </section>
 }
@@ -98,13 +110,6 @@ function EventsPanel({ upcoming, registered }) {
     <div className="db-segment" aria-label="Event selection"><button type="button" aria-pressed={view === 'discover'} onClick={() => setView('discover')}>For you</button><button type="button" aria-pressed={view === 'my'} onClick={() => setView('my')}>My events</button></div>
     {events.length ? <ul className="db-event-list">{events.map((event) => <li key={event.id}><div className="db-event-row"><time dateTime={event.startsAt}><strong>{new Intl.DateTimeFormat('en-IN', { day: '2-digit', timeZone: 'Asia/Kolkata' }).format(new Date(event.startsAt))}</strong><span>{new Intl.DateTimeFormat('en-IN', { month: 'short', timeZone: 'Asia/Kolkata' }).format(new Date(event.startsAt))}</span></time><div><small>{event.category} · {event.format}</small><h3>{event.title}</h3><span className={event.isRegistered ? 'is-registered' : ''}>{event.isRegistered ? 'Registered' : event.availability?.label === 'Register' ? 'Registration open' : event.availability?.label || 'View details'}</span></div></div></li>)}</ul> : <p className="db-overview-empty">{view === 'my' ? 'No upcoming registrations.' : 'No upcoming events scheduled.'}</p>}
     <p className="db-footnote">{view === 'my' ? registered.length + ' upcoming registration' + (registered.length === 1 ? '' : 's') + ' shown' : 'Up to 3 upcoming events'} · Sample listings · Times in IST.</p>
-  </section>
-}
-
-function ActivityPanel({ activity }) {
-  return <section className="db-panel" aria-label="Recent activity">
-    <SectionTitle icon={Zap} title="Recent activity" />
-    {activity.length ? <ul className="db-activity-list">{activity.slice(0, 4).map((item) => <li key={item.id}><span className={'db-activity-dot ' + (item.status === 'Approved' ? 'is-approved' : '')}>{item.status === 'Approved' ? <Check size={12} /> : <CircleDashed size={12} />}</span><div><strong>{item.activity}</strong><small><time dateTime={item.date}>{shortDate(item.date)}</time> · {item.status}</small></div><span className={item.status === 'Approved' ? 'db-earned-points' : 'db-pending-points'}>{item.status === 'Approved' ? '+' + item.amount : 'In review'}</span></li>)}</ul> : <p className="db-overview-empty">No activity yet. Approved quests and milestones will appear here.</p>}
   </section>
 }
 
@@ -145,9 +150,9 @@ export function OnboardingComplete() {
   const { projects } = useProjects()
   const [selectedId, setSelectedId] = useState('')
   const [now, setNow] = useState(() => Date.now())
-  const [, setActivityVersion] = useState(0)
+  const [, setSnapshotVersion] = useState(0)
   useEffect(() => {
-    const refresh = () => { setNow(Date.now()); setActivityVersion((version) => version + 1) }
+    const refresh = () => { setNow(Date.now()); setSnapshotVersion((version) => version + 1) }
     const timer = window.setInterval(refresh, 60000)
     window.addEventListener('focus', refresh)
     window.addEventListener('storage', refresh)
@@ -170,22 +175,23 @@ export function OnboardingComplete() {
   return <div className="db-page">
     <header className="db-header"><div><span className="db-eyebrow">Your progress at a glance</span><p>See how far you have come, and what is left to do.</p></div><span className="db-role"><Shield size={13} aria-hidden="true" />{getRoleLabel(user.role)}</span></header>
     {isFounder ? <>
-      {model.projects.length > 0 && <div className="db-project-picker"><label htmlFor="dashboard-project"><Folder size={15} aria-hidden="true" />Active project</label><select id="dashboard-project" value={project.id} onChange={(event) => setSelectedId(event.target.value)}>{model.projects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><span aria-live="polite">{project.roadmap ? 'Roadmap ready' : project.assessmentCompleted ? 'Placement unavailable' : 'Assessment pending'}</span></div>}
-      <FounderProgress project={project} firstName={firstName} />
       <section className="db-stats db-statistics" aria-label="Founder overview">
         <DailySideQuestCard user={user} variant="stat" />
-        <Stat icon={Route} label="Roadmaps ready" value={model.readyCount + ' / ' + model.projects.length} note={model.draftCount + ' assessments in progress'} tone="mint" />
-        <div className="db-ranks" role="group" aria-label="Your rankings">
+        <StatLink to="/achievements" icon={Coins} label="LabX Points" value={number(model.achievements.pointsBalance)} note="Approved account points" tone="purple" />
+        <DailySideQuestCard user={user} variant="coin-stat" />
+        <Link className="db-ranks" to="/leaderboard" aria-label="View leaderboards: global and domain rankings">
           <Stat icon={Trophy} label="Global Rank" value={standing ? '#' + standing.global_rank : 'Unranked'} note="Across all founders" />
           <Stat icon={Compass} label="Domain Rank" value={standing?.domain_rank ? '#' + standing.domain_rank : 'Unranked'} note={standing?.primary_domain?.name || 'Choose a domain in your assessment'} tone="purple" />
-          <TextLink to="/leaderboard">View leaderboards</TextLink>
-        </div>
+          <span className="db-text-link db-ranks-link">View leaderboards<ArrowUpRight size={14} aria-hidden="true" /></span>
+        </Link>
+        <StatLink to="/roadmap" icon={Route} label="Roadmaps ready" value={model.readyCount + ' / ' + model.projects.length} note={model.draftCount + ' assessments in progress'} tone="mint" />
       </section>
-      <div className="db-dashboard-columns">
-        <div className="db-dashboard-stack"><ProjectJourney project={project} projects={model.projects} />{!project?.roadmap && <EventsPanel upcoming={model.upcomingEvents} registered={model.registeredEvents} />}</div>
-        <div className="db-dashboard-stack"><AchievementPanel achievements={model.achievements} />{project?.roadmap && <EventsPanel upcoming={model.upcomingEvents} registered={model.registeredEvents} />}</div>
+      <div className="db-dashboard-grid">
+        <FounderProgress project={project} firstName={firstName} />
+        <ProjectJourney project={project} projects={model.projects} onProjectChange={setSelectedId} />
+        <AchievementPanel achievements={model.achievements} />
+        <EventsPanel upcoming={model.upcomingEvents} registered={model.registeredEvents} />
       </div>
-      <details className="db-secondary"><summary>Recent activity</summary><ActivityPanel activity={model.activity} /></details>
     </> : <RoleDashboard user={user} model={model} firstName={firstName} />}
     <footer className="db-footer"><Sparkles size={13} aria-hidden="true" /><span>{isFounder ? 'Roadmap progress belongs to the selected project. Points and badges reflect your account.' : 'Your saved preferences are private to this account.'}</span></footer>
   </div>
