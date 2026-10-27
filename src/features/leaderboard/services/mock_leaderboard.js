@@ -198,23 +198,25 @@ function rankFounders(founders) {
   })
 }
 
-function rankMomentumFounders(founders) {
-  const sorted = founders.slice().sort((left, right) =>
-    right.momentum.currentStreakDays - left.momentum.currentStreakDays
-    || right.momentum.activeDays - left.momentum.activeDays
-    || right.momentum.completedMissions - left.momentum.completedMissions
-    || right.momentum.completedMilestones - left.momentum.completedMilestones
-    || compareText(normalizeText(left.full_name), normalizeText(right.full_name))
-    || compareText(left.id, right.id))
+function rankPulseFounders(founders) {
+  const maximums = {
+    points: Math.max(0, ...founders.map((founder) => founder.total_points)),
+    streak: Math.max(0, ...founders.map((founder) => founder.momentum?.currentStreakDays ?? 0)),
+    missions: Math.max(0, ...founders.map((founder) => founder.momentum?.completedMissions ?? 0)),
+  }
+  const score = (founder) => [
+    maximums.points ? founder.total_points / maximums.points : 0,
+    maximums.streak ? (founder.momentum?.currentStreakDays ?? 0) / maximums.streak : 0,
+    maximums.missions ? (founder.momentum?.completedMissions ?? 0) / maximums.missions : 0,
+  ].reduce((total, metric) => total + metric, 0) / 3
+  const sorted = founders.map((founder) => ({ founder, score: score(founder) }))
+    .sort((left, right) => right.score - left.score
+      || compareText(normalizeText(left.founder.full_name), normalizeText(right.founder.full_name))
+      || compareText(left.founder.id, right.founder.id))
   let rank = 0
   return sorted.map((founder, index) => {
-    const current = founder.momentum
-    const previous = sorted[index - 1]?.momentum
-    if (index === 0 || current.currentStreakDays !== previous.currentStreakDays
-      || current.activeDays !== previous.activeDays
-      || current.completedMissions !== previous.completedMissions
-      || current.completedMilestones !== previous.completedMilestones) rank = index + 1
-    return { ...founder, rank }
+    if (index === 0 || Math.abs(founder.score - sorted[index - 1].score) > 1e-12) rank = index + 1
+    return { ...founder.founder, rank }
   })
 }
 
@@ -255,7 +257,7 @@ export function getLeaderboardSnapshot({
   const scopedRankings = requiresDomain ? [] : selectedScope === 'domain'
     ? rankFounders(globalRankings.filter((founder) => founder.domains.some((membership) => membership.id === domain.id)))
     : globalRankings
-  const allRankings = mode === 'momentum' ? rankMomentumFounders(scopedRankings) : scopedRankings
+  const allRankings = mode === 'momentum' ? rankPulseFounders(scopedRankings) : scopedRankings
   const query = normalizeText(search)
   const rankings = allRankings.filter((founder) => (!query || normalizeText(`${founder.full_name} @${founder.username}`).includes(query))
     && (!filterDomainId || founder.domains.some((membership) => membership.id === String(filterDomainId)))
@@ -289,7 +291,7 @@ export function getLeaderboardSnapshot({
       totalFounders: allRankings.length,
       totalPoints: allRankings.reduce((sum, founder) => sum + founder.total_points, 0),
       totalBadges: allRankings.reduce((sum, founder) => sum + founder.badges_count, 0),
-      leadingPoints: allRankings[0]?.total_points ?? 0,
+      leadingPoints: allRankings.reduce((highest, founder) => Math.max(highest, founder.total_points), 0),
     },
     momentumMetrics: {
       rankedFounders: allRankings.length,

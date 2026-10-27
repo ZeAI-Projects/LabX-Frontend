@@ -106,22 +106,44 @@ test('global founders sort by approved points and the podium follows their ranks
   assert.equal(snapshot.nextRankGap, null)
 })
 
-test('Pulse ranks founders by momentum and keeps filter matches at their original ranks', () => {
+test('Pulse ranks by an equal-weight normalized combination and keeps filter matches at their original ranks', () => {
   const pulse = getLeaderboardSnapshot({ mode: 'momentum' })
   assert.equal(pulse.totalFounders, 24)
-  assert.deepEqual(pulse.podium.map(({ full_name, rank }) => [full_name, rank]), [
-    ['Amara Okafor', 1], ['Rohan Patel', 2], ['Sofia Chen', 3],
-  ])
+  const maximums = {
+    points: Math.max(...pulse.allRankings.map(founder => founder.total_points)),
+    streak: Math.max(...pulse.allRankings.map(founder => founder.momentum.currentStreakDays)),
+    missions: Math.max(...pulse.allRankings.map(founder => founder.momentum.completedMissions)),
+  }
+  const expectedOrder = [...pulse.allRankings].sort((left, right) => {
+    const score = founder => (founder.total_points / maximums.points
+      + founder.momentum.currentStreakDays / maximums.streak
+      + founder.momentum.completedMissions / maximums.missions) / 3
+    return score(right) - score(left) || left.full_name.localeCompare(right.full_name)
+  })
+  assert.deepEqual(pulse.allRankings.map(founder => founder.id), expectedOrder.map(founder => founder.id))
+  assert.deepEqual(pulse.podium.map(({ id }) => id), expectedOrder.slice(0, 3).map(({ id }) => id))
   assert.deepEqual(pulse.podium.map(({ id, rank, momentum }) => [id, rank, momentum]),
     pulse.allRankings.slice(0, 3).map(({ id, rank, momentum }) => [id, rank, momentum]))
   assert.ok(pulse.allRankings.every((founder) => founder.momentum?.source === 'demo'))
   assert.equal(pulse.momentumMetrics.rankedFounders, pulse.totalFounders)
+  assert.equal(pulse.metrics.leadingPoints, Math.max(...pulse.allRankings.map(founder => founder.total_points)))
+  assert.ok(pulse.allRankings.every((founder) => !Object.hasOwn(founder, 'score')))
 
   const filtered = getLeaderboardSnapshot({ mode: 'momentum', stage: 'Build' })
   assert.ok(filtered.rankings.length > 0)
   assert.ok(filtered.rankings.every((founder) => founder.stage === 'Build'))
   assert.deepEqual(filtered.allRankings, pulse.allRankings)
   assert.equal(filtered.matchedCount, filtered.rankings.length)
+})
+
+test('Pulse uses streak and missions to break LabX point ties', () => {
+  const pulse = getLeaderboardSnapshot({ user: demoUser, mode: 'momentum' })
+  const user = pulse.allRankings.find(founder => founder.is_current_user)
+  const tiedFounder = pulse.allRankings.find(founder => founder.full_name === 'Anika Bose')
+
+  assert.equal(user.total_points, tiedFounder.total_points)
+  assert.ok(tiedFounder.momentum.currentStreakDays > user.momentum.currentStreakDays)
+  assert.ok(tiedFounder.rank < user.rank)
 })
 
 test('Pulse includes a founder without activity and keeps their ranked position', () => {

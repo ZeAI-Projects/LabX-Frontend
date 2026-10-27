@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ArrowDown, ArrowDownUp, ArrowRight, ArrowUp, Award, Compass, Crown, Filter, Globe2, Info, Medal, Search, Sparkles, Target, Trophy, Users, X as XIcon, Zap } from 'lucide-react'
+import { ArrowDown, ArrowDownUp, ArrowRight, ArrowUp, Compass, Crown, Filter, Globe2, Info, Medal, Search, Sparkles, Target, Trophy, Users, X as XIcon, Zap } from 'lucide-react'
 import { useAuth } from '../../../hooks/use_auth.js'
 import { useProjects } from '../../projects/hooks/use_projects.js'
 import { getLeaderboardSnapshot, LEADERBOARD_DOMAINS } from '../services/mock_leaderboard.js'
@@ -186,13 +186,7 @@ function Podium({ founders, domains, mode, showDomain, scope, highlightedId, pro
         </div>
         {showDomain && <span className="lb-podium-domain" title={founder.domain}>{domain?.shortName || founder.domain}</span>}
         <RankPair founder={founder} scope={scope} className="lb-podium-ranks" />
-        {mode === 'labx' ? <>
-          <div className="lb-podium-points"><Zap size={15} /><strong>{points(founder.total_points)}</strong><span>LabX Points</span></div>
-        </> : <dl className="lb-podium-momentum">
-          <div><dt><Target size={13} />Current streak</dt><dd>{founder.momentum ? `${founder.momentum.currentStreakDays} days` : 'Unavailable'}</dd></div>
-          <div><dt><Medal size={13} />Active days</dt><dd>{founder.momentum ? founder.momentum.activeDays : 'Unavailable'}</dd></div>
-          <div><dt><Award size={13} />Approved missions</dt><dd>{founder.momentum ? founder.momentum.completedMissions : 'Unavailable'}</dd></div>
-        </dl>}
+        <div className="lb-podium-points"><Zap size={15} /><strong>{points(founder.total_points)}</strong><span>LabX Points</span></div>
         <p className="lb-podium-progress">{founder.stage || 'Getting started'}{founder.level ? ` · Level ${founder.level}` : ''}</p>
         <div className="lb-podium-footer"><span>{founder.momentum?.source === 'demo' && mode === 'momentum' ? <span className="lb-demo-tag">DEMO DATA</span> : null}</span>{!founder.is_current_user && <span>Demo profile unavailable</span>}</div>
       </article>
@@ -252,7 +246,7 @@ export function LeaderboardPage() {
     stage: stageFilter,
     level: levelFilter,
   }), [user, projects, scope, effectiveDomainId, search, mode, filterDomainId, stageFilter, levelFilter])
-  const { domains, rankings, podium, leader, userStanding, globalUserStanding, requiresDomain, totalFounders, matchedCount, metrics, momentumMetrics } = snapshot
+  const { domains, rankings, podium, userStanding, globalUserStanding, requiresDomain, totalFounders, matchedCount, metrics } = snapshot
   const scopeLabel = scope === 'global' ? 'Global' : snapshot.domain?.name || 'your selected domain'
   const isFiltering = Boolean(search || filterDomainId || stageFilter || levelFilter)
   const activeFilterCount = [scope === 'global' ? filterDomainId : effectiveDomainId, stageFilter, levelFilter].filter(Boolean).length
@@ -413,33 +407,25 @@ export function LeaderboardPage() {
   return (
     <div className="lb-page">
       <header className="lb-header">
-        <div><span className="lb-eyebrow"><Trophy size={14} />The founder arena</span><p>Big ideas. Real progress. Every step earns your spot.</p></div>
-        <button type="button" className="lb-quiet-button" onClick={() => setShowRules(true)}><Info size={15} />How rankings work</button>
-      </header>
-
-      <section className="lb-controls" aria-label="Leaderboard filters">
-        <div className="lb-scope-row">
-          <div className="lb-scope-toggle" aria-label="Leaderboard scope">
+          <div className="lb-header-controls"><div className="lb-scope-toggle" data-active={scope} role="group" aria-label="Leaderboard scope">
             <button type="button" aria-pressed={scope === 'global'} onClick={() => switchScope('global')}><Globe2 size={16} />Global</button>
             <button type="button" aria-pressed={scope === 'domain'} onClick={() => switchScope('domain')}><Compass size={16} />Domain</button>
           </div><button type="button" className="lb-quiet-button lb-header-help" onClick={() => setShowRules(true)}><Info size={15} />How rankings work</button></div>
-          <p>Big ideas. Real progress. Every step earns your spot.</p></div>
+          <p>Big ideas. Real progress. Every step earns your spot.</p>
       </header>
 
       <div className="lb-dashboard">
-      {!requiresDomain && <section key={`metrics-${scope}-${mode}-${effectiveDomainId}`} className="lb-metrics lb-result-enter" aria-label={`${scope === 'global' ? 'Global' : 'Domain'} ${mode === 'labx' ? 'LabX' : 'LabX Pulse'} leaderboard metrics`}>
-        <div><span><Users size={15} />Ranked founders</span><strong data-metric="founders">{points(mode === 'labx' ? metrics.totalFounders : momentumMetrics.rankedFounders)}</strong><small>{scope === 'global' ? 'Across all domains' : 'In this domain'}</small></div>
-        <div><span><Medal size={15} />{mode === 'labx' ? 'Current Rank' : 'Current Pulse Rank'}</span><strong data-metric="current-rank">{mode === 'momentum' && !userStanding ? '—' : rankLabel(userStanding?.rank)}</strong><small>{scope === 'global' ? 'Global founder ranking' : 'Selected domain ranking'}</small></div>
-        <div><span>{mode === 'labx' ? <Crown size={15} /> : <Target size={15} />}{mode === 'labx' ? 'Leading LabX Score' : 'Leading Streak / Consistency'}</span><strong data-metric="leading">{mode === 'labx'
-          ? leader ? points(leader.total_points) : 'Unavailable'
-          : leader ? `${leader.momentum.currentStreakDays}d · ${leader.momentum.activeDays} active` : 'Unavailable'}</strong><small>{mode === 'labx' ? 'Approved LabX Points' : leader ? 'Current streak · active days' : 'No activity metrics available'}</small></div>
+      {!requiresDomain && <section key={`metrics-${scope}-${mode}-${effectiveDomainId}`} className="lb-metrics lb-result-enter" aria-label={`${scope === 'global' ? 'Global' : 'Domain'} leaderboard metrics`}>
+        <div><span><Users size={15} />Ranked founders</span><strong data-metric="founders">{points(metrics.totalFounders)}</strong><small>{scope === 'global' ? 'Across all domains' : 'In this domain'}</small></div>
+        <div><span><Medal size={15} />Current Rank</span><strong data-metric="current-rank">{mode === 'momentum' && !userStanding ? '—' : rankLabel(userStanding?.rank)}</strong><small>{scope === 'global' ? 'Global founder ranking' : 'Selected domain ranking'}</small></div>
+        <div><span><Crown size={15} />Leading LabX Score</span><strong data-metric="leading">{points(metrics.leadingPoints)}</strong><small>Approved LabX Points</small></div>
         <div><span><Zap size={15} />Your LabX Points</span><strong data-metric="labx-points">{points(globalUserStanding?.total_points ?? 0)}</strong><small>Total points earned</small></div>
       </section>}
       {requiresDomain ? <section className="lb-empty lb-empty--domain">
         <div className="lb-empty-icon"><Compass size={31} /></div><span className="lb-eyebrow">Find your field</span><h2>Choose a domain</h2><p>Select a domain to see its founders and rankings.</p>
         <div className="lb-domain-field lb-empty-domain-select"><label>Domain</label><ThemedSelect ariaLabel="Choose a domain" value={effectiveDomainId} onChange={setDomainId} options={[{ value: '', label: 'Choose a domain' }, ...domains.map(domain => ({ value: domain.id, label: domain.name }))]} /></div>
       </section> : <>
-        {mode === 'momentum' && <p className="lb-momentum-note"><Info size={14} />Pulse ranks current streak, active days, approved missions, then completed milestones. Sample-founder values are demo fixtures; live cohort-wide streak history is unavailable.</p>}
+        {mode === 'momentum' && <p className="lb-momentum-note"><Info size={14} />Pulse ranks using an equal-weight combination of LabX Points, current streak, and completed missions, normalized within this board. Sample-founder activity values are demo fixtures; live cohort-wide streak history is unavailable.</p>}
         <div className="lb-mode-toggle" data-active={mode} role="group" aria-label="Leaderboard ranking mode">
           <button type="button" aria-pressed={mode === 'labx'} onClick={() => changeMode('labx')}><Zap size={15} />LabX</button>
           <button type="button" aria-pressed={mode === 'momentum'} onClick={() => changeMode('momentum')}><Target size={15} />LabX Pulse</button>
@@ -452,7 +438,7 @@ export function LeaderboardPage() {
 
         <section key={`rankings-${scope}-${mode}-${effectiveDomainId}`} className="lb-rankings lb-result-enter" aria-labelledby="lb-rankings-title">
           <div className="lb-section-heading lb-ranking-heading">
-            <div><h2 ref={tableHeading} tabIndex={-1} id="lb-rankings-title">{isFiltering ? 'Matching founders' : mode === 'labx' ? 'LabX Rankings' : 'LabX Pulse Rankings'}<span className="lb-count">{isFiltering ? matchedCount : totalFounders}</span></h2><p>{mode === 'labx' ? `${scopeLabel} · Ranked by approved LabX Points` : 'Ranked by current streak, active days, approved missions, then completed milestones.'}{isFiltering ? ' · Filters do not change rank positions.' : ''}</p>
+            <div><h2 ref={tableHeading} tabIndex={-1} id="lb-rankings-title">{isFiltering ? 'Matching founders' : mode === 'labx' ? 'LabX Rankings' : 'LabX Pulse Rankings'}<span className="lb-count">{isFiltering ? matchedCount : totalFounders}</span></h2><p>{mode === 'labx' ? `${scopeLabel} · Ranked by approved LabX Points` : 'Ranked by an equal-weight combination of LabX Points, current streak, and completed missions.'}{isFiltering ? ' · Filters do not change rank positions.' : ''}</p>
               <div ref={rankingTools} className="lb-ranking-tools">
                 <form className="lb-compact-search" role="search" onSubmit={submitSearch}><Search size={16} aria-hidden="true" /><input ref={searchInput} type="search" aria-label="Search founders" placeholder="Search founders..." value={searchDraft} onChange={event => setSearchDraft(event.target.value)} maxLength={100} enterKeyHint="search" /><button type="submit" aria-label="Apply founder search"><ArrowRight size={15} /></button>{(search || searchDraft) && <button type="button" aria-label="Clear search" onClick={() => { setSearch(''); setSearchDraft('') }}><XIcon size={14} /></button>}</form>
                 <div className="lb-filter-anchor"><button type="button" className={`lb-tool-button${showFilters ? ' is-active' : ''}`} aria-label="Toggle ranking filters" title="Filters" aria-expanded={showFilters} onClick={() => setShowFilters(value => !value)}><Filter size={16} />{activeFilterCount > 0 && <span className="lb-tool-count">{activeFilterCount}</span>}</button>
@@ -503,9 +489,9 @@ export function LeaderboardPage() {
         <span className="lb-rules-trophy"><Trophy size={32} /></span><span className="lb-eyebrow">Every point has a purpose</span><h2 id="lb-rules-title">How rankings work</h2>
         <ul className="lb-rules-list">
           <li><Zap size={18} /><div><strong>Points set the pace</strong><p>Founders rank by their all-time LabX Points. Approved activity counts; pending points do not.</p></div></li>
-          <li><Target size={18} /><div><strong>LabX Pulse</strong><p>Pulse ranks by current streak, active days, approved missions, then completed milestones. The signed-in founder's values use available approved activity dates; sample founders are clearly marked demo fixtures.</p></div></li>
+          <li><Target size={18} /><div><strong>LabX Pulse</strong><p>Pulse combines normalized LabX Points, current streak, and completed missions with equal weight. The consolidated score is used only to rank founders and is not displayed. The signed-in founder's values use available approved activity dates; sample founders are clearly marked demo fixtures.</p></div></li>
           <li><Globe2 size={18} /><div><strong>Global Rank and Domain Rank</strong><p>Global brings all founders together. Domain compares founders with a completed project assessment in that field. Each board displays only its own scope's rank.</p></div></li>
-          <li><Medal size={18} /><div><strong>Equal points share a rank</strong><p>Ties share their place. Name searches keep the original rank within the selected scope. Your row is surfaced before Rank #4 in the default list without changing your rank.</p></div></li>
+          <li><Medal size={18} /><div><strong>Ties share a rank</strong><p>LabX ties share a rank when points match; Pulse ties share a rank when their combined scores match. Name searches keep the original rank within the selected scope. Your row is surfaced before Rank #4 in the default list without changing your rank.</p></div></li>
         </ul>
         <p className="lb-detail-note">Multiple projects never multiply your points. Your balance matches Achievements. LabX Points are recognition, with no cash value.</p>
         <Link to="/achievements" className="lb-primary lb-detail-action">See your points history<ArrowRight size={16} /></Link>
