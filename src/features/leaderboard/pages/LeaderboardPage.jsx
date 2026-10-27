@@ -162,7 +162,7 @@ export function LeaderboardPage() {
   return (
     <div className="lb-page">
       <header className="lb-header">
-        <div><span className="lb-eyebrow"><Trophy size={14} />The founder arena</span><h1>LabX Leaderboard<span className="lb-title-dot" aria-hidden="true">.</span></h1><p>Big ideas. Real progress. Every step earns your spot.</p></div>
+        <div><span className="lb-eyebrow"><Trophy size={14} />The founder arena</span><p>Big ideas. Real progress. Every step earns your spot.</p></div>
         <button type="button" className="lb-quiet-button" onClick={() => setShowRules(true)}><Info size={15} />How rankings work</button>
       </header>
 

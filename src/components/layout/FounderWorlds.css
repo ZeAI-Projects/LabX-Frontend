@@ -1,7 +1,12 @@
 ﻿.app-shell .founder-world {
   position: relative;
   isolation: isolate;
-  min-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .app-shell .founder-world__backdrop,
@@ -16,9 +21,28 @@
 }
 
 .app-shell .founder-world > .labx-navbar,
-.app-shell .founder-world > .app-shell__page {
+.app-shell .founder-world > .app-shell__page,
+.app-shell .founder-world > .labx-footer {
   position: relative;
   z-index: 1;
+}
+
+.app-shell .founder-world > .labx-navbar,
+.app-shell .founder-world > .labx-footer {
+  flex: 0 0 auto;
+}
+
+.app-shell .founder-world > .app-shell__page {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: none;
+}
+
+.app-shell .founder-world > .app-shell__page::-webkit-scrollbar {
+  display: none;
 }
 
 /* Guild headquarters: tactical energy grid and roaming command glow. */
@@ -160,6 +184,39 @@
   animation: notification-glow 5s ease-in-out infinite alternate;
 }
 
+/* Keep the shared LabX glow and constellation field consistent across modules. */
+.app-shell .main-content.founder-world .founder-world__backdrop {
+  inset: 0 0 0 var(--sidebar-width);
+  width: auto;
+  aspect-ratio: auto;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  mask-image: none;
+  opacity: 1;
+  transform: none;
+  background:
+    radial-gradient(circle at 15% 18%, rgba(6, 182, 212, 0.22), transparent 23%),
+    radial-gradient(circle at 86% 72%, rgba(99, 102, 241, 0.18), transparent 26%),
+    conic-gradient(from 220deg at 18% 20%, transparent, rgba(168, 85, 247, 0.09), transparent 24%);
+  animation: achievement-glow 8s ease-in-out infinite alternate;
+}
+
+.app-shell .main-content.founder-world .founder-world__backdrop::before {
+  display: none;
+}
+
+.app-shell .main-content.founder-world .founder-world__backdrop::after {
+  inset: 0 0 0 var(--sidebar-width);
+  opacity: 0.48;
+  background-image:
+    radial-gradient(circle, rgba(103, 232, 249, 0.65) 0 1px, transparent 1.8px),
+    radial-gradient(circle, rgba(196, 181, 253, 0.5) 0 1px, transparent 1.7px);
+  background-position: 18px 22px, 54px 64px;
+  background-size: 96px 96px, 127px 127px;
+  animation: achievement-stars 5s ease-in-out infinite alternate;
+}
+
 @keyframes guild-grid-drift {
   to { background-position: 48px 48px, 48px 48px, 0 0, 0 0; }
 }
@@ -219,6 +276,11 @@
   .app-shell .founder-world .founder-world__backdrop::after {
     left: 0;
   }
+
+  .app-shell .main-content.founder-world .founder-world__backdrop,
+  .app-shell .main-content.founder-world .founder-world__backdrop::after {
+    inset-inline: 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -228,4 +290,3 @@
     animation: none;
   }
 }
-

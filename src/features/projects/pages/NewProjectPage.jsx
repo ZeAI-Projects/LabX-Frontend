@@ -43,7 +43,7 @@ export function NewProjectPage() {
       <div className="projects-new__layout">
         <section className="projects-new__intro" aria-labelledby="new-project-title">
           <span className="projects-eyebrow">A new project. A new path.</span>
-          <h1 id="new-project-title">Name your <br /><span>project.</span></h1>
+          <h2 id="new-project-title">Name your <br /><span>project.</span></h2>
           <p>Start with what you’re building. We’ll use a short assessment to create a roadmap just for this project.</p>
           <ol className="projects-setup-steps" aria-label="Project setup steps">
             <li aria-current="step"><span className="projects-setup-steps__icon"><FolderPlus size={19} aria-hidden="true" /></span><div><strong>01 &nbsp; Project name</strong><span>Give this idea a place of its own.</span></div></li>

@@ -3,8 +3,10 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/use_auth.js'
 import { Sidebar } from './Sidebar.jsx'
 import { Navbar } from './Navbar.jsx'
+import { Footer } from './Footer.jsx'
 import { MobileNavigation } from './MobileNavigation.jsx'
 import { ProgressCelebration } from '../common/ProgressCelebration.jsx'
+import { useProjects } from '../../features/projects/hooks/use_projects.js'
 import './FounderWorlds.css'
 import './labxshell.css'
 
@@ -14,7 +16,7 @@ const pageTitles = {
   dashboard: 'Dashboard',
   chats: 'Chats',
   roadmap: 'Roadmap',
-  leaderboard: 'Leaderboard',
+  leaderboard: 'LabX Leaderboard',
   guild: 'Guilds',
   social: 'Social',
   events: 'Events & Opportunities',
@@ -25,9 +27,17 @@ const pageTitles = {
 
 export function AppShell({ children }) {
   const { user, logout } = useAuth()
+  const { projects } = useProjects()
   const { pathname, search } = useLocation()
   const navigate = useNavigate()
   const section = pathname.split('/')[1] || 'dashboard'
+  const projectId = pathname.match(/^\/roadmap\/([^/]+)\/?$/)?.[1]
+  const project = projectId && projects.find(entry => entry.id === projectId)
+  const title = pathname === '/roadmap/new'
+    ? 'New Project'
+    : pathname.startsWith('/roadmap/joined/')
+      ? 'Joined Roadmap'
+      : project?.name || pageTitles[section] || 'LabX'
 
   function signOut() {
     logout()
@@ -43,11 +53,11 @@ export function AppShell({ children }) {
         <div className="founder-world__backdrop" aria-hidden="true" />
         <Navbar
           user={user}
-          title={pageTitles[section] || 'LabX'}
-          compact={['dashboard', 'chats', 'roadmap', 'leaderboard'].includes(section)}
+          title={title}
           onSignOut={signOut}
         />
         <div id="app-page-content" className="app-shell__page" tabIndex={-1}>{children}</div>
+        <Footer />
       </main>
       <ProgressCelebration key={user.id}/>
       {user.role === 'founder' && section === 'roadmap' && new URLSearchParams(search).get('join') === '1' && <Suspense fallback={null}><JoinRoadmapPopup key={user.id} /></Suspense>}

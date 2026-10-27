@@ -30,7 +30,6 @@
 .app-shell .labx-page-title.labx-workspace-label { color: #c0cde0; font-size: 15px; font-weight: 600; letter-spacing: 0; }
 .app-shell .labx-subtitle { font-size: 10px; letter-spacing: .12em; opacity: .7; }
 .app-shell .labx-title-line { height: 28px; box-shadow: none; }
-.app-shell :is(.projects-header h1,.lb-header h1,.db-header h1,.sharp-page-header h1) { font-size: clamp(25px,2.3vw,32px); line-height: 1.2; letter-spacing: -.035em; }
 .app-shell :is(.projects-header,.lb-header,.db-header) { margin-block: 0 18px; }
 .app-shell :is(.projects-header p,.lb-header p,.db-header p) { font-size: 14px; line-height: 1.65; }
 .app-shell :is(.db-panel,.pf-panel,.events-filter-panel,.lb-controls,.achievements-hero,.projects-header) { border-radius: 14px; }
@@ -53,7 +52,6 @@
 
 /* The project collection stays dense, with optional filters on narrow screens. */
 .app-shell .projects-header { padding: 22px 24px; min-height: 0; }
-.app-shell .projects-header h1 { margin-block: 7px; }
 .app-shell .projects-view-tabs { margin-block: 14px 20px; }
 .app-shell .projects-controls { padding: 14px 16px; gap: 12px; }
 .projects-mobile-filters { display: none; }

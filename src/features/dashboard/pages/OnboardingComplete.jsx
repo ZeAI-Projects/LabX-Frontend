@@ -168,7 +168,7 @@ export function OnboardingComplete() {
   const project = model.projects.find((item) => item.id === selectedId) || model.projects[0]
   const standing = model.leaderboard?.userStanding
   return <div className="db-page">
-    <header className="db-header"><div><span className="db-eyebrow">Your progress at a glance</span><h1>Dashboard<span aria-hidden="true">.</span></h1><p>See how far you have come, and what is left to do.</p></div><span className="db-role"><Shield size={13} aria-hidden="true" />{getRoleLabel(user.role)}</span></header>
+    <header className="db-header"><div><span className="db-eyebrow">Your progress at a glance</span><p>See how far you have come, and what is left to do.</p></div><span className="db-role"><Shield size={13} aria-hidden="true" />{getRoleLabel(user.role)}</span></header>
     {isFounder ? <>
       {model.projects.length > 0 && <div className="db-project-picker"><label htmlFor="dashboard-project"><Folder size={15} aria-hidden="true" />Active project</label><select id="dashboard-project" value={project.id} onChange={(event) => setSelectedId(event.target.value)}>{model.projects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><span aria-live="polite">{project.roadmap ? 'Roadmap ready' : project.assessmentCompleted ? 'Placement unavailable' : 'Assessment pending'}</span></div>}
       <FounderProgress project={project} firstName={firstName} />
