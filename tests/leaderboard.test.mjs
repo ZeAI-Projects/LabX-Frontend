@@ -106,6 +106,38 @@ test('global founders sort by approved points and the podium follows their ranks
   assert.equal(snapshot.nextRankGap, null)
 })
 
+test('Pulse ranks founders by momentum and keeps filter matches at their original ranks', () => {
+  const pulse = getLeaderboardSnapshot({ mode: 'momentum' })
+  assert.equal(pulse.totalFounders, 24)
+  assert.deepEqual(pulse.podium.map(({ full_name, rank }) => [full_name, rank]), [
+    ['Amara Okafor', 1], ['Rohan Patel', 2], ['Sofia Chen', 3],
+  ])
+  assert.deepEqual(pulse.podium.map(({ id, rank, momentum }) => [id, rank, momentum]),
+    pulse.allRankings.slice(0, 3).map(({ id, rank, momentum }) => [id, rank, momentum]))
+  assert.ok(pulse.allRankings.every((founder) => founder.momentum?.source === 'demo'))
+  assert.equal(pulse.momentumMetrics.rankedFounders, pulse.totalFounders)
+
+  const filtered = getLeaderboardSnapshot({ mode: 'momentum', stage: 'Build' })
+  assert.ok(filtered.rankings.length > 0)
+  assert.ok(filtered.rankings.every((founder) => founder.stage === 'Build'))
+  assert.deepEqual(filtered.allRankings, pulse.allRankings)
+  assert.equal(filtered.matchedCount, filtered.rankings.length)
+})
+
+test('Pulse includes a founder without activity and keeps their ranked position', () => {
+  const user = { id: 'pulse-founder', role: 'founder', full_name: 'Pulse Founder', username: 'pulsefounder' }
+  const projectForDomain = project(user, 0)
+  const global = getLeaderboardSnapshot({ user, mode: 'momentum' })
+  const domain = getLeaderboardSnapshot({ user, projects: [projectForDomain], scope: 'domain', domainId: '1', mode: 'momentum' })
+
+  assert.equal(global.userStanding.momentum.currentStreakDays, 0)
+  assert.equal(global.userStanding.momentum.activeDays, 0)
+  assert.ok(global.userStanding.rank > 0)
+  assert.equal(domain.userStanding.id, user.id)
+  assert.equal(domain.userStanding.momentum.activeDays, 0)
+  assert.ok(domain.userStanding.rank > 0)
+})
+
 test('each explicitly selected domain has its own leader and reranks members within that scope', () => {
   for (const domain of LEADERBOARD_DOMAINS.slice(0, 12)) {
     const snapshot = getLeaderboardSnapshot({ scope: 'domain', domainId: domain.id })
