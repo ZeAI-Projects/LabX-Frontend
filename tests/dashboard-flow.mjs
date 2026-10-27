@@ -233,7 +233,7 @@ try {
   assert.equal(await stat('Placement credits').innerText(), '0')
   assert.equal(await stat('Roadmaps ready').innerText(), '1 / 2')
   assert.match(await stat('Domain Rank').innerText(), /^#\d+$/)
-  assert.equal(await stat('Earned badges').innerText(), '3', 'Assessment placement does not award badges')
+  assert.equal(await stat('Earned badges').innerText(), '5', 'Creating a project and completing its assessment add two badges to the three existing demo unlocks; placement grants no mission badges')
   assert.equal(await content().getByRole('link', { name: /stage,/ }).count(), 0, 'Stage statistics do not duplicate Roadmap links')
   await assertUniqueDestinations()
   await checkLayout('founder-ready')

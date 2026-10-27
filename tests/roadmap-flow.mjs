@@ -408,7 +408,7 @@ try {
   assert.equal(await progress.getAttribute('aria-valuenow'), '3')
   assert.equal(await progress.getAttribute('aria-valuemax'), '75')
   await button('450 LabX Coins').waitFor()
-  assert.equal(await page.locator('[data-dashboard-stat="Earned badges"]').innerText(), '4')
+  assert.equal(await page.locator('[data-dashboard-stat="Earned badges"]').innerText(), '6', 'Project creation and assessment completion join the four badges unlocked by existing and approved roadmap work')
   await page.getByRole('region', { name: 'Current project', exact: true }).getByText('Up next: Audience segments', { exact: true }).waitFor()
   assert.equal(await page.locator('[data-dashboard-stat="Completed missions"]').innerText(), '3')
   assert.equal(await page.locator('[data-dashboard-stat="Missions remaining"]').innerText(), '72')

@@ -117,7 +117,7 @@ export function getRegistrationAvailability(event, user, registration, now = Dat
 }
 
 export function selectEvents(events, {
-  query = '', category = 'all', format = 'all', view = 'upcoming', broadcast = 'all', sort = 'soonest', myPeriod = 'all',
+  query = '', category = 'all', format = 'all', view = 'upcoming', broadcast = 'all', sort = 'soonest', myPeriod = 'all', savedPeriod = 'all',
   dateFrom = '', dateTo = '', location = '', eligibility = 'all', fee = 'all', prizes = 'all', sponsored = 'all',
 } = {}, registrations = {}, now = Date.now(), user = null, outcomes = {}, savedEvents = {}) {
   const search = query.trim().toLowerCase()
@@ -127,8 +127,8 @@ export function selectEvents(events, {
     // Announcements stay in the discovery feed throughout their publication window.
     const discoveryPhase = event.type === 'announcement' && phase === 'ongoing' ? 'upcoming' : phase
     const date = new Intl.DateTimeFormat('en-CA', { timeZone: event.timezone || 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(event.startsAt))
-    const visible = view === 'saved' ? Boolean(savedEvents[event.id]) : view === 'my'
-      ? Boolean(registrations[event.id]) && (myPeriod === 'all' || (myPeriod === 'completed' ? completed : !completed && phase === myPeriod))
+    const visible = view === 'saved' ? Boolean(savedEvents[event.id]) && (savedPeriod === 'all' || phase === savedPeriod) : view === 'my'
+      ? Boolean(registrations[event.id]) && (myPeriod === 'all' || (myPeriod === 'past' ? phase === 'past' : myPeriod === 'completed' ? completed : !completed && phase === myPeriod))
       : view === 'completed' ? completed : discoveryPhase === view
     return (!search || `${event.title} ${event.organizer} ${event.description} ${event.category} ${event.location}`.toLowerCase().includes(search))
       && (category === 'all' || event.category === category)

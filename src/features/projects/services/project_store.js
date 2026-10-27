@@ -137,6 +137,21 @@ export function createProjectStore({
   }
 
   return {
+    // Read existing records for summaries without migrating a legacy assessment
+    // or creating a project as a side effect of visiting another feature.
+    peekProjects(expectedUserId) {
+      const user = auth.getUser();
+      if (!user || user.role !== 'founder' || user.id !== expectedUserId) return [];
+      const saved = local.readJSON(projectsKey(user.id));
+      if (saved?.version !== 1 || !Array.isArray(saved.projects)) return [];
+      const ids = new Set();
+      return saved.projects.map((entry) => normalizeProject(entry, user.id)).filter((entry) => {
+        if (!entry || ids.has(entry.id)) return false;
+        ids.add(entry.id);
+        return true;
+      });
+    },
+
     listProjects(expectedUserId) {
       const user = auth.getUser();
       activeUserId = user?.id ?? null;

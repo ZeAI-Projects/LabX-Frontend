@@ -47,6 +47,37 @@ test('Saved includes past, full, closed and role-ineligible events and supports 
   assert.throws(() => store.setSaved(founder, 'customer-workshop', 'yes'), /whether to save/)
 })
 
+test('Saved Events time filters separate upcoming, ongoing and past bookmarks without changing registrations', () => {
+  let now = OCTOBER_14
+  const store = createEventStore({ storage: memoryStorage(), now: () => now })
+  for (const id of ['past-pitch-workshop', 'customer-workshop', 'residency-opportunity']) store.setSaved(founder, id, true)
+  const saved = store.read(founder)
+  const select = (period, extra = {}) => selectEvents(MOCK_EVENTS, { view: 'saved', savedPeriod: period, ...extra }, saved.registrations, now, founder, saved.outcomes, saved.savedEvents).map(({ id }) => id)
+  assert.deepEqual(select('past'), ['past-pitch-workshop'])
+  assert.deepEqual(select('upcoming'), ['customer-workshop', 'residency-opportunity'])
+  assert.deepEqual(select('ongoing'), [])
+  now = Date.parse('2026-10-18T11:00:00+05:30')
+  assert.deepEqual(select('ongoing'), ['customer-workshop'])
+  assert.deepEqual(select('upcoming'), ['residency-opportunity'])
+  assert.deepEqual(select('past', { query: 'does not exist' }), [])
+  assert.deepEqual(store.read(founder), saved, 'Filtering never changes bookmarks or registration')
+})
+
+test('past My Events history retains ended registrations with completed participation', () => {
+  let now = OCTOBER_14
+  const store = createEventStore({ storage: memoryStorage(), now: () => now })
+  store.register(founder, 'customer-workshop')
+  store.register(founder, 'residency-opportunity')
+  now = Date.parse('2026-10-18T13:00:00+05:30')
+  store.saveOutcome(founder, 'customer-workshop', { participation: 'attended', notes: '', award: '', feedback: '', rating: null, certificate: null })
+  const saved = store.read(founder)
+  const select = (myPeriod) => selectEvents(MOCK_EVENTS, { view: 'my', myPeriod }, saved.registrations, now, founder, saved.outcomes).map(({ id }) => id)
+  assert.deepEqual(select('past'), ['customer-workshop'])
+  assert.deepEqual(select('completed'), ['customer-workshop'])
+  assert.deepEqual(select('upcoming'), ['residency-opportunity'])
+  assert.equal(getTrackingStatus(byId('customer-workshop'), saved.registrations['customer-workshop'], saved.outcomes['customer-workshop'], now), 'Completed')
+})
+
 test('corrupt or retired bookmarks never inflate Saved while valid bookmarks survive', () => {
   const storage = memoryStorage()
   const savedAt = new Date(OCTOBER_14).toISOString()
