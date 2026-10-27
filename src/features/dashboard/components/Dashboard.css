@@ -20,7 +20,8 @@
 .db-project-picker label { display: inline-flex; align-items: center; gap: 7px; color: #9fadc3; font-size:14px; flex-shrink: 0; }
 .db-project-picker select { width: 280px; min-width: 0; max-width: 100%; background: #101a2b; color: #dce6f5; padding: 9px 30px 9px 12px; border: 1px solid #354259; border-radius: 7px; color-scheme: dark; font-size:14px; text-overflow: ellipsis; }
 .db-project-picker > span { margin-left: auto; font-size:12px; color: #a4b6ce; }
-.db-roadmap-controls { display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-width:0; }
+.db-roadmap-selector-row { display:flex;align-items:center;justify-content:flex-start;width:100%;min-width:0;margin:0 0 10px; }
+.db-roadmap-controls { display:flex;align-items:center;justify-content:flex-end;gap:10px;min-width:0; }
 .db-roadmap-picker { display:flex;align-items:center;gap:7px;min-width:0;color:#9fadc3;font-size:11px;white-space:nowrap; }
 .db-roadmap-picker select { flex:1;width:auto;min-width:0;max-width:180px;padding:6px 26px 6px 9px;border:1px solid #354259;border-radius:6px;background:#101a2b;color:#dce6f5;color-scheme:dark;font-size:12px;text-overflow:ellipsis; }
 .db-roadmap-picker select:disabled { color:#8294ad;cursor:not-allowed; }
@@ -118,23 +119,20 @@
 .db-project-list a:hover { color: #d0f7ff; }
 .db-footnote { color: #798da9; font-size:12px; line-height: 1.65; margin-top: 13px !important; }
 .db-badge-shelf { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 22px 0 23px; }
-.db-badge-shelf > a { text-align: center; display: flex; align-items: center; flex-direction: column; padding: 5px 0; }
-.db-badge-shelf > a > span { display: grid; place-items: center; width: 56px; height: 60px; background: linear-gradient(145deg, #68502f4a, #282333); color: #e9c778; clip-path: polygon(50% 0, 95% 25%, 95% 75%, 50% 100%, 5% 75%, 5% 25%); box-shadow: inset 0 0 16px #e6b8571c; }
-.db-badge-shelf > a:nth-child(2) > span { color: #b4b5f2; background: linear-gradient(145deg, #41496a73, #242037); }
-.db-badge-shelf > a:nth-child(3) > span { color: #8ad9d3; background: linear-gradient(145deg, #2a545873, #172c33); }
-.db-badge-shelf strong { font-size:12px; font-weight: 550; margin: 10px 0 4px; color: #c8d4e6; line-height: 1.5; }
-.db-badge-shelf small { font-size:12px; text-transform: uppercase; letter-spacing: 1px; color: #889bb8; }
-.db-badge-shelf a:hover strong { color: #9ce8f4; }
-.db-next-badge { background: linear-gradient(125deg, #35305842, #20243d29); border: 1px solid #9f90de23; border-radius: 10px; padding: 15px; }
-.db-next-badge-heading { display: flex; gap: 10px; align-items: center; }
-.db-next-badge-icon { width: 37px; height: 37px; display: grid; place-items: center; border-radius: 10px; background: #a298ed12; color: #b7a0ef; flex-shrink: 0; }
-.db-next-badge-heading > div { flex: 1; }
-.db-next-badge-heading .db-eyebrow { font-size:12px; color: #9f91cb; letter-spacing: 1px; }
-.db-next-badge h3 { font-size:14px; margin-top: 4px; font-weight: 600; }
-.db-next-badge-heading > svg { color: #8176a3; }
-.db-next-badge > p { font-size:12px; color: #9faeca; margin: 13px 0 10px; }
-.db-next-badge-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 5px; }
-.db-next-badge-footer > span { color: #8a9cba; font-size:12px; }
+.db-badge-shelf > .db-badge-card { display: flex; min-width: 0; padding: 10px 9px; border: 1px solid #ffffff12; border-radius: 10px; background: linear-gradient(150deg, #1a2638, #121c2c); text-align: left; align-items: stretch; flex-direction: column; gap: 7px; }
+.db-badge-card.is-earned { border-color: #6ccab630; }
+.db-badge-card.is-current { box-shadow: inset 0 0 0 1px #b19cf522; }
+.db-badge-card__top { display: flex; align-items: center; justify-content: space-between; gap: 5px; color: #7891b1; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+.db-badge-card__state { display: inline-flex; align-items: center; gap: 4px; color: #9aabc2; }
+.db-badge-card.is-earned .db-badge-card__state { color: #91d7c1; }
+.db-badge-shelf > .db-badge-card > .db-badge-card__medal { display: flex; align-items: center; justify-content: center; width: auto; height: 66px; margin: 0; background: transparent; border: 0; box-shadow: none; clip-path: none; }
+.db-badge-card__medal .labx-medal { width: 49px; height: 55px; }
+.db-badge-shelf > .db-badge-card > strong { display: block; margin: 0; color: #c8d4e6; font-size: 12px; line-height: 1.4; text-align: left; }
+.db-badge-card > p { min-height: 3.2em; color: #9bb0cb; font-size: 11px; line-height: 1.5; }
+.db-badge-card__progress { display: block; width: 100%; height: 4px; overflow: hidden; border-radius: 5px; background: #8296b51c; }
+.db-badge-card__progress > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #7d80da, #67d7e8); }
+.db-badge-card.is-earned .db-badge-card__progress > span { background: #69b5a4; }
+.db-badge-shelf > .db-badge-card > small { color: #8a9cba; font-size: 10px; letter-spacing: 0; text-transform: none; line-height: 1.4; }
 .db-empty-badges { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 14px; padding: 10px 0; }
 .db-empty-badges > span { color: #9986c4; background: #b39ee20b; display: grid; place-items: center; width: 66px; height: 66px; border-radius: 16px; border: 1px dashed #a995da38; flex-shrink: 0; }
 .db-empty-badges p { max-width: 170px; color: #90a1bb; font-size:14px; line-height: 1.7; }
@@ -326,7 +324,7 @@
 .db-stats { margin:14px 0;gap:10px; }.db-stat { padding:13px; }.db-stat strong { font-size:23px; }
 .db-grid { gap:12px; }.db-panel { padding:16px; }.db-section-title { margin-bottom:10px; }
 .db-stage-map { margin:16px 0 12px; }.db-project-heading { padding-top:12px;margin-top:12px; }.db-project-list>li { padding:8px 4px; }
-.db-badge-shelf { margin:12px 0; }.db-next-badge { padding:12px; }.db-event-list li a { padding-block:10px; }
+.db-badge-shelf { margin:12px 0; }.db-event-list li a { padding-block:10px; }
 .db-bottom-grid { margin-top:12px;gap:12px; }.db-bottom-grid>section { padding:16px; }.db-bottom-grid h2 { font-size:14px; }
 .db-secondary { grid-column:1/-1;border-top:1px solid #ffffff12; }.db-secondary>summary { cursor:pointer; padding:13px 3px;color:#a6bdd7;font-size:14px; }.db-secondary .db-panel { border:0;background:transparent; }
 .app-shell .founder-world--dashboard .founder-world__backdrop { background:radial-gradient(ellipse at 80% 10%,#7958d723,transparent 50%),radial-gradient(ellipse at 10% 70%,#238bab14,transparent 50%);animation:db-ambient 14s ease-in-out infinite alternate; }
@@ -358,6 +356,10 @@
   .db-dashboard-grid > .db-progress-overview .db-progress-ring { width:156px;height:156px; }
   .db-dashboard-grid > .db-progress-overview .db-progress-ring strong { font-size:42px; }
   .db-dashboard-grid > .db-progress-overview .db-progress-ring strong small { font-size:21px; }
+}
+@media(max-width:640px) {
+  .db-badge-shelf { grid-template-columns: minmax(0, 1fr); }
+  .db-badge-card > p { min-height: 0; }
 }
 @media(max-width:600px) {
 }
@@ -431,7 +433,6 @@
 .db-metric-pair > div { display:flex;flex-direction:column;gap:3px; }
 .db-metric-pair strong { font-size:25px;font-weight:700;line-height:1.3; }
 .db-metric-pair span { color:#96acc5;font-size:12px; }
-.db-achievements .db-next-badge { margin-top:15px; }
 .db-event-row { display:flex;align-items:center;gap:13px;padding:10px 2px; }
 .db-event-row > div { flex:1;min-width:0; }
 .db-event-row > div > span { font-size:12px;color:#8a9ab0;display:block;line-height:1.5; }
@@ -456,6 +457,7 @@
 }
 @media(max-width:600px) {
   .db-journey-title { align-items:stretch; }
+  .db-roadmap-selector-row { margin-bottom:8px; }
   .db-roadmap-controls { width:100%;flex-wrap:wrap;justify-content:space-between; }
   .db-roadmap-picker { flex:1; }
   .db-roadmap-picker select { flex:1;width:auto;max-width:none; }

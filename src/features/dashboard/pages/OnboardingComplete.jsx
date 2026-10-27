@@ -5,6 +5,7 @@ import { useAuth } from '../../../hooks/use_auth.js'
 import { useProjects } from '../../projects/hooks/use_projects.js'
 import { EVENT_CHANGE_EVENT, eventStore } from '../../events/services/mock_events.js'
 import { ACHIEVEMENTS_CHANGE_EVENT } from '../../achievements/services/mock_achievements.js'
+import { Medal } from '../../../components/common/Medal.jsx'
 import { getDashboardSnapshot } from '../services/dashboard_snapshot.js'
 import { getRoleLabel } from '../../../utils/roles.js'
 import { HeroCrystal } from '../components/HeroCrystal.jsx'
@@ -60,7 +61,18 @@ function FounderProgress({ project, firstName }) {
   </section>
 }
 
-function ProjectJourney({ project, projects, onProjectChange }) {
+function ProjectSelector({ project, projects, onProjectChange }) {
+  return <div className="db-roadmap-selector-row">
+    <div className="db-roadmap-picker">
+      <label htmlFor="dashboard-roadmap">Select Roadmap</label>
+      <select id="dashboard-roadmap" value={project?.id || ''} disabled={!projects.length} onChange={(event) => onProjectChange(event.target.value)}>
+        {projects.length ? projects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>) : <option value="">No projects available</option>}
+      </select>
+    </div>
+  </div>
+}
+
+function ProjectJourney({ project }) {
   const roadmap = project?.roadmap
   const levelsCovered = roadmap?.stages.flatMap((stage) => stage.levels).filter((level) => level.milestones.every(isCovered)).length || 0
   const stagesCovered = roadmap?.stages.filter((stage) => stage.levels.every((level) => level.milestones.every(isCovered))).length || 0
@@ -68,12 +80,6 @@ function ProjectJourney({ project, projects, onProjectChange }) {
     <div className="db-section-title db-journey-title">
       <h2><Route size={17} aria-hidden="true" />Roadmap overview</h2>
       <div className="db-roadmap-controls">
-        <div className="db-roadmap-picker">
-          <label htmlFor="dashboard-roadmap">Select Roadmap</label>
-          <select id="dashboard-roadmap" value={project?.id || ''} disabled={!projects.length} onChange={(event) => onProjectChange(event.target.value)}>
-            {projects.length ? projects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>) : <option value="">No projects available</option>}
-          </select>
-        </div>
         <span className="db-roadmap-status" aria-live="polite">{project?.roadmap ? 'Roadmap ready' : project?.assessmentCompleted ? 'Placement unavailable' : project ? 'Assessment pending' : 'No projects'}</span>
         <TextLink to={project?.href || '/roadmap'}>{project ? project.action : 'Open Roadmap'}</TextLink>
       </div>
@@ -91,14 +97,44 @@ function ProjectJourney({ project, projects, onProjectChange }) {
 }
 
 function AchievementPanel({ achievements }) {
-  const next = achievements.nextAchievement
-  const NextIcon = badgeIcons[next?.icon] || Trophy
+  const badges = achievements.badges
+  const next = badges.find(badge => !badge.isEarned) ?? null
   const badgeTotal = achievements.badges.length
+  const earned = badges.map((badge, index) => ({ badge, index }))
+    .filter(({ badge }) => badge.isEarned)
+    .sort((a, b) => Date.parse(b.badge.earnedAt) - Date.parse(a.badge.earnedAt) || b.index - a.index)
+  const nextIndex = badges.findIndex(badge => badge.id === next?.id)
+  const recent = []
+  if (next) {
+    if (earned.length) recent.push(earned[0].badge)
+    recent.push(next)
+    if (nextIndex >= 0) recent.push(...badges.slice(nextIndex + 1).filter(badge => !badge.isEarned))
+  } else {
+    recent.push(...earned.slice(0, 3).map(entry => entry.badge))
+  }
+  const remainingBadges = nextIndex >= 0
+    ? [...badges.slice(nextIndex + 1).filter(badge => !badge.isEarned), ...badges.filter(badge => !badge.isEarned)]
+    : badges
+  for (const badge of [...remainingBadges, ...earned.map(entry => entry.badge)]) {
+    if (recent.length >= 3) break
+    if (!recent.some(item => item.id === badge.id)) recent.push(badge)
+  }
+  const recentBadges = recent.slice(0, 3)
   return <section className="db-panel db-achievements" aria-label="Achievement collection">
     <SectionTitle icon={Award} title="Achievements"><TextLink to="/achievements">View achievements</TextLink></SectionTitle>
     <div className="db-metric-pair"><div><strong data-dashboard-stat="Earned badges">{number(achievements.earnedBadgeCount)}</strong><span>Badges earned</span></div><div><strong>{number(Math.max(0, badgeTotal - achievements.earnedBadgeCount))}</strong><span>Still to unlock</span></div></div>
     <Progress value={achievements.earnedBadgeCount} max={badgeTotal} label="Achievement collection progress" />
-    {next ? <div className="db-next-badge"><div className="db-next-badge-heading"><span className="db-next-badge-icon"><NextIcon size={21} aria-hidden="true" /></span><div><span className="db-eyebrow">Next to unlock</span><h3>{next.name}</h3></div><LockKeyhole size={14} aria-hidden="true" /></div><p>{next.criteria}</p><Progress value={next.current} max={next.target} label={'Progress toward ' + next.name} /><div className="db-next-badge-footer"><span>{next.current} / {next.target} {next.metric === 'quests' ? 'approved quests' : 'milestones'}</span></div></div> : <p className="db-footnote">{achievements.earnedBadgeCount ? 'Every available badge earned.' : 'Complete approved quests to start your collection.'}</p>}
+    {recentBadges.length ? <div className="db-badge-shelf" aria-label="Three most recent achievements">{recentBadges.map(badge => {
+      const Icon = badgeIcons[badge.icon] || Trophy
+      return <article key={badge.id} className={`db-badge-card${badge.isEarned ? ' is-earned' : ''}${badge.id === next?.id ? ' is-current' : ''}`} aria-label={`${badge.name}, ${badge.isEarned ? 'earned' : badge.id === next?.id ? 'in progress' : 'locked'}`}>
+        <div className="db-badge-card__top"><span className="db-badge-card__state">{badge.isEarned ? <CheckCircle2 size={12} aria-hidden="true"/> : <LockKeyhole size={11} aria-hidden="true"/>}{badge.isEarned ? 'Earned' : badge.id === next?.id ? 'In progress' : 'Locked'}</span><span>{badge.metric === 'quests' ? 'Mission' : 'Milestone'}</span></div>
+        <span className="db-badge-card__medal"><Medal icon={Icon} earned={badge.isEarned} tone={badge.metric === 'milestones' ? 'gold' : 'violet'} size={55}/></span>
+        <strong>{badge.name}</strong>
+        <p>{badge.description}</p>
+        <span className="db-badge-card__progress" role="progressbar" aria-label={`${badge.name} progress`} aria-valuenow={badge.current} aria-valuemin={0} aria-valuemax={badge.target}><span style={{ width: `${badge.progress}%` }}/></span>
+        <small>{badge.isEarned ? `Earned ${new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(badge.earnedAt))}` : `${badge.current} / ${badge.target} ${badge.metric === 'quests' ? 'approved missions' : 'level milestones'}`}</small>
+      </article>
+    })}</div> : <p className="db-footnote">{achievements.earnedBadgeCount ? 'Every available badge earned.' : 'Complete approved quests to start your collection.'}</p>}
   </section>
 }
 
@@ -186,9 +222,10 @@ export function OnboardingComplete() {
         </Link>
         <StatLink to="/roadmap" icon={Route} label="Roadmaps ready" value={model.readyCount + ' / ' + model.projects.length} note={model.draftCount + ' assessments in progress'} tone="mint" />
       </section>
+      <ProjectSelector project={project} projects={model.projects} onProjectChange={setSelectedId} />
       <div className="db-dashboard-grid">
         <FounderProgress project={project} firstName={firstName} />
-        <ProjectJourney project={project} projects={model.projects} onProjectChange={setSelectedId} />
+        <ProjectJourney project={project} />
         <AchievementPanel achievements={model.achievements} />
         <EventsPanel upcoming={model.upcomingEvents} registered={model.registeredEvents} />
       </div>

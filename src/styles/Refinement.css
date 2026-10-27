@@ -83,7 +83,6 @@
 .app-shell .sharp-briefing__note { font-size: 12px; opacity: .8; }
 .app-shell .db-section-title h2 { font-size: 16px; }
 .app-shell .db-event-list h3,.app-shell .db-project-list strong { font-size: 14px; }
-.app-shell .db-badge-shelf a > span { background: transparent; border: 0; box-shadow: none; height: 72px; width: 68px; }
 .app-shell .db-badge-shelf .labx-medal { flex-shrink: 0; }
 
 /* Persistent stage context; the road itself remains part of the page. */
