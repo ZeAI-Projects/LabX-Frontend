@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img">
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#13364a"/><stop offset="1" stop-color="#28385f"/></linearGradient>
+    <linearGradient id="window" x2="0" y2="1"><stop stop-color="#80d8e6"/><stop offset="1" stop-color="#c1e9dd"/></linearGradient>
+  </defs>
+  <rect width="1200" height="675" fill="url(#bg)"/>
+  <circle cx="1020" cy="115" r="170" fill="#06b6d4" opacity=".08"/>
+  <rect x="138" y="91" width="924" height="475" rx="42" fill="#edf6f1"/>
+  <rect x="180" y="132" width="438" height="390" rx="22" fill="url(#window)"/>
+  <path d="M180 397q98-96 214-15t224-6v146H180z" fill="#5b9e91" opacity=".7"/>
+  <path d="M180 446q107-80 210-12t228-4v92H180z" fill="#367d78" opacity=".75"/>
+  <g transform="translate(687 150)">
+    <rect width="327" height="67" rx="18" fill="#16283c"/>
+    <circle cx="34" cy="34" r="13" fill="#67e8f9"/>
+    <rect x="65" y="25" width="210" height="12" rx="6" fill="#dbe9ee"/>
+    <rect y="91" width="327" height="67" rx="18" fill="#d9ecf0"/>
+    <circle cx="34" cy="125" r="13" fill="#818cf8"/>
+    <rect x="65" y="116" width="172" height="12" rx="6" fill="#567085"/>
+    <rect y="182" width="327" height="67" rx="18" fill="#d9ecf0"/>
+    <circle cx="34" cy="216" r="13" fill="#34d399"/>
+    <rect x="65" y="207" width="194" height="12" rx="6" fill="#567085"/>
+  </g>
+  <path d="M746 455h246" stroke="#98aebb" stroke-width="11" stroke-linecap="round"/>
+  <text x="205" y="189" fill="#15354b" font-family="Arial,sans-serif" font-size="23" font-weight="700" letter-spacing="4">CARE, WITHOUT THE FRICTION</text>
+  <text x="682" y="479" fill="#34495f" font-family="Arial,sans-serif" font-size="24" font-weight="700">A clearer clinic flow</text>
+  <text x="55" y="625" fill="#d7f8f2" font-family="Arial,sans-serif" font-size="26" font-weight="700" letter-spacing="5">HEALTH TECH · PROTOTYPE</text>
+</svg>
