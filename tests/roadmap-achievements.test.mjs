@@ -147,7 +147,7 @@ test('real local approvals unlock badges persistently and deduplicate without gr
   const result = recognition(achievements, owner)
   assert.equal(result.completedQuests, 3)
   assert.equal(result.completedMilestones, 1)
-  assert.equal(result.earnedBadgeCount, 3)
+  assert.equal(result.earnedBadgeCount, 1)
   assert.equal(result.pointsBalance, 0)
   const savedCount = achievements.read(owner).length
   achievements.recordRoadmap(owner, project, third)

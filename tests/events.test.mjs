@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { EVENT_STORAGE_KEY, MAX_CERTIFICATE_BYTES, MOCK_EVENTS, REPORT_REASONS, createEventStore, eventPhase, getRegistrationAvailability, getSafeEventLink, getTrackingStatus, selectEvents } from '../src/features/events/services/mock_events.js'
+import { EVENT_CITIES, EVENT_STORAGE_KEY, MAX_CERTIFICATE_BYTES, MOCK_EVENTS, REPORT_REASONS, createEventStore, eventPhase, getRegistrationAvailability, getSafeEventLink, getTrackingStatus, selectEvents } from '../src/features/events/services/mock_events.js'
 
 const OCTOBER_14 = Date.parse('2026-10-14T12:00:00+05:30')
 const founder = { id: 'founder-events-test', role: 'founder' }
@@ -305,6 +305,21 @@ test('only HTTPS links without embedded credentials can be offered for external 
   const event = { ...byId('accelerator-preview'), registrationUrl: 'javascript:alert(1)' }
   const store = createEventStore({ storage: memoryStorage(), now: () => OCTOBER_14, events: [event] })
   assert.throws(() => store.beginExternal(founder, event.id), /Registration unavailable/)
+})
+
+test('location filters use canonical cities across venues and combine with event format', () => {
+  assert.deepEqual(EVENT_CITIES, ['Bengaluru', 'Chennai'])
+  const byCity = selectEvents(MOCK_EVENTS, { location: ' bengALURU ' }, {}, OCTOBER_14, founder)
+  assert.ok(byCity.some(({ id }) => id === 'prototype-hackathon'))
+  assert.ok(byCity.some(({ id }) => id === 'residency-opportunity'))
+  assert.ok(byCity.every((event) => event.city === 'Bengaluru'))
+  assert.equal(byCity.some(({ id }) => id === 'customer-workshop'), false, 'Online-only events do not receive a city')
+  const inPerson = selectEvents(MOCK_EVENTS, { location: 'Bengaluru', format: 'In person' }, {}, OCTOBER_14, founder)
+  assert.ok(inPerson.some(({ id }) => id === 'residency-opportunity'))
+  assert.equal(inPerson.some(({ id }) => id === 'prototype-hackathon'), false)
+  for (const location of ['Bengal', 'Innovation Hub, Bengaluru / online', 'Online', 'Unknown city']) {
+    assert.deepEqual(selectEvents(MOCK_EVENTS, { location }, {}, OCTOBER_14, founder), [], 'Location is an exact city selection, not venue substring search')
+  }
 })
 
 test('advanced discovery filters combine dates, role, location, price, prizes and sponsorship', () => {

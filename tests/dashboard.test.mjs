@@ -69,9 +69,9 @@ test('dashboard remaining work excludes rejected work and other accounts', () =>
 test('demo account rewards match achievements and leaderboard without granting project completions', () => {
   const snapshot = getDashboardSnapshot({ user: demo, projects: [readyProject('launch')], now })
   assert.equal(snapshot.achievements.pointsBalance, 450)
-  assert.equal(snapshot.achievements.earnedBadgeCount, 3)
+  assert.equal(snapshot.achievements.earnedBadgeCount, 1)
   assert.equal(snapshot.leaderboard.userStanding.total_points, 450)
-  assert.equal(snapshot.leaderboard.userStanding.badges_count, 3)
+  assert.equal(snapshot.leaderboard.userStanding.badges_count, 1)
   assert.equal(snapshot.projects[0].stage, 'Discover')
   assert.equal(snapshot.projects[0].level, 1)
   assert.equal(snapshot.projects[0].currentMilestone.id, 'discover-l1-m1')

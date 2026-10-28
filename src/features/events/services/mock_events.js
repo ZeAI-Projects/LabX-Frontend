@@ -9,7 +9,7 @@ export const REPORT_REASONS = ['Incorrect or outdated information', 'Misleading 
 
 const defaults = {
   type: 'event', organizer: 'LabX Community', contact: 'Organizer contact is not available.',
-  timezone: 'Asia/Kolkata', format: 'Online', location: 'Online · meeting room available at the event',
+  timezone: 'Asia/Kolkata', format: 'Online', location: 'Online · meeting room available at the event', city: null,
   roles: ['founder', 'mentor'], eligibility: 'LabX founders and mentors', fee: 'Free', prize: null,
   sponsored: false, capacity: 100, available: 24,
   registrationMethod: 'internal', registrationUrl: null, paymentUrl: null, feeAmount: 0,
@@ -22,7 +22,7 @@ export const MOCK_EVENTS = [
     description: 'Turn a meaningful problem into a working prototype with a weekend of building, mentor feedback, and a community showcase.',
     schedule: 'Day 1: team formation and problem framing. Day 2: prototype builds, mentor clinics, and a final showcase.',
     startsAt: '2026-10-20T09:00:00+05:30', endsAt: '2026-10-21T18:00:00+05:30', deadline: '2026-10-19T18:00:00+05:30',
-    format: 'Hybrid', location: 'Innovation Hub, Bengaluru / online', capacity: 120, available: 38,
+    format: 'Hybrid', location: 'Innovation Hub, Bengaluru / online', city: 'Bengaluru', capacity: 120, available: 38,
     prize: 'Prototype feedback and a showcase slot · sample benefits', sponsored: true, sponsor: 'LabX Innovation Partners',
   },
   {
@@ -52,7 +52,7 @@ export const MOCK_EVENTS = [
     description: 'Meet a sample venture studio team, explore the residency program, and learn how structured founder support could fit your next stage.',
     schedule: '14:00: studio introduction. 14:30: program walkthrough. 15:00: open questions.',
     startsAt: '2026-11-02T14:00:00+05:30', endsAt: '2026-11-02T16:00:00+05:30', deadline: '2026-10-30T18:00:00+05:30',
-    format: 'In person', location: 'Venture Studio, Bengaluru', roles: ['founder'], eligibility: 'Founder accounts',
+    format: 'In person', location: 'Venture Studio, Bengaluru', city: 'Bengaluru', roles: ['founder'], eligibility: 'Founder accounts',
   },
   {
     id: 'climate-sprint', category: 'Hackathon', title: 'Climate Sprint: Cohort Full',
@@ -76,6 +76,8 @@ export const MOCK_EVENTS = [
   },
   ...OPPORTUNITY_PREVIEWS,
 ].map((event) => Object.freeze({ ...defaults, ...event }))
+
+export const EVENT_CITIES = Object.freeze([...new Set(MOCK_EVENTS.map((event) => event.city).filter(Boolean))].sort((a, b) => a.localeCompare(b)))
 
 export function eventPhase(event, now = Date.now()) {
   if (Date.parse(event.endsAt) <= now) return 'past'
@@ -135,7 +137,7 @@ export function selectEvents(events, {
       && (format === 'all' || event.format === format)
       && (broadcast === 'all' || event.type === broadcast)
       && (!dateFrom || date >= dateFrom) && (!dateTo || date <= dateTo)
-      && (!location.trim() || event.location.toLowerCase().includes(location.trim().toLowerCase()))
+      && (!location.trim() || event.city?.toLowerCase() === location.trim().toLowerCase())
       && (eligibility !== 'eligible' || Boolean(user?.id && event.roles?.includes(user.role)))
       && (fee === 'all' || (fee === 'paid' ? event.feeAmount > 0 : event.feeAmount === 0))
       && (prizes !== 'with-prizes' || Boolean(event.prize))

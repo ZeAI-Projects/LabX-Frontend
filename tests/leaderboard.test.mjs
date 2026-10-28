@@ -68,7 +68,7 @@ test('scope metrics aggregate approved points and badges once per founder and su
   const projects = [project(demoUser, 11), project(demoUser, 11, { id: 'another-project' })]
   const options = { user: demoUser, projects, scope: 'domain', domainId: '12' }
   const domain = getLeaderboardSnapshot(options)
-  assert.deepEqual(domain.metrics, { totalFounders: 3, totalPoints: 850, totalBadges: 4, leadingPoints: 450 })
+  assert.deepEqual(domain.metrics, { totalFounders: 3, totalPoints: 850, totalBadges: 2, leadingPoints: 450 })
   assert.deepEqual(getLeaderboardSnapshot({ ...options, search: 'Samira' }).metrics, domain.metrics)
   const global = getLeaderboardSnapshot({ user: demoUser, projects })
   assert.equal(global.metrics.totalFounders, 25)
@@ -167,7 +167,7 @@ test('demo points and badges match achievements and ignore inflated profile valu
   assert.equal(snapshot.totalFounders, 25)
   assert.equal(snapshot.userStanding.total_points, 450)
   assert.equal(snapshot.userStanding.total_points, achievements.pointsBalance)
-  assert.equal(snapshot.userStanding.badges_count, 3)
+  assert.equal(snapshot.userStanding.badges_count, 1)
   assert.equal(snapshot.userStanding.badges_count, achievements.earnedBadgeCount)
   assert.equal(snapshot.userStanding.domain, 'Domain not set')
   assert.equal(snapshot.userStanding.stage, null)

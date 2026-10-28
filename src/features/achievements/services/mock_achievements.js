@@ -1,6 +1,7 @@
 import { createSafeStorage, localStore } from '../../../services/storage/local_storage.js'
 import { createMockRoadmap } from '../../roadmap/services/mock_roadmap.js'
 import { readAchievementActivities } from './achievement_sources.js'
+import { roadmapAchievementProgress, streakAchievementProgress } from './achievement_progress.js'
 
 export const ACHIEVEMENTS_CHANGE_EVENT = 'labx:achievements-change'
 
@@ -15,16 +16,16 @@ const freeze = (value) => {
 // Roadmap recognition uses approved submissions only. Placement never creates
 // completion records, and no achievement changes the LabX Points ledger.
 const BADGES = freeze([
-  { id: 'first-quest', name: 'First Steps', icon: 'flag', description: 'Your founder journey starts with one completed mission.', criteria: 'Submit 1 roadmap mission that passes review.', metric: 'quests', target: 1 },
-  { id: 'quest-explorer', name: 'Quest Explorer', icon: 'compass', description: 'Turn your early ideas into completed work.', criteria: 'Submit 3 roadmap missions that pass review.', metric: 'quests', target: 3 },
-  { id: 'milestone-maker', name: 'First Level Up', icon: 'mountain', description: 'Complete your first roadmap level with work of your own.', criteria: 'Complete all 3 missions in one level with your own approved submissions.', metric: 'milestones', target: 1 },
-  { id: 'quest-momentum', name: 'Quest Momentum', icon: 'zap', description: 'Build momentum through consistent progress.', criteria: 'Submit 5 roadmap missions that pass review.', metric: 'quests', target: 5 },
-  { id: 'pathfinder', name: 'Pathfinder', icon: 'route', description: 'Create a path forward, one completed level at a time.', criteria: 'Complete 3 levels, each with all 3 missions approved from your own submissions.', metric: 'milestones', target: 3 },
-  { id: 'quest-champion', name: 'Quest Champion', icon: 'trophy', description: 'Grow your collection as your venture takes shape.', criteria: 'Submit 10 roadmap missions that pass review.', metric: 'quests', target: 10 },
-  { id: 'project-starter', name: 'Idea in Motion', icon: 'rocket', description: 'Give your next venture a place to grow.', criteria: 'Create your first LabX project.', metric: 'projects', target: 1 },
-  { id: 'assessment-complete', name: 'Find Your Starting Point', icon: 'compass', description: 'Turn your startup answers into a roadmap starting point.', criteria: 'Complete the assessment for one of your projects.', metric: 'assessments', target: 1 },
-  { id: 'guild-founder', name: 'Guild Founder', icon: 'flag', description: 'Bring a new community of builders together.', criteria: 'Create your first guild when guild creation is available.', metric: 'guildsCreated', target: 1, availabilityNote: 'Guild creation is not available yet. This achievement will unlock when you can create a guild.' },
-  { id: 'guild-member', name: 'Find Your Guild', icon: 'users', description: 'Find your community and start building together.', criteria: 'Join a guild when guild membership is available.', metric: 'guildsJoined', target: 1, availabilityNote: 'Guild membership is not available yet. An assessment recommendation does not count as joining a guild.' },
+  { id: 'first-quest', name: 'First Step', category: 'Missions', icon: 'flag', description: 'Start your journey with your first approved mission.', criteria: 'Complete 1 mission', metric: 'quests', target: 1 },
+  { id: 'mission-master', name: 'Mission Master', category: 'Missions', icon: 'trophy', description: 'Build a record of 100 approved missions across your roadmaps.', criteria: 'Complete 100 missions', metric: 'quests', target: 100 },
+  { id: 'event-attendance-explorer', name: 'Event Explorer', category: 'Events', icon: 'compass', description: 'Learn and connect through recorded event participation.', criteria: 'Attend 10 events', metric: 'eventParticipation', target: 10 },
+  { id: 'event-champion', name: 'Event Champion', category: 'Events', icon: 'award', description: 'Celebrate your participation in 25 different events.', criteria: 'Attend 25 events', metric: 'eventParticipation', target: 25 },
+  { id: 'roadmap-builder', name: 'Roadmap Builder', category: 'Roadmap', icon: 'route', description: 'Complete half of one roadmap through your own approved missions.', criteria: 'Reach 50% progress in an individual roadmap', metric: 'roadmapProgress', target: 50 },
+  { id: 'roadmap-champion', name: 'Roadmap Champion', category: 'Roadmap', icon: 'mountain', description: 'Complete every mission in one roadmap with your own approved work.', criteria: 'Reach 100% progress in an individual roadmap', metric: 'roadmapProgress', target: 100 },
+  { id: 'consistency-champion', name: 'Consistency Champion', category: 'Consistency', icon: 'zap', description: 'Record mission or platform activity on 30 consecutive days, counted in IST.', criteria: 'Maintain a 30-day activity streak', metric: 'activityStreak', target: 30 },
+  { id: 'community-connect', name: 'Community Connect', category: 'Social Interaction', icon: 'users', description: 'Grow your community by connecting with five different people.', criteria: 'Connect with 5 unique users', metric: 'uniqueConnections', target: 5, availabilityNote: 'Connection tracking will be available with Social. This achievement will unlock once five unique connections are recorded.' },
+  { id: 'conversation-starter', name: 'Conversation Starter', category: 'Social Interaction', icon: 'message', description: 'Share your ideas and start conversations in the community.', criteria: 'Publish 10 eligible posts', metric: 'eligiblePosts', target: 10, availabilityNote: 'Post tracking will be available with Social. This achievement will count eligible published posts when that feature is available.' },
+  { id: 'community-contributor', name: 'Community Contributor', category: 'Social Interaction', icon: 'handshake', description: 'Help other members with answers and useful contributions.', criteria: 'Receive 5 accepted answers or verified helpful contributions', metric: 'helpfulContributions', target: 5, availabilityNote: 'Contribution recognition will be available with Social. This achievement will count accepted answers and verified helpful contributions.' },
   { id: 'quest-builder', name: 'Steady Builder', icon: 'zap', description: 'Make steady progress across your roadmap.', criteria: 'Submit 15 roadmap missions that pass review.', metric: 'quests', target: 15 },
   { id: 'quest-specialist', name: 'Making an Impact', icon: 'flag', description: 'Turn a growing body of work into real momentum.', criteria: 'Submit 25 roadmap missions that pass review.', metric: 'quests', target: 25 },
   { id: 'quest-master', name: 'Builder at Heart', icon: 'rocket', description: 'Keep showing up and putting your ideas into practice.', criteria: 'Submit 50 roadmap missions that pass review.', metric: 'quests', target: 50 },
@@ -48,6 +49,9 @@ const BADGES = freeze([
 ].map((badge) => ({ ...badge, ...badgePresentation(badge.metric) })))
 
 function badgePresentation(metric) {
+  if (metric === 'roadmapProgress') return { progressLabel: '% roadmap progress', actionPath: '/roadmap', actionLabel: 'Open roadmaps', tone: 'violet' }
+  if (metric === 'activityStreak') return { progressLabel: 'consecutive days', actionPath: '/dashboard', actionLabel: 'Continue your journey', tone: 'gold' }
+  if (['uniqueConnections', 'eligiblePosts', 'helpfulContributions'].includes(metric)) return { progressLabel: { uniqueConnections: 'unique connections', eligiblePosts: 'eligible posts', helpfulContributions: 'recognized contributions' }[metric], actionPath: null, actionLabel: null, tone: 'mint' }
   if (['quests', 'milestones'].includes(metric)) return { progressLabel: metric === 'quests' ? 'approved missions' : 'completed levels', actionPath: '/roadmap', actionLabel: 'Open roadmaps', tone: 'violet' }
   if (['projects', 'assessments'].includes(metric)) return { progressLabel: metric === 'projects' ? 'projects created' : 'assessments completed', actionPath: metric === 'projects' ? '/roadmap/new' : '/roadmap', actionLabel: metric === 'projects' ? 'Create a project' : 'Open projects', tone: 'mint' }
   if (metric.startsWith('guild')) return { progressLabel: metric === 'guildsCreated' ? 'guilds created' : 'guilds joined', actionPath: null, actionLabel: null, tone: 'gold' }
@@ -73,7 +77,7 @@ const byDate = (a, b) => Date.parse(a.date) - Date.parse(b.date) || a.id.localeC
 
 export const achievementActivityKey = (userId) => `labx:achievement-activity:v1:${encodeURIComponent(userId)}`
 export const platformAchievementKey = (userId) => `labx:platform-achievements:v1:${encodeURIComponent(userId)}`
-const platformMetrics = new Set(['projects', 'assessments', 'profileBio', 'profileSkills', 'profileGoals', 'startupStory', 'profileLink', 'eventRegistrations', 'eventParticipation', 'eventFeedback', 'eventCertificates', 'savedEvents', 'collaborationPosts', 'joinedRoadmaps'])
+const platformMetrics = new Set(['projects', 'assessments', 'profileBio', 'profileSkills', 'profileGoals', 'startupStory', 'profileLink', 'eventRegistrations', 'eventParticipation', 'eventFeedback', 'eventCertificates', 'savedEvents', 'collaborationPosts', 'joinedRoadmaps', 'activityDays'])
 
 function sanitizePlatformActivity(user, records) {
   if (!eligible(user) || !Array.isArray(records)) return []
@@ -214,6 +218,8 @@ export function getAchievementsSnapshot(user, activityRecords = achievementStore
   const platformStore = sources?.achievementStore ?? achievementStore
   const platformActivity = sanitizePlatformActivity(user, [...platformStore.readPlatform(user), ...readAchievementActivities(user, sources)])
   const badges = BADGES.map((badge) => {
+    if (badge.metric === 'roadmapProgress') return { ...badge, ...roadmapAchievementProgress(recognitionActivity, badge.target) }
+    if (badge.metric === 'activityStreak') return { ...badge, ...streakAchievementProgress([...recognitionActivity, ...platformActivity], badge.target) }
     const activities = badge.metric === 'quests' ? quests : badge.metric === 'milestones' ? milestones : platformActivity.filter((entry) => entry.metric === badge.metric)
     const isEarned = activities.length >= badge.target
     return {

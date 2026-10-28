@@ -66,12 +66,15 @@ try {
   await page.getByRole('heading', { name: 'Achievements', exact: true, level: 1 }).waitFor()
   const content = page.locator('.achievements-page')
   const filters = page.locator('.achievements-filters')
-  const unlocked = filters.getByRole('button', { name: /^Unlocked/ })
-  const pending = filters.getByRole('button', { name: /^Yet to unlock/ })
+  const unlocked = filters.getByRole('button', { name: /^Earned/ })
+  const pending = filters.getByRole('button', { name: /^Unearned/ })
+  const search = page.getByRole('searchbox', { name: 'Search achievements', exact: true })
   const cards = page.locator('.achievement-card')
   const pagination = page.getByRole('navigation', { name: 'Achievement pages', exact: true })
   const previous = pagination.getByRole('button', { name: 'Previous page', exact: true })
   const next = pagination.getByRole('button', { name: 'Next page', exact: true })
+  const first = pagination.getByRole('button', { name: 'First page', exact: true })
+  const last = pagination.getByRole('button', { name: 'Last page', exact: true })
   const pageButton = (number) => pagination.getByRole('button', { name: `Page ${number}`, exact: true })
   const names = () => cards.locator('h3').allTextContents()
   const assertPage = async (number, count) => {
@@ -80,6 +83,8 @@ try {
     assert.equal(await cards.count(), count, `Page ${number} contains ${count} cards`)
     assert.equal(await previous.isDisabled(), number === 1, 'Previous page boundary is correct')
     assert.equal(await next.isDisabled(), number === 3, 'Next page boundary is correct')
+    assert.equal(await first.isDisabled(), number === 1, 'First page boundary is correct')
+    assert.equal(await last.isDisabled(), number === 3, 'Last page boundary is correct')
   }
   const layout = async (name, width) => {
     await page.setViewportSize({ width, height: width < 600 ? 844 : 1000 })
@@ -93,6 +98,14 @@ try {
     assert.doesNotMatch(text, removed, `${removed} has been removed`)
   }
   await content.getByText('LabX Points', { exact: true }).waitFor()
+  assert.equal(await content.locator('.achievements-hero').count(), 0, 'The trophy hero is removed')
+  assert.equal(await content.locator('.achievements-summary > div').count(), 3, 'Only the requested three KPIs remain')
+  await content.getByText('Total earned badges', { exact: true }).waitFor()
+  await content.getByText('Unearned badges', { exact: true }).waitFor()
+  assert.doesNotMatch(await content.locator('.achievements-collection-heading').innerText(), /of 30 unlocked/)
+  const headingBox = await content.getByRole('heading', { name: 'Your achievements', exact: true }).boundingBox()
+  const searchBox = await search.boundingBox()
+  assert.ok(Math.abs((headingBox.y + headingBox.height / 2) - (searchBox.y + searchBox.height / 2)) < 20, 'Desktop search aligns with the collection heading')
   assert.equal(await filters.getByRole('button').count(), 2, 'Only the two status filters remain')
   assert.equal(await pending.getAttribute('aria-pressed'), 'true', 'The unearned collection is selected initially')
   assert.equal(await unlocked.getAttribute('aria-pressed'), 'false')
@@ -108,9 +121,17 @@ try {
     assert.equal(await page.locator('.achievement-card.is-locked').count(), 10)
     collected.push(...await names())
   }
+  assert.deepEqual(collected.slice(0, 10), [
+    'First Step', 'Mission Master', 'Event Explorer', 'Event Champion', 'Roadmap Builder',
+    'Roadmap Champion', 'Consistency Champion', 'Community Connect', 'Conversation Starter', 'Community Contributor',
+  ], 'The first page follows the requested achievement order')
   assert.equal(new Set(collected).size, 30, 'The three pages contain 30 unique achievements')
   assert.equal(await pagination.getByRole('button', { name: /^Page \d+$/ }).count(), 3, 'There are exactly three page buttons')
   await layout('page-3', 1440)
+  await first.click()
+  await assertPage(1, 10)
+  await last.click()
+  await assertPage(3, 10)
 
   // Changing status on the final page must not leave the new result set blank
   // because its old page index was retained.
@@ -140,8 +161,8 @@ try {
   assert.equal(await badgeTrigger.evaluate((element) => element === document.activeElement), true, 'Escape restores focus to the badge trigger')
   assert.equal(new URL(page.url()).searchParams.has('badge'), false, 'Closing removes the badge URL parameter')
 
-  // The seeded demo has three existing unlocks: filtering happens before
-  // pagination, so its remaining collection occupies 10 + 10 + 7 slots.
+  // The seeded demo has one existing unlock: filtering happens before
+  // pagination, so its remaining collection occupies 10 + 10 + 9 slots.
   await page.evaluate((keys) => {
     sessionStorage.setItem(keys.session, JSON.stringify({
       version: 1, userId: 'demo-founder', authVersion: 0, expiresAt: null,
@@ -149,12 +170,31 @@ try {
   }, AUTH_STORAGE_KEYS)
   await page.reload()
   await page.getByRole('heading', { name: 'Achievements', exact: true, level: 1 }).waitFor()
-  assert.match(await pending.innerText(), /27/)
-  await pageButton(3).click()
-  await assertPage(3, 7)
+  assert.match(await pending.innerText(), /29/)
+  const totalStats = await content.locator('.achievements-summary').innerText()
+  await search.fill('mission')
+  assert.match(await unlocked.innerText(), /1$/, 'Search counts the matching earned badge')
+  assert.equal(Number((await pending.innerText()).match(/\d+$/)[0]), 11, 'Search counts only the matching unearned badges')
+  assert.equal(await content.locator('.achievements-summary').innerText(), totalStats, 'Search leaves account-wide KPIs unchanged')
   await unlocked.click()
-  assert.equal(await cards.count(), 3, 'The seeded account shows its three unlocked badges')
-  assert.equal(await page.locator('.achievement-card.is-earned').count(), 3)
+  assert.deepEqual(await names(), ['First Step'])
+  await search.fill('COMMUNITY')
+  assert.match(await unlocked.innerText(), /0$/)
+  assert.ok(Number((await pending.innerText()).match(/\d+$/)[0]) > 0, 'Counts for the other status remain visible')
+  await pending.click()
+  assert.ok(await cards.count() > 0)
+  await search.fill('zzzz no matching achievement')
+  assert.equal(await cards.count(), 0)
+  assert.match(await unlocked.innerText(), /0$/)
+  assert.match(await pending.innerText(), /0$/)
+  assert.equal(await pagination.count(), 0)
+  await search.fill('')
+  await assertPage(1, 10)
+  await pageButton(3).click()
+  await assertPage(3, 9)
+  await unlocked.click()
+  assert.equal(await cards.count(), 1, 'The seeded account shows its one unlocked badge')
+  assert.equal(await page.locator('.achievement-card.is-earned').count(), 1)
   if (await pagination.count()) {
     assert.equal(await pageButton(1).getAttribute('aria-current'), 'page')
     assert.equal(await previous.isDisabled(), true)

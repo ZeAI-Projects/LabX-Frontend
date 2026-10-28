@@ -1,22 +1,60 @@
 import collaborationPhoto from '../assets/collaboration.jpg'
 import conferencePhoto from '../assets/conference.jpg'
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
-import { ArrowLeft, ArrowUpRight, Award, Bell, Bookmark, BookmarkCheck, Calendar, CalendarCheck2, CheckCircle2, ChevronDown, Clock, Copy, Download, ExternalLink, FileCheck2, Flag, History, MapPin, Radio, Search, SlidersHorizontal, Sparkles, Ticket, Trophy, Upload, Users, X } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, Award, Bell, Bookmark, BookmarkCheck, Calendar, CalendarCheck2, CheckCircle2, ChevronDown, Clock, Copy, Download, ExternalLink, FileCheck2, Flag, History, MapPin, Radio, Sparkles, Ticket, Trophy, Upload, Users, X } from 'lucide-react'
 import { useAuth } from '../../../hooks/use_auth.js'
-import { EVENT_CATEGORIES, EVENT_CHANGE_EVENT, MAX_CERTIFICATE_BYTES, MOCK_EVENTS, REPORT_REASONS, eventPhase, eventStore, getRegistrationAvailability, getSafeEventLink, getTrackingStatus, selectEvents } from '../services/mock_events.js'
+import { EVENT_CHANGE_EVENT, MAX_CERTIFICATE_BYTES, MOCK_EVENTS, REPORT_REASONS, eventPhase, eventStore, getRegistrationAvailability, getSafeEventLink, getTrackingStatus, selectEvents } from '../services/mock_events.js'
 import '../components/EventsPage.css'
 import { EventArtwork } from '../components/EventArtwork.jsx'
 import { EventList } from '../components/EventList.jsx'
+import { Pagination } from '../../../components/common/Pagination.jsx'
+import { EventsSearchField, EventFiltersDropdown } from '../components/EventsDiscoveryControls.jsx'
 
 const INITIAL_FILTERS = {
   query: '', category: 'all', format: 'all', sort: '', myPeriod: 'all', savedPeriod: 'all',
   dateFrom: '', dateTo: '', location: '', eligibility: 'all', fee: 'all', prizes: 'all', sponsored: 'all',
 }
-const ADVANCED_FILTERS = ['dateFrom', 'dateTo', 'location', 'eligibility', 'fee', 'prizes', 'sponsored']
 const CERTIFICATE_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
 const VIEW_NAMES = { upcoming: 'Upcoming broadcasts', ongoing: 'Happening now', saved: 'Saved Events', my: 'My Events', completed: 'Completed participation', past: 'Past-event history' }
-const PAGE_SIZE = 9
+const PAGE_SIZE = 10
+const COLLECTION_VIEWS = ['saved', 'completed', 'past']
+function EventsPopup({ dialogRef, titleId, returnFocusRef, onClose, className = '', notification, children }) {
+  useEffect(() => {
+    const dialog = dialogRef.current
+    const opener = document.activeElement
+    const returnFocusTarget = returnFocusRef.current
+    dialog.showModal()
+    return () => {
+      dialog.close()
+      if (opener instanceof HTMLElement && opener !== document.body && opener.isConnected) opener.focus({ preventScroll: true })
+      else returnFocusTarget?.focus({ preventScroll: true })
+    }
+  }, [dialogRef, returnFocusRef])
+  return <dialog ref={dialogRef} className={`events-dialog ${className}`} aria-labelledby={titleId} onCancel={(event) => { event.preventDefault(); onClose() }}>
+    <div className="events-dialog__body">
+      <button autoFocus type="button" className="events-dialog__close" aria-label="Close events popup" onClick={onClose}><X size={19} aria-hidden="true" /></button>
+      {children}
+    </div>
+    {notification}
+  </dialog>
+}
+
+function EventSaveToast({ notification }) {
+  if (!notification) return null
+  return <div className={`events-save-toast${notification.exiting ? ' events-save-toast--exiting' : ''}`} role="status" aria-atomic="true">
+    <BookmarkCheck size={18} aria-hidden="true" />
+    <span>{notification.text}</span>
+  </div>
+}
+
+function EventEmptyState({ view, savedCount }) {
+  const Icon = view === 'saved' ? Bookmark : view === 'past' ? History : view === 'completed' ? Trophy : Calendar
+  const title = view === 'saved' ? savedCount ? 'No saved events match your search' : 'Save an event for later' : view === 'my' ? 'No registrations match this view' : view === 'completed' ? 'Your next achievement starts here' : view === 'past' ? 'No past events match your search' : 'No events found'
+  const description = view === 'saved' ? savedCount ? 'Clear or adjust your search to revisit your saved events.' : 'Use Save on an event to add it to your list.' : view === 'my' ? 'Register for an event to find it here, or adjust your filters.' : view === 'completed' ? 'After a registered event starts, record your participation from its details. Your results and certificates will appear here.' : view === 'past' ? 'Clear or adjust your search to find past events.' : 'Try another category, format, or search. Check Ongoing for events happening now and Past Events for older listings.'
+  return <section className="events-empty"><span className="events-empty__icon"><Icon size={32} aria-hidden="true" /></span><h3>{title}</h3><p>{description}</p></section>
+}
 
 function formatDate(value) {
   return new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' }).format(new Date(value))
@@ -69,8 +107,8 @@ function OutcomeSummary({ outcome, onEdit, onCopy, copying }) {
   </section>
 }
 
-function EventDialog({ event, user, registration, outcome, saved, now, onClose, onChanged, onViewMyEvents, returnFocusRef }) {
-  const dialogRef = useRef(null)
+function EventDetails({ event, user, registration, outcome, saved, now, dialogRef, onClose, onChanged, onSaved, onViewMyEvents, onBack, backLabel }) {
+  const detailsRef = useRef(null)
   const headingRef = useRef(null)
   const errorRef = useRef(null)
   const fileInputRef = useRef(null)
@@ -101,21 +139,19 @@ function EventDialog({ event, user, registration, outcome, saved, now, onClose, 
   const title = panel === 'confirm' ? 'Confirm registration' : panel === 'external' ? 'External registration' : panel === 'report' ? 'Report listing' : panel === 'participation' ? outcome ? 'Edit participation' : 'Record participation' : event.title
 
   useEffect(() => {
-    const dialog = dialogRef.current
-    const opener = document.activeElement
-    const returnFocusTarget = returnFocusRef.current
-    if (!dialog.open) dialog.showModal()
+    headingRef.current?.focus({ preventScroll: true })
+    if (dialogRef.current) dialogRef.current.scrollTop = 0
     return () => {
       fileReaderRef.current?.abort()
       fileReaderRef.current = null
-      dialog.close()
-      if (opener instanceof HTMLElement && opener.isConnected) opener.focus({ preventScroll: true })
-      else if (returnFocusTarget?.isConnected) returnFocusTarget.focus({ preventScroll: true })
     }
-  }, [returnFocusRef])
+  }, [dialogRef])
 
   function focusHeading() {
-    requestAnimationFrame(() => headingRef.current?.focus({ preventScroll: true }))
+    requestAnimationFrame(() => {
+      headingRef.current?.focus({ preventScroll: true })
+      if (dialogRef.current) dialogRef.current.scrollTop = 0
+    })
   }
 
   function fail(err) {
@@ -156,7 +192,8 @@ function EventDialog({ event, user, registration, outcome, saved, now, onClose, 
       eventStore.setSaved(user, event.id, !saved)
       onChanged()
       setError('')
-      setNotice(saved ? 'Removed from Saved Events.' : 'Added to Saved Events. Revisit it anytime from Saved Events.')
+      setNotice('')
+      onSaved(!saved)
     } catch (err) { fail(err) }
   }
 
@@ -274,22 +311,21 @@ function EventDialog({ event, user, registration, outcome, saved, now, onClose, 
     ].filter(Boolean).join('\n')
     try {
       await navigator.clipboard.writeText(summary)
-      if (dialogRef.current?.open) {
+      if (detailsRef.current?.isConnected) {
         setError('')
         setNotice('Participation summary copied. Feedback, rating, and certificate were not included.')
       }
     } catch {
-      if (dialogRef.current?.open) fail(new Error('The summary could not be copied. Select and copy the participation details instead.'))
+      if (detailsRef.current?.isConnected) fail(new Error('The summary could not be copied. Select and copy the participation details instead.'))
     } finally {
       copyingRef.current = false
-      if (dialogRef.current?.open) setCopying(false)
+      if (detailsRef.current?.isConnected) setCopying(false)
     }
   }
 
   return (
-    <dialog ref={dialogRef} className="events-dialog" aria-labelledby="event-dialog-title" onCancel={(e) => { e.preventDefault(); onClose() }} onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="events-dialog__body">
-        <button type="button" className="events-dialog__close" aria-label="Close event details" onClick={onClose}><X size={21} aria-hidden="true" /></button>
+      <div ref={detailsRef} className={`events-detail-panel${panel !== 'details' || onBack ? ' has-back' : ''}`}>
+        {(panel !== 'details' || onBack) && <button type="button" className="events-dialog__back" aria-label={panel !== 'details' ? 'Back to event details' : backLabel} onClick={() => panel !== 'details' ? showPanel('details') : onBack()}><ArrowLeft size={20} aria-hidden="true" /></button>}
         <span className="events-eyebrow"><Radio size={14} aria-hidden="true" />{event.category} · {event.format}</span>
         <h2 id="event-dialog-title" tabIndex={-1} ref={headingRef}>{title}</h2>
         {error && <p ref={errorRef} tabIndex={-1} className="events-feedback events-feedback--error" role="alert">{error}</p>}
@@ -369,7 +405,6 @@ function EventDialog({ event, user, registration, outcome, saved, now, onClose, 
           <div className="events-dialog__actions"><button type="button" className="events-button" onClick={() => showPanel('details')}><ArrowLeft size={15} aria-hidden="true" />Back</button><button type="submit" className="events-button events-button--primary" disabled={!reason}>Save report</button></div>
         </form>}
       </div>
-    </dialog>
   )
 }
 
@@ -406,41 +441,80 @@ function EventCard({ event, registration, outcome, saved, user, now, onSelect, o
 function EventsContent({ user }) {
   const [searchParams, setSearchParams] = useSearchParams()
   const resultsHeadingRef = useRef(null)
+  const collectionHeadingRef = useRef(null)
+  const popupRef = useRef(null)
+  const collectionReturnRef = useRef(null)
+  const collectionScrollRef = useRef(0)
+  const restoreCollectionRef = useRef(false)
+  const focusResultsAfterDialog = useRef(false)
   const [saved, setSaved] = useState(() => eventStore.read(user))
   const [saveFeedback, setSaveFeedback] = useState(null)
+  const [saveToast, setSaveToast] = useState(null)
+  const toastSequence = useRef(0)
+  const toastId = saveToast?.id
   const [filterValues, setFilters] = useState(INITIAL_FILTERS)
-  const [expandedFilters, setExpandedFilters] = useState(false)
-  const [pagination, setPagination] = useState({ key: '', count: PAGE_SIZE })
+  const [collectionQuery, setCollectionQuery] = useState('')
+  const [pagination, setPagination] = useState({ key: '', page: 1 })
+  const [collectionLimit, setCollectionLimit] = useState({ key: '', count: PAGE_SIZE })
   const [now, setNow] = useState(Date.now)
   const requestedView = searchParams.get('view')
-  const view = Object.hasOwn(VIEW_NAMES, requestedView) ? requestedView : 'upcoming'
-  const historyView = view === 'past' || (view === 'my' && filterValues.myPeriod === 'past') || (view === 'saved' && filterValues.savedPeriod === 'past')
+  const view = ['upcoming', 'ongoing', 'my'].includes(requestedView) ? requestedView : 'upcoming'
+  const collectionView = COLLECTION_VIEWS.includes(searchParams.get('collection')) ? searchParams.get('collection') : COLLECTION_VIEWS.includes(requestedView) ? requestedView : null
+  const historyView = view === 'my' && filterValues.myPeriod === 'past'
   const filters = { ...filterValues, view, sort: filterValues.sort || (historyView ? 'latest' : 'soonest') }
-  const listView = ['saved', 'my', 'completed', 'past'].includes(view)
+  // Popups have their own search; discovery filters do not hide their records.
+  const collectionFilters = { ...INITIAL_FILTERS, query: collectionQuery, view: collectionView, sort: collectionView === 'past' ? 'latest' : 'soonest' }
   const filterKey = JSON.stringify(filters)
-  const visibleLimit = pagination.key === filterKey ? pagination.count : PAGE_SIZE
+  const collectionFilterKey = JSON.stringify(collectionFilters)
   const selected = MOCK_EVENTS.find((event) => event.id === searchParams.get('event')) ?? null
   const outcomes = saved.outcomes ?? {}
   const savedEvents = saved.savedEvents ?? {}
   const savedCount = Object.keys(savedEvents).length
   const filtered = selectEvents(MOCK_EVENTS, filters, saved.registrations, now, user, outcomes, savedEvents)
+  const collectionEvents = collectionView ? selectEvents(MOCK_EVENTS, collectionFilters, saved.registrations, now, user, outcomes, savedEvents) : []
+  const currentPage = Math.min(pagination.key === filterKey ? pagination.page : 1, Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)))
+  const visibleLimit = collectionLimit.key === collectionFilterKey ? collectionLimit.count : PAGE_SIZE
+  const visible = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  const visibleCollection = collectionEvents.slice(0, visibleLimit)
   const registrations = MOCK_EVENTS.filter((event) => saved.registrations[event.id])
   const totalRegistrations = registrations.length
   const completedCount = registrations.filter((event) => outcomes[event.id]).length
   const activeListings = MOCK_EVENTS.filter((event) => event.type !== 'announcement' && eventPhase(event, now) !== 'past').length
-  const advancedCount = ADVANCED_FILTERS.filter((key) => filters[key] !== INITIAL_FILTERS[key]).length
 
   function refresh() {
     setSaved(eventStore.read(user))
-    setNow(Date.now())
   }
 
+  function notifySaved(nextSaved) {
+    setSaveFeedback(null)
+    setSaveToast({ id: ++toastSequence.current, text: nextSaved ? 'Added to Saved Events.' : 'Removed from Saved Events.', exiting: false })
+  }
+
+  useEffect(() => {
+    if (!toastId) return
+    const fadeTimer = window.setTimeout(() => {
+      setSaveToast((current) => current?.id === toastId ? { ...current, exiting: true } : current)
+    }, 2700)
+    const dismissTimer = window.setTimeout(() => {
+      setSaveToast((current) => current?.id === toastId ? null : current)
+    }, 3000)
+    return () => {
+      window.clearTimeout(fadeTimer)
+      window.clearTimeout(dismissTimer)
+    }
+  }, [toastId])
+
   function saveEvent(event, nextSaved) {
+    const trigger = document.activeElement
     try {
       eventStore.setSaved(user, event.id, nextSaved)
       refresh()
-      setSaveFeedback({ text: `${event.title} ${nextSaved ? 'added to Saved Events.' : 'removed from Saved Events.'}`, error: false })
+      notifySaved(nextSaved)
+      requestAnimationFrame(() => {
+        if (!trigger?.isConnected) (collectionHeadingRef.current ?? resultsHeadingRef.current)?.focus({ preventScroll: true })
+      })
     } catch (err) {
+      setSaveToast(null)
       setSaveFeedback({ text: err.message || 'This event could not be saved. Please try again.', error: true })
     }
   }
@@ -450,20 +524,70 @@ function EventsContent({ user }) {
       setSearchParams((current) => {
         const next = new URLSearchParams(current)
         next.set('view', value)
+        next.delete('collection')
+        next.delete('event')
         return next
       })
     } else {
       setFilters((current) => ({ ...current, [key]: value }))
     }
-    setPagination({ key: '', count: PAGE_SIZE })
+    setPagination({ key: '', page: 1 })
   }
 
   function clearFilters() {
     setFilters(INITIAL_FILTERS)
-    setPagination({ key: '', count: PAGE_SIZE })
+    setPagination({ key: '', page: 1 })
+  }
+
+  function selectCollection(value) {
+    restoreCollectionRef.current = false
+    setCollectionQuery('')
+    setCollectionLimit({ key: '', count: PAGE_SIZE })
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current)
+      if (COLLECTION_VIEWS.includes(next.get('view'))) next.set('view', view)
+      next.set('collection', value)
+      next.delete('event')
+      return next
+    })
+  }
+
+  function closePopup() {
+    restoreCollectionRef.current = false
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current)
+      if (COLLECTION_VIEWS.includes(next.get('view'))) next.set('view', view)
+      next.delete('collection')
+      next.delete('event')
+      return next
+    }, { replace: true })
+  }
+
+  function changePage(page) {
+    setPagination({ key: filterKey, page })
+    resultsHeadingRef.current?.focus({ preventScroll: true })
+    resultsHeadingRef.current?.scrollIntoView({ block: 'start', behavior: 'instant' })
+  }
+
+  function searchCollection(value) {
+    setCollectionQuery(value)
+    setCollectionLimit({ key: '', count: PAGE_SIZE })
+  }
+
+  function showMore() {
+    const trigger = document.activeElement
+    setCollectionLimit({ key: collectionFilterKey, count: visibleLimit + PAGE_SIZE })
+    requestAnimationFrame(() => {
+      if (!trigger?.isConnected) collectionHeadingRef.current?.focus({ preventScroll: true })
+    })
   }
 
   function selectEvent(event) {
+    if (collectionView && event) {
+      restoreCollectionRef.current = true
+      collectionReturnRef.current = document.activeElement
+      collectionScrollRef.current = popupRef.current?.scrollTop ?? 0
+    }
     setSearchParams((current) => {
       const next = new URLSearchParams(current)
       if (event) next.set('event', event.id)
@@ -472,15 +596,37 @@ function EventsContent({ user }) {
     }, { replace: !event })
   }
 
+  function backToCollection() {
+    restoreCollectionRef.current = true
+    selectEvent(null)
+  }
+
   function viewMyEvents() {
+    restoreCollectionRef.current = false
+    focusResultsAfterDialog.current = true
     clearFilters()
     setSearchParams((current) => {
       const next = new URLSearchParams(current)
       next.delete('event')
+      next.delete('collection')
       next.set('view', 'my')
       return next
     })
   }
+
+  useEffect(() => {
+    if (!selected && collectionView && restoreCollectionRef.current) {
+      restoreCollectionRef.current = false
+      const target = collectionReturnRef.current
+      if (target?.isConnected) target.focus({ preventScroll: true })
+      else collectionHeadingRef.current?.focus({ preventScroll: true })
+      if (popupRef.current) popupRef.current.scrollTop = collectionScrollRef.current
+    }
+    if (!selected && !collectionView && focusResultsAfterDialog.current) {
+      focusResultsAfterDialog.current = false
+      resultsHeadingRef.current?.focus({ preventScroll: true })
+    }
+  }, [selected, collectionView])
 
   useEffect(() => {
     const update = () => { setSaved(eventStore.read(user)); setNow(Date.now()) }
@@ -498,48 +644,41 @@ function EventsContent({ user }) {
 
   return (
     <div className="events-page">
-      <section className="events-hero" aria-labelledby="events-showcase-title">
-        <div className="events-hero__copy"><span className="events-eyebrow"><span className="events-live-dot" />Global Broadcast Network</span><h2 id="events-showcase-title">Showcase Events <span>&amp; Keynotes</span></h2><p>Your next connection. Your next breakthrough. Explore learning sessions, founder opportunities, and community broadcasts.</p><span className="events-demo-note">Sample listings · your registrations and activity stay on this browser.</span></div>
-        <div className="events-broadcast-art" aria-hidden="true"><span /><span /><span /><div><Radio size={38} /></div><i className="events-broadcast-art__satellite"><Sparkles size={15} /></i></div>
-      </section>
       <section className="events-metrics" aria-label="Your event overview">
         {[[Radio, activeListings, 'Live & upcoming'], [Bookmark, savedCount, 'Saved events'], [CalendarCheck2, totalRegistrations, 'My registrations'], [Trophy, completedCount, 'Participation records']].map(([Icon, count, label]) => <div key={label}><span className="events-metric-icon"><Icon size={20} aria-hidden="true" /></span><dl><dt>{label}</dt><dd>{count}</dd></dl></div>)}
       </section>
-      <div className="events-view-row"><nav className="events-views" aria-label="Event views">
+      <div className="events-view-row"><nav className="events-views events-primary-views" aria-label="Event views">
         {[
           ['upcoming', 'Upcoming', Calendar], ['ongoing', 'Ongoing', Radio],
-          ['my', 'My Events', CalendarCheck2, totalRegistrations], ['saved', 'Saved Events', Bookmark, savedCount],
-          ['past', 'Past Events', History], ['completed', 'Completed', CheckCircle2],
-        ].map(([value, label, Icon, count]) => <button type="button" key={value} aria-label={count === undefined ? label : `${label} (${count})`} aria-pressed={filters.view === value} onClick={() => setFilter('view', value)}><Icon size={16} aria-hidden="true" /><span>{label}</span>{count !== undefined && <span className="events-view-count">{count}</span>}</button>)}
+          ['my', 'My Events', CalendarCheck2, totalRegistrations],
+        ].map(([value, label, Icon, count]) => <button type="button" key={value} title={label} aria-label={count === undefined ? label : `${label} (${count})`} aria-pressed={filters.view === value} onClick={() => setFilter('view', value)}><Icon size={16} aria-hidden="true" /><span>{label}</span>{count !== undefined && <span className="events-view-count">{count}</span>}</button>)}
+      </nav><nav className="events-views events-secondary-views" aria-label="Event collections">
+        {[
+          ['saved', 'Saved Events', Bookmark, savedCount], ['past', 'Past Events', History], ['completed', 'Completed', CheckCircle2],
+        ].map(([value, label, Icon, count]) => <button type="button" key={value} title={count === undefined ? label : `${label} (${count})`} aria-label={count === undefined ? label : `${label} (${count})`} aria-haspopup="dialog" aria-expanded={collectionView === value} onClick={() => selectCollection(value)}><Icon size={18} aria-hidden="true" /></button>)}
       </nav></div>
-      {saveFeedback && <p className={`events-feedback${saveFeedback.error ? ' events-feedback--error' : ''}`} role={saveFeedback.error ? 'alert' : 'status'}>{saveFeedback.text}</p>}
-      <section className={`events-filter-panel${expandedFilters ? ' is-expanded' : ''}`} aria-label="Find events">
-        <div className="events-filters">
-          <label className="events-field events-search">Search events<span><Search size={18} aria-hidden="true" /><input type="search" value={filters.query} placeholder="Search events, organizers, opportunities…" onChange={(e) => setFilter('query', e.target.value)} /></span></label>
-          <label className="events-field">Category<select aria-label="Category" value={filters.category} onChange={(e) => setFilter('category', e.target.value)}><option value="all">All categories</option>{EVENT_CATEGORIES.map((item) => <option key={item}>{item}</option>)}</select></label>
-          <label className="events-field">Format<select aria-label="Format" value={filters.format} onChange={(e) => setFilter('format', e.target.value)}><option value="all">All formats</option><option>Online</option><option>In person</option><option>Hybrid</option></select></label>
-          <label className="events-field">Sort by date<select aria-label="Sort by date" value={filters.sort} onChange={(e) => setFilter('sort', e.target.value)}><option value="soonest">Soonest first</option><option value="latest">Latest first</option></select></label>
-        </div>
-        <div className="events-filter-tools"><button type="button" className="events-text-button" aria-expanded={expandedFilters} aria-controls="events-advanced-filters" onClick={() => setExpandedFilters((value) => !value)}><SlidersHorizontal size={15} aria-hidden="true" />More filters{advancedCount > 0 && <span className="events-filter-count">{advancedCount}</span>}<ChevronDown size={15} aria-hidden="true" /></button><button type="button" className="events-text-button" onClick={clearFilters}>Clear filters</button></div>
-        <div id="events-advanced-filters" className="events-advanced-filters" hidden={!expandedFilters}>
-          <label className="events-field">Starts from<input type="date" value={filters.dateFrom} max={filters.dateTo || undefined} onChange={(e) => setFilter('dateFrom', e.target.value)} /></label>
-          <label className="events-field">Starts by<input type="date" value={filters.dateTo} min={filters.dateFrom || undefined} onChange={(e) => setFilter('dateTo', e.target.value)} /></label>
-          <label className="events-field">Location<input type="search" value={filters.location} placeholder="City, venue, or online" onChange={(e) => setFilter('location', e.target.value)} /></label>
-          <label className="events-field">Eligibility<select aria-label="Eligibility" value={filters.eligibility} onChange={(e) => setFilter('eligibility', e.target.value)}><option value="all">All eligibility</option><option value="eligible">Eligible for my role</option></select></label>
-          <label className="events-field">Fee<select aria-label="Fee" value={filters.fee} onChange={(e) => setFilter('fee', e.target.value)}><option value="all">Any fee</option><option value="free">Free</option><option value="paid">Paid</option></select></label>
-          <label className="events-field">Prizes &amp; benefits<select aria-label="Prizes & benefits" value={filters.prizes} onChange={(e) => setFilter('prizes', e.target.value)}><option value="all">Any benefits</option><option value="with-prizes">With prizes or benefits</option></select></label>
-          <label className="events-field">Sponsorship<select aria-label="Sponsorship" value={filters.sponsored} onChange={(e) => setFilter('sponsored', e.target.value)}><option value="all">All listings</option><option value="sponsored">Sponsored only</option><option value="organic">Not sponsored</option></select></label>
-          <p className="events-note">Date filters use the listing start date in India Standard Time, including both selected dates.</p>
-        </div>
+      {saveFeedback && !collectionView && !selected && <p className="events-feedback events-feedback--error" role="alert">{saveFeedback.text}</p>}
+      {!collectionView && !selected && createPortal(<EventSaveToast key={toastId} notification={saveToast} />, document.body)}
+      <section className="events-discovery-toolbar" aria-label="Find events">
+        <EventsSearchField value={filters.query} onChange={(value) => setFilter('query', value)} onSubmit={() => changePage(1)} />
+        <EventFiltersDropdown filters={filters} onChange={setFilter} onClear={clearFilters} />
       </section>
       {filters.view === 'my' && <div className="events-my-period events-list-controls"><div><span className="events-eyebrow"><CalendarCheck2 size={16} aria-hidden="true" />Your registrations</span><p>Track upcoming plans, past events, and your participation records.</p></div><label className="events-field">Show registrations<select aria-label="My Events period" value={filters.myPeriod} onChange={(e) => setFilter('myPeriod', e.target.value)}><option value="all">All registrations</option><option value="upcoming">Upcoming events</option><option value="ongoing">Happening now</option><option value="past">Past events</option><option value="completed">Participation recorded</option></select></label></div>}
-      {filters.view === 'saved' && <div className="events-my-period events-list-controls events-saved-period"><div><span className="events-eyebrow"><Bookmark size={16} aria-hidden="true" />Your bookmarks</span><p>Keep events to revisit. Saving an event does not register you.</p></div><label className="events-field">Show saved events<select aria-label="Saved Events period" value={filters.savedPeriod} onChange={(e) => setFilter('savedPeriod', e.target.value)}><option value="all">All saved events</option><option value="upcoming">Upcoming events</option><option value="ongoing">Happening now</option><option value="past">Past events</option></select></label></div>}
-      {filters.view === 'past' && <p className="events-history-intro"><History size={16} aria-hidden="true" />Browse events that have ended, with your registration or participation status where available.</p>}
       <div className="events-results-heading"><h3 ref={resultsHeadingRef} tabIndex={-1}>{VIEW_NAMES[filters.view]}</h3><p className="events-count" role="status">{filtered.length} {filtered.length === 1 ? 'listing' : 'listings'}{filters.view === 'my' ? ' in My Events' : ''}</p></div>
-      {filtered.length === 0 ? <section className="events-empty"><span className="events-empty__icon">{filters.view === 'saved' ? <Bookmark size={34} aria-hidden="true" /> : filters.view === 'past' ? <History size={34} aria-hidden="true" /> : filters.view === 'completed' ? <Trophy size={34} aria-hidden="true" /> : <Calendar size={34} aria-hidden="true" />}</span><h3>{filters.view === 'saved' ? savedCount ? 'No saved events match your filters' : 'Save an event for later' : filters.view === 'my' ? 'No registrations match this view' : filters.view === 'completed' ? 'Your next achievement starts here' : filters.view === 'past' ? 'No past events match your filters' : 'No broadcasts found'}</h3><p>{filters.view === 'saved' ? savedCount ? 'Clear or adjust your filters to revisit your saved events.' : 'Use Save on an event to add it to your list.' : filters.view === 'my' ? 'Register for an event to find it here, or adjust your filters.' : filters.view === 'completed' ? 'After a registered event starts, record your participation from its details. Your results and certificates will appear here.' : 'Try another category, format, or search. Check Ongoing for events happening now and Past Events for older listings.'}</p></section> : listView ? <EventList events={filtered.slice(0, visibleLimit)} registrations={saved.registrations} outcomes={outcomes} savedEvents={savedEvents} user={user} now={now} onSelect={selectEvent} onSave={saveEvent} label={VIEW_NAMES[filters.view]} /> : <div className="events-grid">{filtered.slice(0, visibleLimit).map((event) => <EventCard key={event.id} event={event} registration={saved.registrations[event.id]} outcome={outcomes[event.id]} saved={Boolean(savedEvents[event.id])} user={user} now={now} onSelect={selectEvent} onSave={saveEvent} />)}</div>}
-      {filtered.length > visibleLimit && <div className="events-show-more"><p className="events-note">Showing {visibleLimit} of {filtered.length} listings</p><button type="button" className="events-button" onClick={() => setPagination({ key: filterKey, count: visibleLimit + PAGE_SIZE })}>Show more broadcasts<ChevronDown size={16} aria-hidden="true" /></button></div>}
+      {filtered.length === 0 ? <EventEmptyState view={view} savedCount={savedCount} /> : <div className="events-grid">{visible.map((event) => <EventCard key={event.id} event={event} registration={saved.registrations[event.id]} outcome={outcomes[event.id]} saved={Boolean(savedEvents[event.id])} user={user} now={now} onSelect={selectEvent} onSave={saveEvent} />)}</div>}
+      <Pagination page={currentPage} pageSize={PAGE_SIZE} total={filtered.length} itemLabel="events" onPageChange={changePage} label="Event pages" className="events-pagination" />
       <p className="events-page-footnote"><Radio size={13} aria-hidden="true" />Sample broadcast network · All times in IST · No real registrations, payments, or messages</p>
-      {selected && <EventDialog key={selected.id} event={selected} user={user} registration={saved.registrations[selected.id]} outcome={outcomes[selected.id]} saved={Boolean(savedEvents[selected.id])} now={now} onClose={() => selectEvent(null)} onChanged={refresh} onViewMyEvents={viewMyEvents} returnFocusRef={resultsHeadingRef} />}
+      {(collectionView || selected) && <EventsPopup dialogRef={popupRef} titleId={selected ? 'event-dialog-title' : 'events-collection-title'} returnFocusRef={resultsHeadingRef} onClose={closePopup} className={collectionView ? 'events-collection-dialog' : ''} notification={<EventSaveToast key={toastId} notification={saveToast} />}>
+        {collectionView && <div className="events-collection-content" hidden={Boolean(selected)}>
+          <h2 id="events-collection-title" ref={collectionHeadingRef} tabIndex={-1}>{VIEW_NAMES[collectionView]}</h2>
+          <EventsSearchField label={`Search ${VIEW_NAMES[collectionView].toLowerCase()}`} value={collectionQuery} onChange={searchCollection} onSubmit={() => collectionHeadingRef.current?.focus({ preventScroll: true })} />
+          {saveFeedback && <p className="events-feedback events-feedback--error" role="alert">{saveFeedback.text}</p>}
+          <p className="events-collection-count" role="status">{collectionEvents.length} {collectionEvents.length === 1 ? 'event' : 'events'}</p>
+          {collectionEvents.length ? <EventList events={visibleCollection} registrations={saved.registrations} outcomes={outcomes} savedEvents={savedEvents} user={user} now={now} onSelect={selectEvent} onSave={saveEvent} label={VIEW_NAMES[collectionView]} /> : <EventEmptyState view={collectionView} savedCount={savedCount} />}
+          {collectionEvents.length > visibleCollection.length && <div className="events-show-more"><p className="events-note">Showing {visibleCollection.length} of {collectionEvents.length} events</p><button type="button" className="events-button" onClick={showMore}>Show more<ChevronDown size={16} aria-hidden="true" /></button></div>}
+        </div>}
+        {selected && <EventDetails key={selected.id} event={selected} user={user} registration={saved.registrations[selected.id]} outcome={outcomes[selected.id]} saved={Boolean(savedEvents[selected.id])} now={now} dialogRef={popupRef} onClose={closePopup} onChanged={refresh} onSaved={notifySaved} onViewMyEvents={viewMyEvents} onBack={collectionView ? backToCollection : null} backLabel={collectionView ? `Back to ${VIEW_NAMES[collectionView]}` : undefined} />}
+      </EventsPopup>}
     </div>
   )
 }

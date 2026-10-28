@@ -1,0 +1,15 @@
+.collection-pagination { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-top: 22px; padding: 14px 0; border-top: 1px solid #253449; }
+.collection-pagination__summary { margin: 0; color: #8fa4bf; font-size: 13px; line-height: 1.6; }
+.collection-pagination__summary strong { color: #c4d2e3; font-weight: 600; font-variant-numeric: tabular-nums; }
+.collection-pagination__controls { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 5px; }
+.collection-pagination .collection-pagination__controls button { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 1px solid #30435b; border-radius: 9px; color: #b0c5de; background: #172538; font: inherit; font-size: 13px; line-height: 1; cursor: pointer; }
+.collection-pagination .collection-pagination__controls button[aria-current='page'] { border-color: #6ccbe2; color: #c7f6ff; background: #1b3d51; }
+.collection-pagination .collection-pagination__controls button:hover:not(:disabled) { border-color: #6ccbe2; background: #203b50; }
+.collection-pagination .collection-pagination__controls button:focus-visible { outline: 2px solid #67e8f9; outline-offset: 3px; }
+.collection-pagination .collection-pagination__controls button:disabled { color: #50647c; border-color: #213247; background: #121f2f; cursor: default; }
+.collection-pagination__ellipsis { width: 16px; color: #8fa4bf; text-align: center; }
+@media (max-width: 600px) {
+  .collection-pagination { gap: 12px; }
+  .collection-pagination__controls { justify-content: flex-start; }
+  .collection-pagination .collection-pagination__controls button { width: 36px; height: 40px; }
+}

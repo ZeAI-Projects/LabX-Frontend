@@ -1,0 +1,21 @@
+.events-list .events-list-row.events-list-row--compact { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 7px 16px; padding: 13px 15px; }
+.events-list-row--compact .events-list-row__content { grid-column: 1; min-width: 0; }
+.events-list-row--compact .events-list-row__category { margin-bottom: 3px; font-size: 10px; line-height: 1.4; }
+.events-list .events-list-row--compact h3 { font-size: 14px; line-height: 1.4; }
+.events-list-row--compact .events-list-row__format { grid-column: 2; justify-self: end; padding: 3px 7px; border: 1px solid #35526b; border-radius: 5px; color: #a9d3df; background: #183044; font-size: 10px; line-height: 1.5; white-space: nowrap; }
+.events-list-row--compact .events-list-facts { grid-column: 1; display: flex; flex-direction: column; gap: 3px; margin: 0; font-size: 11px; line-height: 1.5; }
+.events-list-row--compact .events-list-facts dt { padding-top: 1px; }
+.events-list .events-list-row--compact .events-list-row__trailing { grid-column: 2; display: flex; flex-direction: column; align-items: flex-end; gap: 7px; max-width: none; padding: 0; border: 0; }
+.events-list-row--compact .events-status { font-size: 10px; line-height: 1.4; }
+.events-list-row--compact .events-status > svg { width: 12px; height: 12px; }
+.events-list .events-list-row--compact .events-list-row__actions { display: flex; flex: initial; flex-wrap: nowrap; justify-content: flex-end; gap: 6px; width: auto; }
+.events-list .events-list-row--compact .events-list-row__actions .events-button { flex: none; min-height: 32px; padding: 6px 8px; gap: 5px; font-size: 11px; line-height: 1.4; white-space: nowrap; overflow-wrap: normal; }
+.events-list-row--compact .events-list-row__actions .events-button > svg { width: 14px; height: 14px; }
+@media (max-width: 600px) {
+  .events-list .events-list-row.events-list-row--compact { gap: 7px 10px; padding: 12px; }
+  .events-list-row--compact .events-list-facts { grid-column: 1 / -1; }
+  .events-list .events-list-row--compact .events-list-row__trailing { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+  .events-list .events-list-row--compact .events-list-row__trailing > .events-status { justify-content: flex-start; text-align: left; }
+  .events-list .events-list-row--compact .events-list-row__actions { margin-left: auto; }
+  .events-list .events-list-row--compact .events-list-row__actions .events-button { min-height: 40px; }
+}

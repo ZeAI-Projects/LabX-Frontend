@@ -8,6 +8,7 @@ const defaultSources = { projectStore, profileStore, eventStore, collaborationSt
 const text = (value) => typeof value === 'string' && value.trim().length > 0
 const date = (value) => typeof value === 'string' && Number.isFinite(Date.parse(value))
 const read = (operation, fallback) => { try { return operation() ?? fallback } catch { return fallback } }
+const activityDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' })
 
 // Consume each feature's validated, account-scoped API. Never interpret raw
 // storage, assessment guild suggestions, or external registration attempts as
@@ -20,10 +21,14 @@ export function readAchievementActivities(user, sources = defaultSources) {
     const key = JSON.stringify([metric, id])
     const entry = { id: key, userId: user.id, source: 'platform', status: 'Recorded', amount: 0, metric, targetId: id, date: completedAt }
     if (!records.has(key) || Date.parse(completedAt) < Date.parse(records.get(key).date)) records.set(key, entry)
+    // Keep each activity day even when a later edit keeps an existing badge's
+    // original recognition date. Visiting or refreshing a page is not activity.
+    if (metric !== 'activityDays') add('activityDays', activityDay.format(Date.parse(completedAt)), completedAt)
   }
   const projects = read(() => sources.projectStore.peekProjects(user.id), []).filter((project) => project?.owner_id === user.id && text(project.id))
   for (const project of projects) {
     add('projects', project.id, project.created_at)
+    if (date(project.updated_at)) add('activityDays', activityDay.format(Date.parse(project.updated_at)), project.updated_at)
     if (project.assessment_completed === true && project.assessment_result
       && Array.from({ length: ASSESSMENT_QUESTION_COUNT }, (_, index) => index + 1).every((step) => !validateAssessmentStep(project.assessment_answers, step))) {
       add('assessments', project.id, project.updated_at)
@@ -31,6 +36,7 @@ export function readAchievementActivities(user, sources = defaultSources) {
   }
 
   const profile = read(() => sources.profileStore.read(user.id), {})
+  if (date(profile.updatedAt)) add('activityDays', activityDay.format(Date.parse(profile.updatedAt)), profile.updatedAt)
   if (text(profile.bio)) add('profileBio', user.id, profile.updatedAt)
   const skills = new Set((Array.isArray(profile.skills) ? profile.skills : []).filter(text).map((skill) => skill.trim().toLocaleLowerCase()))
   // Preserve the highest qualifying skill count without duplicating private

@@ -171,6 +171,12 @@
 .events-inline-actions .events-button { font-size:14px; }
 .events-feedback { background: #123f3a; border: 1px solid #277469; border-radius: 9px; padding: 13px; color: #b2f5d9; font-size:14px; line-height: 1.7; overflow-wrap: anywhere; }
 .events-feedback--error { background: #4a2031; border-color: #a63f61; color: #ffcad7; }
+.events-save-toast { position: fixed; z-index: 1200; top: max(18px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 9px; width: max-content; max-width: calc(100vw - 32px); box-sizing: border-box; padding: 12px 16px; border: 1px solid #38786c; border-radius: 12px; background: #15382f; color: #c0f5df; box-shadow: 0 8px 28px #0005; font-size: 14px; font-weight: 600; line-height: 1.4; pointer-events: none; animation: events-save-toast-in .22s ease-out both; }
+.events-save-toast > svg { flex-shrink: 0; color: #83dfb9; }
+.events-save-toast--exiting { animation: events-save-toast-out .3s ease-in both; }
+@keyframes events-save-toast-in { from { opacity: 0; transform: translate(-50%, -10px) scale(.97); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+@keyframes events-save-toast-out { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, -8px); } }
+@media (prefers-reduced-motion: reduce) { .events-save-toast { animation: none; } .events-save-toast--exiting { opacity: 0; } }
 .events-external-steps { list-style: none; padding: 0; margin: 23px 0; display: flex; flex-direction: column; gap: 25px; }
 .events-external-steps > li { display: flex; align-items: flex-start; gap: 14px; }
 .events-external-steps > li > div { flex: 1; min-width: 0; }
@@ -361,3 +367,97 @@
   .events-view-count { min-width: 18px; padding: 1px 4px; }
 }
 @media (prefers-reduced-motion: reduce) { .events-list-row { transition: none; } }
+
+/* Search and compact collection tabs share the same discovery controls. */
+.app-shell .events-page .events-view-row { flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+.app-shell .events-page .events-primary-views { display: flex; flex-wrap: wrap; width: auto; overflow: visible; }
+.app-shell .events-page .events-secondary-views { display: flex; flex-wrap: wrap; width: auto; margin-left: auto; padding: 3px; gap: 3px; border-color: #25364b; background: #101b2a; overflow: visible; }
+.app-shell .events-page .events-secondary-views button { min-height: 34px; padding: 7px 9px; gap: 5px; font-size: 12px; font-weight: 600; }
+.app-shell .events-page .events-secondary-views button[aria-expanded='true'] { border-color: #3b6d82; color: #a8edf5; background: #203c4e; }
+.events-search-toolbar { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 5px; border: 1px solid #2b3e56; border-radius: 9px; background: #101c2e; }
+.events-search-input { display: flex; flex: 1; align-items: center; gap: 10px; min-width: 0; padding-left: 9px; color: #829db8; }
+.events-search-input > svg { flex-shrink: 0; }
+.events-search-input input { width: 100%; min-width: 0; min-height: 34px; padding: 6px 0; border: 0; border-radius: 4px; background: transparent; color: #e2eaf5; font: inherit; font-size: 13px; outline-offset: 1px; }
+.events-search-input input::placeholder { color: #859ab5; }
+.events-search-toolbar .events-filter-trigger { flex-shrink: 0; min-height: 34px; padding: 7px 11px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+.events-popup-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 15px; }
+.events-filters-dialog .events-advanced-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+.events-filters-dialog .events-location-fields { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; }
+.events-filters-dialog .events-advanced-filters > .events-note { grid-column: 1 / -1; }
+.events-filters-dialog .events-dialog__actions { margin-top: 0; }
+.events-collection-dialog { width: min(850px, calc(100% - 32px)); max-width: 850px; }
+.events-collection-count { margin: 17px 0 12px; color: #9cb0ca; font-size: 12px; }
+.events-collection-dialog .events-list-controls { margin-top: 14px; padding: 12px; }
+.events-collection-dialog .events-list-row { grid-template-columns: 46px minmax(0, 1fr) auto; gap: 12px; padding: 14px; }
+.events-collection-dialog .events-list-date { padding: 6px 4px; }
+.events-collection-dialog .events-list-date > strong { font-size: 21px; }
+.events-collection-dialog .events-list-row h3 { font-size: 14px; }
+.events-collection-dialog .events-list-row__organizer { margin-bottom: 5px; }
+.events-collection-dialog .events-list-row__trailing { grid-column: auto; flex-direction: column; align-items: flex-end; gap: 10px; max-width: none; }
+.events-collection-dialog .events-list-row__actions { flex-wrap: nowrap; }
+.events-collection-dialog .events-list-row__actions .events-button { flex-shrink: 0; min-height: 34px; padding: 7px 8px; font-size: 11px; white-space: nowrap; overflow-wrap: normal; }
+.app-shell .events-page .events-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.app-shell .events-page .events-card__visual { min-height: 190px; padding: 12px; gap: 7px; }
+.app-shell .events-page .events-card__visual .events-tag { font-size: 9px; padding: 5px; gap: 4px; letter-spacing: .02em; }
+.app-shell .events-page .events-date-chip { min-width: 34px; width: 34px; padding: 4px; }
+.app-shell .events-page .events-date-chip > span { font-size: 10px; }
+.app-shell .events-page .events-date-chip > strong { font-size: 17px; }
+.app-shell .events-page .events-sponsored-tag { top: 52px; left: 12px; font-size: 10px; }
+.app-shell .events-page .events-card__story { margin-top: 28px; }
+.app-shell .events-page .events-card__story h3 { font-size: 14px; line-height: 1.45; }
+.app-shell .events-page .events-card__story .events-card__description { font-size: 12px; }
+.app-shell .events-page .events-card__body { padding: 10px 12px 12px; }
+.app-shell .events-page .events-card-facts { font-size: 11px; gap: 7px; }
+.app-shell .events-page .events-card-facts > div { gap: 6px; }
+.app-shell .events-page .events-card__benefits { font-size: 11px; padding: 8px; }
+.app-shell .events-page .events-card__actions { gap: 6px; }
+.app-shell .events-page .events-card__actions .events-button { min-height: 36px; padding: 7px; gap: 5px; font-size: 11px; }
+@media (max-width: 1279px) {
+  .app-shell .events-page .events-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .app-shell .events-page .events-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .app-shell .events-page .events-primary-views { width: 100%; }
+  .app-shell .events-page .events-secondary-views { margin-left: auto; }
+}
+@media (max-width: 600px) {
+  .app-shell .events-page .events-grid { grid-template-columns: 1fr; }
+  .app-shell .events-page .events-primary-views { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; }
+  .app-shell .events-page .events-primary-views button { min-width: 0; justify-content: center; padding: 8px 5px; gap: 4px; white-space: normal; font-size: 11px; }
+  .app-shell .events-page .events-primary-views button > svg { display: none; }
+  .app-shell .events-page .events-secondary-views { display: flex; width: 100%; justify-content: space-between; gap: 2px; }
+  .app-shell .events-page .events-secondary-views button { min-width: 0; min-height: 40px; flex: 1 1 auto; justify-content: center; padding: 7px 5px; font-size: 10px; }
+  .app-shell .events-page .events-secondary-views button > svg { display: none; }
+  .app-shell .events-page .events-card__story h3 { font-size: 16px; }
+  .app-shell .events-page .events-card__story .events-card__description { font-size: 13px; }
+  .app-shell .events-page .events-card-facts, .app-shell .events-page .events-card__benefits { font-size: 12px; }
+  .app-shell .events-page .events-card__actions .events-button { min-height: 42px; font-size: 12px; }
+  .events-search-toolbar { gap: 5px; }
+  .events-search-input { gap: 7px; padding-left: 6px; }
+  .events-search-input input { font-size: 12px; }
+  .events-search-toolbar .events-filter-trigger { min-height: 40px; padding: 7px 9px; }
+  .events-popup-filters, .events-filters-dialog .events-advanced-filters, .events-filters-dialog .events-location-fields { grid-template-columns: 1fr; }
+  .events-collection-dialog .events-list-row { grid-template-columns: 42px minmax(0, 1fr); padding: 12px; }
+  .events-collection-dialog .events-list-row__trailing { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; align-items: center; max-width: none; }
+  .events-collection-dialog .events-list-row__actions { display: flex; width: 100%; }
+  .events-collection-dialog .events-list-row__actions .events-button { flex: 1; min-height: 40px; }
+}
+
+/* Labeled primary tabs, icon collection shortcuts, and in-popup navigation. */
+.app-shell .events-page .events-primary-views { display: flex; flex-wrap: nowrap; width: auto; gap: 4px; }
+.app-shell .events-page .events-primary-views button { display: inline-flex; justify-content: center; flex: 0 1 auto; width: auto; min-height: 40px; padding: 10px 16px; }
+.app-shell .events-page .events-primary-views button > svg { display: block; width: 16px; height: 16px; }
+.app-shell .events-page .events-secondary-views { width: auto; flex-wrap: nowrap; }
+.app-shell .events-page .events-secondary-views button { display: grid; place-items: center; flex: 0 0 40px; width: 40px; min-height: 40px; padding: 0; }
+.app-shell .events-page .events-secondary-views button > svg { display: block; width: 18px; height: 18px; }
+.events-detail-panel.has-back { padding-top: 38px; }
+.events-dialog__back { position: absolute; left: 13px; top: 13px; display: grid; place-items: center; width: 38px; height: 38px; padding: 0; border: 1px solid #36455e; border-radius: 9px; background: #1c2b44; color: #d4e3f8; cursor: pointer; }
+.events-dialog__back:hover { color: #9feaf6; border-color: #67b6c5; }
+.events-dialog__back:focus-visible { outline: 2px solid #67e8f9; outline-offset: 3px; }
+.events-collection-content[hidden] { display: none; }
+.events-collection-content .events-show-more { margin-top: 16px; }
+.events-collection-content .events-show-more .events-button { min-width: 140px; }
+@media (max-width: 600px) {
+  .app-shell .events-page .events-primary-views { width: 100%; }
+  .app-shell .events-page .events-primary-views button { flex: 1 1 auto; padding: 8px 5px; }
+}

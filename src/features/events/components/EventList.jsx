@@ -1,12 +1,10 @@
 import { ArrowUpRight, Bell, Bookmark, BookmarkCheck, CalendarCheck2, CheckCircle2, Clock, History, MapPin } from 'lucide-react'
 import { eventPhase, getRegistrationAvailability, getTrackingStatus } from '../services/mock_events.js'
 import './EventsPage.css'
+import './EventList.css'
 
 const dateOptions = { timeZone: 'Asia/Kolkata' }
 const dateFormatter = new Intl.DateTimeFormat('en-IN', { ...dateOptions, dateStyle: 'medium', timeStyle: 'short' })
-const monthFormatter = new Intl.DateTimeFormat('en-IN', { ...dateOptions, month: 'short' })
-const dayFormatter = new Intl.DateTimeFormat('en-IN', { ...dateOptions, day: '2-digit' })
-const yearFormatter = new Intl.DateTimeFormat('en-IN', { ...dateOptions, year: 'numeric' })
 
 export function EventList({ events, registrations = {}, outcomes = {}, savedEvents = {}, user, now, onSelect, onSave, label = 'Events' }) {
   return (
@@ -26,30 +24,26 @@ export function EventList({ events, registrations = {}, outcomes = {}, savedEven
         const StatusIcon = completed ? CheckCircle2 : phase === 'past' ? History : confirmed ? CalendarCheck2 : Clock
         const startsAt = new Date(event.startsAt)
         const fullDate = `${dateFormatter.format(startsAt)} IST`
+        const venue = event.format === 'Online' ? '' : event.location?.replace(/\s*\/\s*online\s*$/i, '')
 
         return (
           <li key={event.id}>
-            <article className="events-list-row" aria-labelledby={`event-list-title-${event.id}`}>
-              <time className="events-list-date" dateTime={event.startsAt} aria-label={fullDate}>
-                <span>{monthFormatter.format(startsAt)}</span>
-                <strong>{dayFormatter.format(startsAt)}</strong>
-                <small>{yearFormatter.format(startsAt)}</small>
-              </time>
+            <article className="events-list-row events-list-row--compact" aria-labelledby={`event-list-title-${event.id}`}>
               <div className="events-list-row__content">
                 <span className="events-list-row__category">{event.category}</span>
                 <h3 id={`event-list-title-${event.id}`}>{event.title}</h3>
-                <p className="events-list-row__organizer">{event.organizer}</p>
-                <dl className="events-list-facts">
+              </div>
+              <span className="events-list-row__format">{event.format}</span>
+              <dl className="events-list-facts">
                   <div>
                     <dt><Clock size={14} aria-hidden="true" /><span className="events-sr-only">{event.type === 'announcement' ? 'Published' : 'Starts'}</span></dt>
                     <dd><time dateTime={event.startsAt}>{fullDate}</time></dd>
                   </div>
-                  <div>
-                    <dt><MapPin size={14} aria-hidden="true" /><span className="events-sr-only">Format and location</span></dt>
-                    <dd>{event.format}{event.location ? ` · ${event.location}` : ''}</dd>
-                  </div>
-                </dl>
-              </div>
+                  {venue && <div>
+                    <dt><MapPin size={14} aria-hidden="true" /><span className="events-sr-only">Location</span></dt>
+                    <dd>{venue}</dd>
+                  </div>}
+              </dl>
               <div className="events-list-row__trailing">
                 <span className={`events-status${confirmed ? ' events-status--registered' : ''}${completed ? ' events-status--completed' : ''}`}>
                   <StatusIcon size={15} aria-hidden="true" />

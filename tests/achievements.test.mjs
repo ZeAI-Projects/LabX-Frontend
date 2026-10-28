@@ -55,11 +55,11 @@ test('earned dates reflect the qualifying approval and locked badges have no ear
     assert.ok(badge.progress >= 0 && badge.progress <= 100)
     assert.ok(badge.current <= badge.target)
   }
-  assert.equal(snapshot.earnedBadgeCount, 3)
+  assert.equal(snapshot.earnedBadgeCount, 1)
   assert.equal(snapshot.completedQuests, 3)
   assert.equal(snapshot.completedMilestones, 1)
-  assert.equal(snapshot.nextAchievement.id, 'quest-momentum')
-  assert.equal(snapshot.nextAchievement.progress, 60)
+  assert.equal(snapshot.nextAchievement.id, 'level-climber')
+  assert.equal(snapshot.nextAchievement.progress, 20)
 })
 
 test('new accounts and assessment placement cannot inherit demo rewards', () => {
@@ -101,8 +101,8 @@ test('recognition persists once per project mission and qualifies a level on the
   const snapshot = getAchievementsSnapshot(owner, completed)
   assert.equal(snapshot.completedQuests, 3)
   assert.equal(snapshot.completedMilestones, 1)
-  assert.equal(snapshot.earnedBadgeCount, 3)
-  assert.equal(snapshot.badges.find((badge) => badge.id === 'milestone-maker').earnedAt, approval(firstLevel[2], 2).submittedAt)
+  assert.equal(snapshot.earnedBadgeCount, 1)
+  assert.equal(snapshot.recognitionActivity.find((entry) => entry.metric === 'milestones').date, approval(firstLevel[2], 2).submittedAt)
   assert.equal(snapshot.pointsBalance, 0)
   assert.deepEqual(snapshot.transactions, [])
   // Reads do not depend on the original project continuing to exist.
@@ -203,7 +203,69 @@ function platformFixture(initialUser = builder) {
 }
 const badgeById = (snapshot, id) => snapshot.badges.find((badge) => badge.id === id)
 
-test('catalog contains 30 unique actionable LabX achievements and two explicitly unavailable guild awards', () => {
+test('the first ten achievements match the requested order, unlock conditions, categories and thresholds', () => {
+  const firstTen = getAchievementsSnapshot(owner, [], {}).badges.slice(0, 10)
+  assert.deepEqual(firstTen.map(({ name, criteria, category, metric, target }) => [name, criteria, category, metric, target]), [
+    ['First Step', 'Complete 1 mission', 'Missions', 'quests', 1],
+    ['Mission Master', 'Complete 100 missions', 'Missions', 'quests', 100],
+    ['Event Explorer', 'Attend 10 events', 'Events', 'eventParticipation', 10],
+    ['Event Champion', 'Attend 25 events', 'Events', 'eventParticipation', 25],
+    ['Roadmap Builder', 'Reach 50% progress in an individual roadmap', 'Roadmap', 'roadmapProgress', 50],
+    ['Roadmap Champion', 'Reach 100% progress in an individual roadmap', 'Roadmap', 'roadmapProgress', 100],
+    ['Consistency Champion', 'Maintain a 30-day activity streak', 'Consistency', 'activityStreak', 30],
+    ['Community Connect', 'Connect with 5 unique users', 'Social Interaction', 'uniqueConnections', 5],
+    ['Conversation Starter', 'Publish 10 eligible posts', 'Social Interaction', 'eligiblePosts', 10],
+    ['Community Contributor', 'Receive 5 accepted answers or verified helpful contributions', 'Social Interaction', 'helpfulContributions', 5],
+  ])
+})
+
+test('Mission Master unlocks on the hundredth distinct approved project mission and keeps its qualifying date', () => {
+  const store = createAchievementStore({ storage: memoryStorage() })
+  const missionIds = createMockRoadmap().stages.flatMap((stage) => stage.levels.flatMap((level) => level.milestones.map((mission) => mission.id)))
+  const secondProject = { ...project, id: 'project-two' }
+  store.recordRoadmap(owner, project, validatedSnapshot(missionIds.map((id) => approval(id))))
+  store.recordRoadmap(owner, secondProject, validatedSnapshot(missionIds.slice(0, 24).map((id) => approval(id))))
+  let snapshot = getAchievementsSnapshot(owner, store.read(owner), {})
+  assert.equal(snapshot.completedQuests, 99)
+  assert.equal(badgeById(snapshot, 'mission-master').isEarned, false)
+  assert.equal(badgeById(snapshot, 'mission-master').current, 99)
+  const hundredth = approval(missionIds[24], 1)
+  const finalApproval = validatedSnapshot([hundredth])
+  store.recordRoadmap(owner, secondProject, finalApproval)
+  store.recordRoadmap(owner, secondProject, finalApproval)
+  snapshot = getAchievementsSnapshot(owner, store.read(owner), {})
+  assert.equal(snapshot.completedQuests, 100)
+  assert.equal(badgeById(snapshot, 'mission-master').isEarned, true)
+  assert.equal(badgeById(snapshot, 'mission-master').earnedAt, hundredth.submittedAt)
+  assert.equal(snapshot.pointsBalance, 0)
+})
+
+test('attendance awards require ten and twenty-five distinct participation records, excluding registration and duplicate records', () => {
+  const store = createAchievementStore({ storage: memoryStorage() })
+  const activity = (index, metric = 'eventParticipation') => ({
+    userId: owner.id, source: 'platform', status: 'Recorded', amount: 0,
+    metric, targetId: `event-${index}`, date: `2026-10-20T12:${String(index).padStart(2, '0')}:00Z`,
+  })
+  const snapshot = () => getAchievementsSnapshot(owner, [], { achievementStore: store })
+  store.recordPlatform(owner, Array.from({ length: 25 }, (_, index) => activity(index, 'eventRegistrations')))
+  assert.equal(badgeById(snapshot(), 'event-attendance-explorer').current, 0)
+  store.recordPlatform(owner, Array.from({ length: 9 }, (_, index) => activity(index)))
+  store.recordPlatform(owner, [activity(0), activity(8)])
+  assert.equal(badgeById(snapshot(), 'event-attendance-explorer').current, 9)
+  assert.equal(badgeById(snapshot(), 'event-attendance-explorer').isEarned, false)
+  store.recordPlatform(owner, [activity(9)])
+  assert.equal(badgeById(snapshot(), 'event-attendance-explorer').isEarned, true)
+  assert.equal(badgeById(snapshot(), 'event-attendance-explorer').earnedAt, activity(9).date)
+  store.recordPlatform(owner, Array.from({ length: 14 }, (_, index) => activity(index + 10)))
+  assert.equal(badgeById(snapshot(), 'event-champion').current, 24)
+  assert.equal(badgeById(snapshot(), 'event-champion').isEarned, false)
+  store.recordPlatform(owner, [activity(24)])
+  assert.equal(badgeById(snapshot(), 'event-champion').isEarned, true)
+  assert.equal(badgeById(snapshot(), 'event-champion').earnedAt, activity(24).date)
+  assert.equal(badgeById(snapshot(), 'event-attendance-explorer').earnedAt, activity(9).date)
+})
+
+test('catalog contains 30 unique LabX achievements and three explicitly unavailable social awards', () => {
   const snapshot = getAchievementsSnapshot(owner, [], {})
   assert.equal(snapshot.badges.length, 30)
   assert.equal(new Set(snapshot.badges.map((badge) => badge.id)).size, 30)
@@ -212,7 +274,7 @@ test('catalog contains 30 unique actionable LabX achievements and two explicitly
     assert.ok(['gold', 'mint', 'violet'].includes(badge.tone))
     assert.ok(badge.icon)
     assert.ok(Number.isInteger(badge.target) && badge.target > 0)
-    if (badge.id.startsWith('guild-')) {
+    if (badge.category === 'Social Interaction') {
       assert.ok(badge.availabilityNote)
       assert.equal(badge.actionPath, null)
       assert.equal(badge.actionLabel, null)
@@ -222,24 +284,25 @@ test('catalog contains 30 unique actionable LabX achievements and two explicitly
       assert.ok(badge.actionLabel)
     }
   }
-  assert.equal(badgeById(snapshot, 'milestone-maker').name, 'First Level Up')
+  assert.equal(snapshot.badges.filter((badge) => badge.availabilityNote).length, 3)
 })
 
-test('project creation and valid assessment completion award only their own badges, never levels or guild membership', () => {
+test('project creation and valid assessment completion remain source activity without awarding mission, roadmap or social achievements', () => {
   const app = platformFixture()
   const project = app.sources.projectStore.createProject('New venture', builder.id)
   let snapshot = app.snapshot()
-  assert.equal(badgeById(snapshot, 'project-starter').isEarned, true)
-  assert.equal(badgeById(snapshot, 'assessment-complete').isEarned, false)
+  assert.equal(snapshot.earnedBadgeCount, 0)
+  assert.equal(readAchievementActivities(builder, app.sources).filter((entry) => entry.metric === 'projects').length, 1)
+  assert.equal(readAchievementActivities(builder, app.sources).filter((entry) => entry.metric === 'assessments').length, 0)
   app.setTime('2026-10-15T12:00:00Z')
   app.sources.projectStore.completeProject(project.id, completeAnswers, builder.id)
   snapshot = app.snapshot()
-  assert.equal(badgeById(snapshot, 'assessment-complete').isEarned, true)
-  assert.equal(badgeById(snapshot, 'assessment-complete').earnedAt, '2026-10-15T12:00:00.000Z')
+  assert.equal(snapshot.earnedBadgeCount, 0)
+  assert.equal(readAchievementActivities(builder, app.sources).find((entry) => entry.metric === 'assessments').date, '2026-10-15T12:00:00.000Z')
   assert.equal(snapshot.completedQuests, 0)
   assert.equal(snapshot.completedMilestones, 0)
   assert.equal(snapshot.pointsBalance, 0)
-  for (const id of ['milestone-maker', 'guild-founder', 'guild-member']) assert.equal(badgeById(snapshot, id).isEarned, false)
+  for (const id of ['first-quest', 'roadmap-builder', 'roadmap-champion', 'community-connect', 'conversation-starter', 'community-contributor']) assert.equal(badgeById(snapshot, id).isEarned, false)
   app.switchUser(teammate)
   assert.equal(app.snapshot().earnedBadgeCount, 0)
   assert.equal(app.snapshot(builder).earnedBadgeCount, 0, 'A stale account cannot read another signed-in account through its stores')
@@ -280,6 +343,8 @@ test('event achievements distinguish confirmed registration, saved opportunities
   snapshot = app.snapshot()
   for (const id of ['event-first', 'event-explorer', 'event-saved']) assert.equal(badgeById(snapshot, id).isEarned, true)
   assert.equal(badgeById(snapshot, 'event-participation').isEarned, false, 'Registration does not prove participation')
+  assert.equal(badgeById(snapshot, 'event-attendance-explorer').current, 0)
+  assert.equal(badgeById(snapshot, 'event-champion').current, 0)
   app.setTime('2026-10-18T12:00:00Z')
   const certificate = Buffer.from('%PDF-1.4\nSample certificate')
   events.saveOutcome(builder, 'customer-workshop', {
@@ -289,6 +354,8 @@ test('event achievements distinguish confirmed registration, saved opportunities
   snapshot = app.snapshot()
   for (const id of ['event-participation', 'event-feedback', 'event-certificate']) assert.equal(badgeById(snapshot, id).isEarned, true)
   assert.equal(badgeById(snapshot, 'event-participation').earnedAt, '2026-10-18T12:00:00.000Z')
+  assert.equal(badgeById(snapshot, 'event-attendance-explorer').current, 1)
+  assert.equal(badgeById(snapshot, 'event-attendance-explorer').isEarned, false)
   assert.equal(snapshot.pointsBalance, 0)
   assert.deepEqual(snapshot.transactions, [])
   app.switchUser(teammate)
@@ -311,8 +378,9 @@ test('collaboration badges require own published opportunity or accepted members
   const snapshot = app.snapshot()
   assert.equal(badgeById(snapshot, 'roadmap-teammate').isEarned, true)
   assert.equal(badgeById(snapshot, 'roadmap-teammate').earnedAt, '2026-10-15T12:00:00.000Z')
-  assert.equal(badgeById(snapshot, 'project-starter').isEarned, false, 'Joining another founder does not create an owned project')
-  assert.equal(badgeById(snapshot, 'guild-member').isEarned, false)
+  assert.equal(readAchievementActivities(teammate, app.sources).some((entry) => entry.metric === 'projects'), false, 'Joining another founder does not create an owned project')
+  assert.equal(badgeById(snapshot, 'community-connect').isEarned, false, 'Team membership is not a social connection')
+  assert.equal(badgeById(snapshot, 'conversation-starter').isEarned, false, 'Collaboration opportunities are not eligible social posts')
   assert.equal(snapshot.completedQuests, 0)
 })
 
@@ -337,8 +405,10 @@ test('profile recognition keeps its first date after unrelated edits and remains
   const originalLedger = app.storage.getItem(platformAchievementKey(builder.id))
   app.setTime('2026-10-18T12:00:00Z')
   app.sources.profileStore.save(builder.id, { city: 'Chennai' })
-  assert.deepEqual(app.capture(), first)
-  assert.equal(app.storage.getItem(platformAchievementKey(builder.id)), originalLedger, 'Unrelated source edits do not rewrite recognition')
+  const updated = app.capture()
+  assert.deepEqual(updated.filter((entry) => entry.metric !== 'activityDays'), first.filter((entry) => entry.metric !== 'activityDays'), 'Unrelated source edits preserve badge recognition')
+  assert.deepEqual(updated.filter((entry) => entry.metric === 'activityDays').map((entry) => entry.targetId), ['2026-10-14', '2026-10-18'])
+  assert.deepEqual(app.capture(), updated, 'Reading the same profile does not create another activity day')
   assert.equal(badgeById(app.snapshot(), 'profile-story').earnedAt, earnedAt)
   app.sources.profileStore.save(builder.id, { bio: '', skills: [] })
   app.capture()
@@ -352,32 +422,62 @@ test('profile recognition keeps its first date after unrelated edits and remains
   assert.equal(originalLedger.includes('Research'), false, 'Recognition does not duplicate private skill names')
 })
 
-test('saved event and project achievements survive unsaving and deletion and remain isolated after reload', () => {
+test('recurring profile activity records distinct days and unlocks a retained thirty-day streak without changing the original badge date', () => {
+  const app = platformFixture()
+  app.setTime('2026-09-01T12:00:00Z')
+  app.sources.profileStore.save(builder.id, { bio: 'My founder story' })
+  app.capture()
+  const bioDate = badgeById(app.snapshot(), 'profile-story').earnedAt
+  for (let day = 2; day <= 30; day += 1) {
+    app.setTime(`2026-09-${String(day).padStart(2, '0')}T12:00:00Z`)
+    app.sources.profileStore.save(builder.id, { city: `City ${day}` })
+    app.capture()
+    app.capture()
+    if (day === 29) assert.equal(badgeById(app.snapshot(), 'consistency-champion').isEarned, false)
+  }
+  const days = app.sources.achievementStore.readPlatform(builder).filter((entry) => entry.metric === 'activityDays')
+  assert.equal(days.length, 30, 'Repeated reads never duplicate a saved activity day')
+  assert.equal(new Set(days.map((entry) => entry.targetId)).size, 30)
+  assert.equal(badgeById(app.snapshot(), 'profile-story').earnedAt, bioDate)
+  const streak = badgeById(app.snapshot(), 'consistency-champion')
+  assert.equal(streak.isEarned, true)
+  assert.equal(streak.earnedAt, '2026-09-30T12:00:00.000Z')
+  app.setTime('2026-10-14T12:00:00Z')
+  app.sources.profileStore.save(builder.id, { bio: '' })
+  app.capture()
+  app.sources.achievementStore = createAchievementStore({ storage: app.storage })
+  assert.equal(badgeById(app.snapshot(), 'consistency-champion').earnedAt, streak.earnedAt)
+  assert.equal(badgeById(app.snapshot(), 'profile-story').earnedAt, bioDate)
+  app.switchUser(teammate)
+  assert.equal(badgeById(app.snapshot(), 'consistency-champion').isEarned, false)
+})
+
+test('saved event achievement and project activity survive unsaving and deletion and remain isolated after reload', () => {
   const app = platformFixture()
   const project = app.sources.projectStore.createProject('Temporary project', builder.id)
   app.sources.projectStore.completeProject(project.id, completeAnswers, builder.id)
   app.sources.eventStore.setSaved(builder, 'customer-workshop', true)
   app.capture()
   const saved = app.snapshot()
+  const projectActivity = app.sources.achievementStore.readPlatform(builder).filter((entry) => ['projects', 'assessments'].includes(entry.metric))
   app.setTime('2026-10-18T12:00:00Z')
   app.sources.eventStore.setSaved(builder, 'customer-workshop', false)
   app.sources.projectStore.renameProject(project.id, 'New title', builder.id)
   app.capture()
-  assert.equal(badgeById(app.snapshot(), 'assessment-complete').earnedAt, badgeById(saved, 'assessment-complete').earnedAt)
+  assert.deepEqual(app.sources.achievementStore.readPlatform(builder).filter((entry) => ['projects', 'assessments'].includes(entry.metric)), projectActivity)
   app.sources.projectStore.deleteProject(project.id, builder.id)
   app.capture()
   app.sources.achievementStore = createAchievementStore({ storage: app.storage })
-  for (const id of ['event-saved', 'project-starter', 'assessment-complete']) {
-    assert.equal(badgeById(app.snapshot(), id).isEarned, true)
-    assert.equal(badgeById(app.snapshot(), id).earnedAt, badgeById(saved, id).earnedAt)
-  }
+  assert.equal(badgeById(app.snapshot(), 'event-saved').isEarned, true)
+  assert.equal(badgeById(app.snapshot(), 'event-saved').earnedAt, badgeById(saved, 'event-saved').earnedAt)
+  assert.deepEqual(app.sources.achievementStore.readPlatform(builder).filter((entry) => ['projects', 'assessments'].includes(entry.metric)), projectActivity)
   app.switchUser(teammate)
   app.capture()
   assert.equal(app.snapshot().earnedBadgeCount, 0)
   assert.deepEqual(app.sources.achievementStore.readPlatform(teammate), [])
   assert.equal(app.storage.getItem(platformAchievementKey(teammate.id)), null)
   app.switchUser(builder)
-  assert.equal(app.snapshot().earnedBadgeCount, 3)
+  assert.equal(app.snapshot().earnedBadgeCount, 1)
 })
 
 test('platform ledger sanitizes account, metric, points and dates while deduplicating earliest qualification', () => {
@@ -408,7 +508,7 @@ test('platform ledger sanitizes account, metric, points and dates while deduplic
   assert.deepEqual(store.readPlatform(owner), [])
 })
 
-test('snapshots merge stored recognition with current evidence without writing, double counting, or speculative guild awards', () => {
+test('snapshots merge stored recognition with current evidence without writing, double counting, or speculative social awards', () => {
   const app = platformFixture()
   app.sources.profileStore.save(builder.id, { bio: 'Builder', skills: ['Research'] })
   app.capture()
@@ -422,6 +522,6 @@ test('snapshots merge stored recognition with current evidence without writing, 
   assert.equal(snapshot.earnedBadgeCount, 2, 'Current event evidence merges with the saved bio award')
   assert.equal(badgeById(snapshot, 'profile-story').current, 1)
   assert.equal(badgeById(snapshot, 'event-saved').isEarned, true)
-  for (const id of ['guild-founder', 'guild-member']) assert.equal(badgeById(snapshot, id).isEarned, false)
+  for (const id of ['community-connect', 'conversation-starter', 'community-contributor']) assert.equal(badgeById(snapshot, id).isEarned, false)
   assert.equal(writes, 0)
 })

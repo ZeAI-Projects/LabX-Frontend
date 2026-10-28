@@ -67,9 +67,9 @@ try {
   assert.equal(await page.locator('.sharp-page .sharp-welcome__avatar').isVisible(),false,'Companion does not repeat the large welcome robot');
   await go('/events');await page.setViewportSize({width:390,height:844});
   assert.equal(await page.getByLabel('Category',{exact:true}).isVisible(),false);
-  await page.getByRole('button',{name:/More filters/}).click();
+  await page.getByRole('button',{name:'Filters',exact:true}).click();
   assert.equal(await page.getByLabel('Category',{exact:true}).isVisible(),true);
-  await page.getByRole('button',{name:/More filters/}).click();await shot('events-mobile');
+  await page.getByRole('button',{name:'Show results',exact:true}).click();await shot('events-mobile');
   await page.setViewportSize({width:1440,height:960});
   await go('/roadmap/'+project);
   await page.getByRole('region',{name:'Current stage navigation',exact:true}).waitFor();
