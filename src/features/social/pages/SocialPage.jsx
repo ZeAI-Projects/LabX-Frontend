@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Check, ChevronDown, Heart, MessageCircle, MoreHorizontal, Paperclip, Plus, Search, Send, Share2, Smile, Trash2, Users, X } from 'lucide-react'
+import { ArrowLeft, Check, ChevronDown, Copy, Heart, MessageCircle, MoreHorizontal, Paperclip, Plus, Search, Send, Share2, Smile, Trash2, Users, X } from 'lucide-react'
 import { ProfileAvatar } from '../../../components/common/ProfileAvatar.jsx'
 import { useAuth } from '../../../hooks/use_auth.js'
 import { getRoleLabel } from '../../../utils/roles.js'
@@ -16,18 +16,94 @@ const relativeTime = (date) => {
   return `${Math.floor(seconds / 86400)}d ago`
 }
 const messageTime = (date) => new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(date)
+const conversationActivity = (conversation) => conversation.messages.at(-1)?.createdAt || conversation.startedAt || 0
 
-function SocialIdentity({ user, profile, compact = false }) {
-  const destination = `/profile?userId=${encodeURIComponent(user.id)}`
+function SocialProfileControl({ user, className, available, onUnavailable, onSelect, ariaLabel, role, children }) {
+  if (available) return <Link className={className} to={`/profile?userId=${encodeURIComponent(user.id)}`} aria-label={ariaLabel} role={role}>{children}</Link>
+  if (onSelect || onUnavailable) return <button className={className} type="button" aria-label={ariaLabel} title={onUnavailable ? 'Profile not created' : undefined} onClick={() => (onSelect || onUnavailable)(user)} role={role}>{children}</button>
+  return <span className={className} role={role}>{children}</span>
+}
+
+function SocialMediaPreview({ media, onClose }) {
+  const dialogRef = useRef(null)
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    dialog.showModal()
+    return () => dialog.close()
+  }, [])
+
+  return <dialog ref={dialogRef} className="social-media-preview" aria-label="Post image preview" onCancel={event => { event.preventDefault(); onClose() }} onClick={event => { if (event.target === event.currentTarget) onClose() }}>
+    <button className="social-icon-button" type="button" aria-label="Close image preview" onClick={onClose}><X size={20} /></button>
+    <img src={media.src} alt={media.alt} />
+  </dialog>
+}
+
+function SocialIdentity({ user, profile, compact = false, profileAvailable = false, onUnavailableProfile, onSelect }) {
   const assessment = user.assessment_result || {}
   const details = [profile?.startup?.name, user.domain || assessment.domain, user.stage || assessment.stage, (user.level || assessment.level) && `Level ${user.level || assessment.level}`].filter(Boolean)
   return <div className={`social-identity${compact ? ' social-identity--compact' : ''}`}>
-    <Link className="social-identity__avatar" to={destination} aria-label={`Open ${user.full_name || user.username}'s profile`}><ProfileAvatar user={user} /></Link>
+    <SocialProfileControl className="social-identity__avatar" user={user} available={profileAvailable} onUnavailable={onUnavailableProfile} onSelect={onSelect} ariaLabel={`${onSelect ? 'Select' : 'Open'} ${user.full_name || user.username}'s ${onSelect ? 'conversation' : 'profile'}`}><ProfileAvatar user={user} /></SocialProfileControl>
     <div className="social-identity__copy">
-      <Link to={destination} className="social-identity__name">{user.full_name || user.username}</Link>
-      <Link to={destination} className="social-identity__handle">@{user.username || user.email?.split('@')[0]}</Link>
+      <SocialProfileControl className="social-identity__name" user={user} available={profileAvailable} onUnavailable={onUnavailableProfile} onSelect={onSelect}>{user.full_name || user.username}</SocialProfileControl>
+      <SocialProfileControl className="social-identity__handle" user={user} available={profileAvailable} onUnavailable={onUnavailableProfile} onSelect={onSelect}>@{user.username || user.email?.split('@')[0]}</SocialProfileControl>
       {!compact && <span className="social-identity__role">{[getRoleLabel(user.role), ...details].join(' · ')}</span>}
     </div>
+  </div>
+}
+
+function CreatePostAudience({ audience, onChange }) {
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef(null)
+  const optionRefs = useRef([])
+  const options = ['Everyone', 'Connections', 'Only me']
+
+  useEffect(() => {
+    if (!open) return undefined
+    function handlePointerDown(event) {
+      if (!rootRef.current?.contains(event.target)) setOpen(false)
+    }
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setOpen(false)
+      }
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open])
+
+  return <div className="social-audience__control" ref={rootRef}>
+    <button className="social-audience__select" type="button" aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen(value => !value)}>
+      <Users size={15} />{audience}<ChevronDown size={14} />
+    </button>
+    {open && <div className="social-audience__options" role="listbox" aria-label="Post audience">
+      {options.map((option, index) => <button
+        key={option}
+        ref={element => { optionRefs.current[index] = element }}
+        type="button"
+        role="option"
+        aria-selected={audience === option}
+        onKeyDown={event => {
+          if (event.key === 'Escape') {
+            event.preventDefault()
+            setOpen(false)
+            rootRef.current?.querySelector('.social-audience__select')?.focus()
+            return
+          }
+          const nextIndex = event.key === 'ArrowDown' ? (index + 1) % options.length : event.key === 'ArrowUp' ? (index - 1 + options.length) % options.length : event.key === 'Home' ? 0 : event.key === 'End' ? options.length - 1 : -1
+          if (nextIndex >= 0) {
+            event.preventDefault()
+            optionRefs.current[nextIndex]?.focus()
+          }
+        }}
+        onClick={() => { onChange(option); setOpen(false) }}
+      >{option}</button>)}
+    </div>}
   </div>
 }
 
@@ -82,8 +158,8 @@ function CreatePostDialog({ user, profile, onClose, onPublish }) {
   return <dialog ref={dialogRef} className="social-dialog" aria-labelledby="social-create-title" onCancel={(event) => { event.preventDefault(); onClose() }} onClick={(event) => { if (event.target === event.currentTarget) onClose() }}>
     <header className="social-dialog__header"><div><span className="social-eyebrow">Share with your community</span><h2 id="social-create-title">Create post</h2></div><button className="social-icon-button" type="button" aria-label="Close create post" onClick={onClose}><X size={19} /></button></header>
     <form onSubmit={submit}>
-      <SocialIdentity user={user} profile={profile} compact />
-      <label className="social-audience"><span>Post audience</span><span className="social-audience__select"><Users size={15} /><select value={audience} onChange={(event) => setAudience(event.target.value)} aria-label="Post audience"><option>Everyone</option><option>Connections</option><option>Only me</option></select><ChevronDown size={14} /></span></label>
+      <SocialIdentity user={user} profile={profile} profileAvailable compact />
+      <label className="social-audience"><span>Post audience</span><CreatePostAudience audience={audience} onChange={setAudience} /></label>
       <textarea ref={editorRef} className="social-editor" value={text} onChange={(event) => { setText(event.target.value); setError('') }} placeholder="What are you building or thinking about?" maxLength={5000} aria-label="Post text" />
       <div className="social-dialog__note">Local preview only — posts are not shared with other accounts.</div>
       <div className="social-composer-tools" aria-label="Available post tools">
@@ -98,7 +174,11 @@ function CreatePostDialog({ user, profile, onClose, onPublish }) {
 
 function ShareLinkDialog({ url, onClose }) {
   const dialogRef = useRef(null)
+  const closeTimerRef = useRef(null)
+  const copyInProgressRef = useRef(false)
+  const isOpenRef = useRef(false)
   const [error, setError] = useState('')
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -106,19 +186,37 @@ function ShareLinkDialog({ url, onClose }) {
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     dialog.showModal()
+    isOpenRef.current = true
     return () => {
+      isOpenRef.current = false
+      if (closeTimerRef.current !== null) window.clearTimeout(closeTimerRef.current)
       dialog.close()
       document.body.style.overflow = previousOverflow
       if (opener instanceof HTMLElement && opener.isConnected) opener.focus({ preventScroll: true })
     }
   }, [])
 
+  function showCopied() {
+    if (closeTimerRef.current !== null || !isOpenRef.current) return
+    setError('')
+    setCopied(true)
+    closeTimerRef.current = window.setTimeout(() => {
+      closeTimerRef.current = null
+      onClose()
+    }, 3000)
+  }
+
   async function copyLink() {
+    if (copyInProgressRef.current || closeTimerRef.current !== null) return
+    copyInProgressRef.current = true
     try {
       if (!navigator.clipboard?.writeText) throw new Error('Clipboard access is unavailable in this browser. Select and copy the link instead.')
       await navigator.clipboard.writeText(url)
-      onClose()
+      if (!isOpenRef.current) return
+      showCopied()
     } catch (copyError) {
+      copyInProgressRef.current = false
+      if (!isOpenRef.current) return
       setError(copyError instanceof Error ? copyError.message : 'Unable to copy the post link.')
     }
   }
@@ -127,23 +225,67 @@ function ShareLinkDialog({ url, onClose }) {
     <header className="social-dialog__header"><div><span className="social-eyebrow">Share post</span><h2 id="social-share-title">Copy link</h2></div><button className="social-icon-button" type="button" aria-label="Close share dialog" onClick={onClose}><X size={19} /></button></header>
     <p className="social-share-dialog__description">Anyone with this link can open this post in the current app session.</p>
     <label className="social-sr-only" htmlFor="social-share-url">Post link</label>
-    <input id="social-share-url" className="social-share-dialog__url" value={url} readOnly onFocus={event => event.currentTarget.select()} />
+    <input id="social-share-url" className="social-share-dialog__url" value={url} readOnly onFocus={event => event.currentTarget.select()} onCopy={showCopied} />
     {error && <p className="social-error" role="alert">{error}</p>}
-    <footer className="social-dialog__footer"><span>Direct post URL only</span><button className="social-primary-button" type="button" onClick={copyLink}>Copy link</button></footer>
+    {copied && <p className="social-share-dialog__status" role="status">Link copied.</p>}
+    <footer className="social-dialog__footer"><span>Direct post URL only</span><button className="social-primary-button" type="button" onClick={copyLink} disabled={copied}>{copied ? <><Check size={16} />Copied!</> : <><Copy size={16} />Copy Link</>}</button></footer>
   </dialog>
 }
 
-function SocialPost({ post, user, profile, people, onDelete, onLike, onComment }) {
+function SocialPost({ post, user, profile, people, onDelete, onLike, onComment, onUnavailableProfile }) {
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [likesOpen, setLikesOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [replyTo, setReplyTo] = useState(null)
   const [comment, setComment] = useState('')
   const [shareOpen, setShareOpen] = useState(false)
+  const [previewMedia, setPreviewMedia] = useState(null)
+  const likesRef = useRef(null)
+  const likesTimerRef = useRef(null)
+  const longPressTriggeredRef = useRef(false)
   const liked = post.likes.includes(user.id)
   const likers = post.likes.map(id => people.find(person => person.id === id)).filter(Boolean)
   const timestamp = relativeTime(post.createdAt)
   const postUrl = `${window.location.origin}${window.location.pathname}#post-${post.id}`
+  const mediaItems = post.media ? (Array.isArray(post.media) ? post.media : [post.media]) : []
+  const visibleMediaItems = mediaItems.slice(0, 4)
+  const galleryLayout = Math.min(mediaItems.length, 4)
+
+  useEffect(() => {
+    if (!likesOpen) return undefined
+    function handlePointerDown(event) {
+      if (!likesRef.current?.contains(event.target)) setLikesOpen(false)
+    }
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') setLikesOpen(false)
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [likesOpen])
+
+  useEffect(() => () => {
+    if (likesTimerRef.current) window.clearTimeout(likesTimerRef.current)
+  }, [])
+
+  function startLikeCountPress() {
+    if (likesTimerRef.current) window.clearTimeout(likesTimerRef.current)
+    longPressTriggeredRef.current = false
+    likesTimerRef.current = window.setTimeout(() => {
+      longPressTriggeredRef.current = true
+      setLikesOpen(true)
+    }, 450)
+  }
+
+  function endLikeCountPress() {
+    if (likesTimerRef.current) {
+      window.clearTimeout(likesTimerRef.current)
+      likesTimerRef.current = null
+    }
+  }
 
   function submitComment(event) {
     event.preventDefault()
@@ -155,7 +297,7 @@ function SocialPost({ post, user, profile, people, onDelete, onLike, onComment }
 
   return <article className="social-post" id={`post-${post.id}`}>
     <header className="social-post__header">
-      <SocialIdentity user={post.author} profile={post.author.id === user.id ? profile : null} />
+      <SocialIdentity user={post.author} profile={post.author.id === user.id ? profile : null} profileAvailable={post.author.id === user.id} onUnavailableProfile={onUnavailableProfile} />
       <div className="social-post__header-end"><time dateTime={new Date(post.createdAt).toISOString()}>{timestamp}</time><div className="social-post__menu-wrap">
         {post.author.id === user.id && <>
           <button className="social-icon-button" type="button" aria-label="Post options" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}><MoreHorizontal size={20} /></button>
@@ -164,26 +306,34 @@ function SocialPost({ post, user, profile, people, onDelete, onLike, onComment }
       </div></div>
     </header>
     <p className="social-post__text">{post.text}</p>
-    {post.media && <img className="social-post__media" src={post.media.src} alt={post.media.alt} loading="lazy" />}
+    {mediaItems.length > 0 && <div className={`social-post__media-grid social-post__media-grid--${galleryLayout}`} role="group" aria-label={`${mediaItems.length} post images`}>
+      {visibleMediaItems.map((media, index) => <button className={`social-post__media-item${mediaItems.length > 4 && index === 3 ? ' social-post__media-item--more' : ''}`} type="button" onClick={() => setPreviewMedia(media)} aria-label={`View image ${index + 1} of ${mediaItems.length}`} key={`${media.src}-${index}`}>
+        <img className="social-post__media social-post__media--grid" src={media.src} alt={media.alt} loading="lazy" />
+        {mediaItems.length > 4 && index === 3 && <span aria-hidden="true">+{mediaItems.length - 4}</span>}
+      </button>)}
+    </div>}
     {post.audience !== 'Everyone' && <span className="social-post__audience">{post.audience} · local preview</span>}
-    <div className="social-post__stats">
-      <button type="button" onClick={() => setCommentsOpen(!commentsOpen)}>{post.comments.length} {post.comments.length === 1 ? 'comment' : 'comments'}</button>
-    </div>
     <div className="social-post__actions" aria-label="Post actions">
-      <div className="social-action-like">
-        <button type="button" className={liked ? 'is-liked' : ''} aria-pressed={liked} onClick={() => onLike(post.id)}><Heart size={17} fill={liked ? 'currentColor' : 'none'} />{liked ? 'Liked' : 'Like'}</button>
-        <div className="social-like-count" onMouseEnter={() => setLikesOpen(true)} onMouseLeave={() => setLikesOpen(false)}>
-          <button type="button" aria-label={`Show ${post.likes.length} people who liked this post`} aria-expanded={likesOpen} onBlur={() => setLikesOpen(false)} onClick={() => setLikesOpen(open => !open)}>{post.likes.length}</button>
-          {likesOpen && <div className="social-likes-popover" role="status">{likers.length ? likers.map(liker => <Link to={`/profile?userId=${encodeURIComponent(liker.id)}`} key={liker.id}><ProfileAvatar user={liker} />{liker.full_name || liker.username}</Link>) : <span>No likes yet</span>}</div>}
+      <div className="social-post__action-group">
+        <button type="button" className={liked ? 'is-liked' : ''} aria-label={liked ? 'Unlike post' : 'Like post'} title={liked ? 'Unlike' : 'Like'} aria-pressed={liked} onClick={() => onLike(post.id)}><Heart size={17} fill={liked ? 'currentColor' : 'none'} /></button>
+        <div className="social-like-count" ref={likesRef} onMouseEnter={() => setLikesOpen(true)} onMouseLeave={() => setLikesOpen(false)} onPointerDown={startLikeCountPress} onPointerUp={endLikeCountPress} onPointerCancel={endLikeCountPress} onPointerLeave={endLikeCountPress}>
+          <button type="button" aria-label={`Show ${post.likes.length} people who liked this post`} aria-expanded={likesOpen} onClick={() => {
+            if (longPressTriggeredRef.current) {
+              longPressTriggeredRef.current = false
+              return
+            }
+            setLikesOpen(true)
+          }}>{post.likes.length}</button>
+          {likesOpen && <div className="social-likes-popover" role="dialog" aria-label="People who liked this post"><strong>Liked by</strong><div role="list">{likers.length ? likers.map(liker => <SocialProfileControl key={liker.id} className="social-like-person" user={liker} available={liker.id === user.id} onUnavailable={onUnavailableProfile} ariaLabel={`Open ${liker.full_name || liker.username}'s profile`} role="listitem"><ProfileAvatar user={liker} />{liker.full_name || liker.username}</SocialProfileControl>) : <span>No likes yet</span>}</div></div>}
         </div>
       </div>
-      <button type="button" aria-expanded={commentsOpen} onClick={() => setCommentsOpen(!commentsOpen)}><MessageCircle size={17} />Comment</button>
-      <button type="button" onClick={() => setShareOpen(true)}><Share2 size={17} />Share</button>
+      <button className="social-post__action-group" type="button" aria-label={`Comment on post; ${post.comments.length} comments`} title="Comment" aria-expanded={commentsOpen} onClick={() => setCommentsOpen(!commentsOpen)}><MessageCircle size={17} /><span>{post.comments.length}</span></button>
+      <button type="button" aria-label="Share post" title="Share" onClick={() => setShareOpen(true)}><Share2 size={17} /></button>
     </div>
     {commentsOpen && <section className="social-comments" aria-label="Comments">
       {post.comments.map((item) => <article className={`social-comment${item.replyTo ? ' social-comment--reply' : ''}`} key={item.id}>
-        <Link className="social-comment__avatar" to={`/profile?userId=${encodeURIComponent(item.author.id)}`} aria-label={`Open ${item.author.full_name}'s profile`}><ProfileAvatar user={item.author} /></Link>
-        <div><p><Link to={`/profile?userId=${encodeURIComponent(item.author.id)}`}><strong>{item.author.full_name || item.author.username}</strong></Link><span>{item.text}</span></p><button type="button" onClick={() => setReplyTo(item.id)}>Reply</button></div>
+        <SocialProfileControl className="social-comment__avatar" user={item.author} available={item.author.id === user.id} onUnavailable={onUnavailableProfile} ariaLabel={`Open ${item.author.full_name}'s profile`}><ProfileAvatar user={item.author} /></SocialProfileControl>
+        <div><p><SocialProfileControl className="social-comment__author" user={item.author} available={item.author.id === user.id} onUnavailable={onUnavailableProfile}><strong>{item.author.full_name || item.author.username}</strong></SocialProfileControl><span>{item.text}</span></p><button type="button" onClick={() => setReplyTo(item.id)}>Reply</button></div>
       </article>)}
       {!post.comments.length && <p className="social-comments__empty">Start the conversation.</p>}
       <form className="social-comment-form" onSubmit={submitComment}>
@@ -195,6 +345,7 @@ function SocialPost({ post, user, profile, people, onDelete, onLike, onComment }
       </form>
     </section>}
     {shareOpen && <ShareLinkDialog url={postUrl} onClose={() => setShareOpen(false)} />}
+    {previewMedia && <SocialMediaPreview media={previewMedia} onClose={() => setPreviewMedia(null)} />}
   </article>
 }
 
@@ -202,6 +353,7 @@ function MessagesPanel({ user, people, followedUsers, initialConversations }) {
   const [search, setSearch] = useState('')
   const [newMessage, setNewMessage] = useState(false)
   const [query, setQuery] = useState('')
+  const [recipientSearchOpen, setRecipientSearchOpen] = useState(false)
   const [conversations, setConversations] = useState(initialConversations)
   const [selectedId, setSelectedId] = useState(initialConversations[0]?.id || null)
   const [mobileChat, setMobileChat] = useState(false)
@@ -209,19 +361,59 @@ function MessagesPanel({ user, people, followedUsers, initialConversations }) {
   const [attachment, setAttachment] = useState(null)
   const [notice, setNotice] = useState('')
   const threadRef = useRef(null)
+  const recipientPanelRef = useRef(null)
+  const newMessageButtonRef = useRef(null)
+  const recipientSearchRef = useRef(null)
   const selected = conversations.find(conversation => conversation.id === selectedId)
-  const matches = followedUsers.filter(person => `${person.full_name} ${person.username}`.toLowerCase().includes(query.trim().toLowerCase()))
-  const visibleConversations = conversations.filter(conversation => `${conversation.person.full_name} ${conversation.person.username}`.toLowerCase().includes(search.trim().toLowerCase()))
+  const followedRecipients = [...new Map(followedUsers.filter(person => person.canMessage).map(person => [person.id, person])).values()]
+  const matches = followedRecipients.filter(person => `${person.full_name} ${person.username}`.toLowerCase().includes(query.trim().toLowerCase()))
+  const visibleConversations = conversations
+    .filter(conversation => `${conversation.person.full_name} ${conversation.person.username}`.toLowerCase().includes(search.trim().toLowerCase()))
+    .sort((a, b) => conversationActivity(b) - conversationActivity(a))
 
   useEffect(() => {
     if (threadRef.current) threadRef.current.scrollTop = threadRef.current.scrollHeight
   }, [selectedId, selected?.messages.length])
 
+  useEffect(() => {
+    if (!newMessage) return undefined
+    function handlePointerDown(event) {
+      if (recipientPanelRef.current?.contains(event.target) || newMessageButtonRef.current?.contains(event.target)) return
+      setNewMessage(false)
+      setRecipientSearchOpen(false)
+      setQuery('')
+    }
+    function handleKeyDown(event) {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      setNewMessage(false)
+      setRecipientSearchOpen(false)
+      setQuery('')
+      newMessageButtonRef.current?.focus()
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [newMessage])
+
+  useEffect(() => {
+    if (recipientSearchOpen) recipientSearchRef.current?.focus()
+  }, [recipientSearchOpen])
+
+  function closeRecipientPanel() {
+    setNewMessage(false)
+    setRecipientSearchOpen(false)
+    setQuery('')
+  }
+
   function openConversation(conversation) {
     setSelectedId(conversation.id)
     setConversations(current => current.map(item => item.id === conversation.id ? { ...item, unreadCount: 0 } : item))
     setMobileChat(true)
-    setNewMessage(false)
+    closeRecipientPanel()
   }
 
   function openPerson(person) {
@@ -234,7 +426,8 @@ function MessagesPanel({ user, people, followedUsers, initialConversations }) {
       setNotice('This user is not available for messages.')
       return
     }
-    const conversation = { id: `social-demo-conversation-${person.id}`, person, unreadCount: 0, messages: [] }
+    const startedAt = conversations.reduce((latest, item) => Math.max(latest, conversationActivity(item)), 0) + 1
+    const conversation = { id: `social-demo-conversation-${person.id}`, person, unreadCount: 0, startedAt, messages: [] }
     setConversations(current => [conversation, ...current])
     openConversation(conversation)
   }
@@ -250,7 +443,7 @@ function MessagesPanel({ user, people, followedUsers, initialConversations }) {
       createdAt: Date.now(),
     }
     setConversations(current => current.map(conversation => conversation.id === selected.id
-      ? { ...conversation, unreadCount: 0, messages: [...conversation.messages, nextMessage] }
+      ? { ...conversation, unreadCount: 0, startedAt: conversation.startedAt || nextMessage.createdAt, messages: [...conversation.messages, nextMessage] }
       : conversation))
     setMessageText('')
     setAttachment(null)
@@ -265,13 +458,13 @@ function MessagesPanel({ user, people, followedUsers, initialConversations }) {
 
   return <section className="social-messages" aria-label="Messages">
     <aside className={`social-inbox${mobileChat ? ' social-inbox--hidden' : ''}`}>
-      <header className="social-inbox__header"><div><h2>Messages</h2><p>Your conversations</p></div><button className="social-icon-button social-compose-button" type="button" aria-label="New message" title="New message" onClick={() => { setNewMessage(true); setQuery('') }}><Plus size={20} /></button></header>
+      <header className="social-inbox__header"><div><h2>Messages</h2><p>Your conversations</p></div><button ref={newMessageButtonRef} className="social-icon-button social-compose-button" type="button" aria-label="New message" title="New message" aria-expanded={newMessage} onClick={() => { setNewMessage(value => !value); setQuery(''); setRecipientSearchOpen(false) }}><Plus size={20} /></button></header>
       <label className="social-search social-search--inbox"><Search size={16} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search conversations" aria-label="Search conversations" /></label>
-      {newMessage && <section className="social-recipient-panel" aria-label="New message recipient selection">
-        <header><h3>New Message</h3><button type="button" className="social-icon-button" onClick={() => setNewMessage(false)} aria-label="Close new message"><X size={17} /></button></header>
-        <label className="social-search"><Search size={15} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search people you follow" aria-label="Search followed users" /></label>
+      {newMessage && <section className="social-recipient-panel" ref={recipientPanelRef} role="dialog" aria-modal="false" aria-label="New message recipient selection">
+        <header><h3>New Message</h3><div><button type="button" className="social-icon-button" onClick={() => setRecipientSearchOpen(value => !value)} aria-label={recipientSearchOpen ? 'Close recipient search' : 'Search followed users'} aria-expanded={recipientSearchOpen}><Search size={17} /></button><button type="button" className="social-icon-button" onClick={closeRecipientPanel} aria-label="Close new message"><X size={17} /></button></div></header>
+        {recipientSearchOpen && <label className="social-search social-recipient-search"><Search size={15} /><input ref={recipientSearchRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search people you follow" aria-label="Search followed users" /></label>}
         <div className="social-recipient-list">
-          {!followedUsers.length ? <p>You're not following anyone yet.</p> : !matches.length ? <p>No matching users found.</p> : matches.map(person => <button className="social-recipient" type="button" key={person.id} onClick={() => openPerson(person)}>
+          {!followedRecipients.length ? <p>You're not following anyone yet.</p> : !matches.length ? <p>No matching users found.</p> : matches.map(person => <button className="social-recipient" type="button" key={person.id} onClick={() => openPerson(person)}>
             <ProfileAvatar user={person} /><span><strong>{person.full_name}</strong><small>@{person.username}</small></span>
           </button>)}
         </div>
@@ -281,9 +474,9 @@ function MessagesPanel({ user, people, followedUsers, initialConversations }) {
         {!visibleConversations.length ? <div className="social-inbox__empty"><MessageCircle size={24} /><strong>{search.trim() ? 'No conversations found' : 'No conversations yet'}</strong><span>{search.trim() ? 'Try another name or username.' : 'Your conversations will appear here.'}</span></div> : visibleConversations.map(conversation => {
           const lastMessage = conversation.messages.at(-1)
           return <div className="social-conversation" key={conversation.id} aria-current={selectedId === conversation.id ? 'true' : undefined}>
-            <Link className="social-conversation__avatar" to={`/profile?userId=${encodeURIComponent(conversation.person.id)}`} aria-label={`Open ${conversation.person.full_name}'s profile`}><ProfileAvatar user={conversation.person} /></Link>
+            <button className="social-conversation__avatar" type="button" aria-label={`Open conversation with ${conversation.person.full_name}`} onClick={() => openConversation(conversation)}><ProfileAvatar user={conversation.person} /></button>
             <span className="social-conversation__copy">
-              <Link className="social-conversation__name" to={`/profile?userId=${encodeURIComponent(conversation.person.id)}`}>{conversation.person.full_name}</Link>
+              <button className="social-conversation__name" type="button" onClick={() => openConversation(conversation)}>{conversation.person.full_name}</button>
               <button className="social-conversation__preview" type="button" onClick={() => openConversation(conversation)}>{lastMessage?.text || (lastMessage?.attachment ? `Attachment: ${lastMessage.attachment.name}` : 'Start a conversation')}</button>
             </span>
             <button className="social-conversation__meta" type="button" aria-label={`Open conversation with ${conversation.person.full_name}`} onClick={() => openConversation(conversation)}><time>{lastMessage ? relativeTime(lastMessage.createdAt) : ''}</time>{conversation.unreadCount > 0 && <span className="social-unread">{conversation.unreadCount}</span>}</button>
@@ -295,7 +488,7 @@ function MessagesPanel({ user, people, followedUsers, initialConversations }) {
       {selected ? <>
         <header className="social-chat__header">
           <button className="social-chat__back" type="button" onClick={() => setMobileChat(false)}><ArrowLeft size={17} /><span className="social-sr-only">Back to conversations</span></button>
-          <SocialIdentity user={selected.person} compact />
+          <SocialIdentity user={selected.person} compact onSelect={() => openConversation(selected)} />
         </header>
         <div className="social-chat__thread" ref={threadRef} aria-live="polite">
           {selected.messages.map(message => {
@@ -339,6 +532,7 @@ export function SocialPage() {
   const [demo] = useState(() => createSocialDemoData(user))
   const [posts, setPosts] = useState(() => [...readCreatedSocialPosts(user.id), ...demo.posts].sort((a, b) => b.createdAt - a.createdAt))
   const [notice, setNotice] = useState('')
+  const [profileUnavailable, setProfileUnavailable] = useState('')
   const [profile] = useState(() => profileStore.read(user.id))
 
   const visiblePosts = posts.filter(post => !search.trim() || `${post.author.full_name} ${post.author.username} ${post.text}`.toLowerCase().includes(search.trim().toLowerCase()))
@@ -351,6 +545,10 @@ export function SocialPage() {
       else next.set('tab', nextTab)
       return next
     })
+  }
+
+  function showUnavailableProfile(person) {
+    setProfileUnavailable(`${person.full_name || person.username}'s profile has not been created.`)
   }
 
   function publish({ text, audience }) {
@@ -384,6 +582,7 @@ export function SocialPage() {
         <button className="social-primary-button" type="button" onClick={() => { setShowCreate(true); setNotice('') }}><Plus size={17} />Create Post</button>
       </div>
       {notice && <p className="social-page-notice" role="status"><Check size={15} />{notice}</p>}
+      {profileUnavailable && <p className="social-profile-unavailable" role="status">{profileUnavailable}</p>}
       <div className="social-feed">
           {visiblePosts.map(post => <SocialPost
             key={post.id}
@@ -391,6 +590,7 @@ export function SocialPage() {
             user={user}
             profile={profile}
             people={demo.users}
+            onUnavailableProfile={showUnavailableProfile}
             onLike={id => updatePost(id, item => ({
               ...item,
               likes: item.likes.includes(user.id) ? item.likes.filter(likedBy => likedBy !== user.id) : [...item.likes, user.id],
@@ -413,6 +613,7 @@ export function SocialPage() {
           user={user}
           profile={profile}
           people={demo.users}
+          onUnavailableProfile={showUnavailableProfile}
           onLike={id => updatePost(id, item => ({
             ...item,
             likes: item.likes.includes(user.id) ? item.likes.filter(likedBy => likedBy !== user.id) : [...item.likes, user.id],

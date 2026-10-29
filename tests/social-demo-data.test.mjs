@@ -14,16 +14,26 @@ const user = {
 
 test('Social mock data includes media, reactions, comments, follows, and conversations', () => {
   const data = createSocialDemoData(user)
-  assert.equal(data.posts.length, 3)
-  assert.ok(data.posts.every(post => post.media?.src && post.media?.alt && post.likes.length && post.createdAt))
+  assert.equal(data.posts.length, 8)
+  assert.ok(data.posts.every((post, index) => index === 0 || data.posts[index - 1].createdAt >= post.createdAt))
+  assert.ok(data.posts.every(post => {
+    const media = post.media ? (Array.isArray(post.media) ? post.media : [post.media]) : []
+    return media.length > 0 && media.every(item => item.src && item.alt) && post.likes.length && post.createdAt
+  }))
   assert.ok(data.posts.some(post => post.comments.length > 0))
-  assert.deepEqual(data.followedUsers.map(person => person.id), ['social-demo-ava', 'social-demo-noah'])
+  assert.equal(data.followedUsers.length, 12)
+  assert.equal(new Set(data.followedUsers.map(person => person.id)).size, data.followedUsers.length)
+  assert.ok(data.followedUsers.every(person => person.canMessage))
   assert.ok(data.conversations.length >= 2)
   assert.ok(data.conversations.every(conversation => conversation.messages.length > 0))
+  assert.ok(data.conversations.reduce((total, conversation) => total + conversation.messages.length, 0) >= 15)
 
   for (const post of data.posts) {
-    const asset = fileURLToPath(new URL(`../public${post.media.src}`, import.meta.url))
-    assert.ok(existsSync(asset), `Expected mock media asset ${post.media.src}`)
+    const media = post.media ? (Array.isArray(post.media) ? post.media : [post.media]) : []
+    for (const item of media) {
+      const asset = fileURLToPath(new URL(`../public${item.src}`, import.meta.url))
+      assert.ok(existsSync(asset), `Expected mock media asset ${item.src}`)
+    }
   }
 })
 
