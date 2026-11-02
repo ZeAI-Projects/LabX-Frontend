@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import EmojiPicker from 'emoji-picker-react'
+import { createPortal } from 'react-dom'
+import EmojiPicker, { Categories } from 'emoji-picker-react'
 import { ArrowLeft, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Heart, MessageCircle, MoreHorizontal, Paperclip, Plus, Search, Send, Share2, Smile, Trash2, Users, X } from 'lucide-react'
 import { ProfileAvatar } from '../../../components/common/ProfileAvatar.jsx'
 import { useAuth } from '../../../hooks/use_auth.js'
+import { sessionStore } from '../../../services/storage/local_storage.js'
 import { getRoleLabel } from '../../../utils/roles.js'
 import { profileStore } from '../../profile/services/profile_store.js'
 import { createSocialDemoData, readCreatedSocialPosts, saveCreatedSocialPost, writeCreatedSocialPosts } from '../services/social_demo_data.js'
@@ -16,6 +18,12 @@ const relativeTime = (date) => {
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
   return `${Math.floor(seconds / 86400)}d ago`
 }
+const recentSocialEmojisKey = 'labx:social-recent-emojis:v1'
+function readRecentSocialEmojis() {
+  const recent = sessionStore.readJSON(recentSocialEmojisKey, [])
+  if (!Array.isArray(recent)) return []
+  return recent.filter(emoji => typeof emoji === 'string' && /^[a-f0-9]+(?:-[a-f0-9]+)*$/i.test(emoji)).slice(0, 12)
+}
 const messageTime = (date) => new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(date)
 const conversationActivity = (conversation) => conversation.messages.at(-1)?.createdAt || conversation.startedAt || 0
 
@@ -24,6 +32,113 @@ function SocialProfileControl({ user, className, available, onUnavailable, onSel
   if (available) return <Link className={className} to={`/profile?userId=${encodeURIComponent(user.id)}`} aria-label={ariaLabel} role={role}>{children}</Link>
   if (onSelect || onUnavailable) return <button className={className} type="button" aria-label={ariaLabel} title={onUnavailable ? 'Profile not created' : undefined} onClick={() => (onSelect || onUnavailable)(user)} role={role}>{children}</button>
   return <span className={className} role={role}>{children}</span>
+}
+
+function SocialEmojiPicker({ label, onEmojiSelect, recentEmojis = [], onTriggerPointerDown, onOpenChange, triggerClassName = 'social-emoji-picker__trigger', showLabel = false, placement = 'auto' }) {
+  const [open, setOpen] = useState(false)
+  const [position, setPosition] = useState(null)
+  const [portalTarget, setPortalTarget] = useState(null)
+  const triggerRef = useRef(null)
+  const pickerRef = useRef(null)
+
+  const setPickerOpen = useCallback((nextOpen) => {
+    setOpen(nextOpen)
+    onOpenChange?.(nextOpen)
+  }, [onOpenChange])
+
+  const updatePosition = useCallback(() => {
+    const trigger = triggerRef.current
+    if (!trigger) return
+    const triggerBounds = trigger.getBoundingClientRect()
+    const dialog = trigger.closest('dialog')
+    const dialogBounds = dialog?.getBoundingClientRect()
+    const bounds = {
+      top: 8,
+      right: Math.min(window.innerWidth - 8, dialogBounds?.right ?? window.innerWidth - 8),
+      bottom: window.innerHeight - 8,
+      left: Math.max(8, dialogBounds?.left ?? 8),
+    }
+    const sidePadding = placement === 'below' && dialogBounds ? 20 : 12
+    const width = Math.min(360, window.innerWidth - 32, bounds.right - bounds.left - sidePadding * 2)
+    let height = Math.min(280, window.innerHeight - 32, bounds.bottom - bounds.top - 24)
+    let top
+    if (placement === 'below') {
+      height = Math.max(0, Math.min(height, bounds.bottom - triggerBounds.bottom - 8))
+      top = triggerBounds.bottom + 8
+    } else {
+      top = triggerBounds.top - height - 8
+      if (top < bounds.top + 12) top = triggerBounds.bottom + 8
+      top = Math.min(Math.max(top, bounds.top + 12), bounds.bottom - height - 12)
+    }
+    const preferredLeft = placement === 'below' && dialogBounds ? dialogBounds.left + sidePadding : triggerBounds.left
+    const left = Math.min(Math.max(preferredLeft, bounds.left + sidePadding), bounds.right - width - sidePadding)
+    setPosition({ top, left, width, height })
+  }, [placement])
+
+  function toggleOpen() {
+    if (open) {
+      setPickerOpen(false)
+      return
+    }
+    setPortalTarget(triggerRef.current?.closest('dialog') || document.body)
+    setPickerOpen(true)
+  }
+
+  useLayoutEffect(() => {
+    if (!open) return undefined
+    updatePosition()
+    pickerRef.current?.showPopover()
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', updatePosition, true)
+    return () => {
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', updatePosition, true)
+    }
+  }, [open, updatePosition])
+
+  useEffect(() => {
+    if (!open) return undefined
+    function handlePointerDown(event) {
+      if (!pickerRef.current?.contains(event.target) && !triggerRef.current?.contains(event.target)) setPickerOpen(false)
+    }
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        event.stopPropagation()
+        setPickerOpen(false)
+        triggerRef.current?.focus()
+      }
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open, setPickerOpen])
+
+  const picker = open && <section ref={pickerRef} className="social-emoji-picker" popover="manual" role="dialog" aria-label="Choose an emoji" style={{ ...position, visibility: position ? 'visible' : 'hidden' }}>
+    <EmojiPicker
+      className="social-emoji-picker__widget"
+      width="100%"
+      height={position?.height ?? 280}
+      colorScheme="dark"
+      emojiStyle="native"
+      categories={[...(recentEmojis.length ? [Categories.SUGGESTED] : []), Categories.SMILEYS_PEOPLE, Categories.ANIMALS_NATURE, Categories.FOOD_DRINK, Categories.TRAVEL_PLACES, Categories.ACTIVITIES, Categories.OBJECTS, Categories.SYMBOLS]}
+      suggestedEmojis={recentEmojis}
+      lazyLoadEmojis
+      autoFocusSearch={false}
+      previewConfig={{ showPreview: false }}
+      onEmojiClick={({ emoji, unified }) => onEmojiSelect(emoji, unified)}
+    />
+  </section>
+
+  return <>
+    <div className="social-emoji-picker-wrap">
+      <button ref={triggerRef} className={triggerClassName} type="button" aria-haspopup="dialog" aria-expanded={open} aria-label={label} onPointerDown={onTriggerPointerDown} onClick={toggleOpen}><Smile size={18} aria-hidden="true" />{showLabel && <span>Emoji</span>}</button>
+    </div>
+    {portalTarget && picker && createPortal(picker, portalTarget)}
+  </>
 }
 
 function SocialMediaPreview({ mediaItems, initialIndex, onClose }) {
@@ -116,11 +231,9 @@ function CreatePostAudience({ audience, onChange }) {
   </div>
 }
 
-function CreatePostDialog({ user, profile, onClose, onPublish }) {
+function CreatePostDialog({ user, profile, recentEmojis, onRecentEmoji, onClose, onPublish }) {
   const dialogRef = useRef(null)
   const editorRef = useRef(null)
-  const emojiButtonRef = useRef(null)
-  const emojiPickerRef = useRef(null)
   const selectionRef = useRef([0, 0])
   const [text, setText] = useState('')
   const [audience, setAudience] = useState('Everyone')
@@ -141,31 +254,13 @@ function CreatePostDialog({ user, profile, onClose, onPublish }) {
     }
   }, [])
 
-  useEffect(() => {
-    if (!emojiOpen) return undefined
-    function handlePointerDown(event) {
-      if (!emojiPickerRef.current?.contains(event.target) && !emojiButtonRef.current?.contains(event.target)) setEmojiOpen(false)
-    }
-    function handleKeyDown(event) {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        setEmojiOpen(false)
-        emojiButtonRef.current?.focus()
-      }
-    }
-    document.addEventListener('pointerdown', handlePointerDown)
-    document.addEventListener('keydown', handleKeyDown)
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown)
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [emojiOpen])
-
-  function addEmoji(emoji) {
+  function addEmoji(emoji, unified) {
     const editor = editorRef.current
     if (!editor) return
     const [start, end] = selectionRef.current
     const next = `${text.slice(0, start)}${emoji}${text.slice(end)}`
+    if (next.length > 5000) return
+    onRecentEmoji(unified)
     setText(next)
     requestAnimationFrame(() => {
       editor.focus()
@@ -189,7 +284,7 @@ function CreatePostDialog({ user, profile, onClose, onPublish }) {
     onPublish({ text: text.trim(), audience })
   }
 
-  return <dialog ref={dialogRef} className="social-dialog" aria-labelledby="social-create-title" onCancel={(event) => { event.preventDefault(); onClose() }} onClick={(event) => { if (event.target === event.currentTarget) onClose() }}>
+  return <dialog ref={dialogRef} className={`social-dialog${emojiOpen ? ' social-dialog--emoji-open' : ''}`} aria-labelledby="social-create-title" onCancel={event => event.preventDefault()}>
     <header className="social-dialog__header"><div><span className="social-eyebrow">Share with your community</span><h2 id="social-create-title">Create post</h2></div><button className="social-icon-button" type="button" aria-label="Close create post" onClick={onClose}><X size={19} /></button></header>
     <form onSubmit={submit}>
       <SocialIdentity user={user} profile={profile} profileAvailable compact />
@@ -197,21 +292,7 @@ function CreatePostDialog({ user, profile, onClose, onPublish }) {
       <textarea ref={editorRef} className="social-editor" value={text} onBlur={event => { selectionRef.current = [event.currentTarget.selectionStart, event.currentTarget.selectionEnd] }} onSelect={event => { selectionRef.current = [event.currentTarget.selectionStart, event.currentTarget.selectionEnd] }} onChange={(event) => { setText(event.target.value); setError('') }} placeholder="What are you building or thinking about?" maxLength={5000} aria-label="Post text" />
       <div className="social-dialog__note">Local preview only — posts are not shared with other accounts.</div>
       <div className="social-composer-tools" aria-label="Available post tools">
-        <div className="social-emoji-picker-wrap" ref={emojiPickerRef}>
-          <button ref={emojiButtonRef} type="button" aria-haspopup="dialog" aria-expanded={emojiOpen} onPointerDown={() => { const editor = editorRef.current; if (editor) selectionRef.current = [editor.selectionStart, editor.selectionEnd] }} onClick={() => setEmojiOpen(value => !value)} aria-label="Open emoji picker"><Smile size={18} /><span>Emoji</span></button>
-          {emojiOpen && <section className="social-emoji-picker" role="dialog" aria-label="Choose an emoji">
-            <EmojiPicker
-              className="social-emoji-picker__widget"
-              width="100%"
-              height={340}
-              colorScheme="dark"
-              emojiStyle="native"
-              lazyLoadEmojis
-              previewConfig={{ showPreview: false }}
-              onEmojiClick={({ emoji }) => addEmoji(emoji)}
-            />
-          </section>}
-        </div>
+        <SocialEmojiPicker label="Open emoji picker" showLabel placement="below" recentEmojis={recentEmojis} onOpenChange={setEmojiOpen} onTriggerPointerDown={() => { const editor = editorRef.current; if (editor) selectionRef.current = [editor.selectionStart, editor.selectionEnd] }} onEmojiSelect={addEmoji} />
         <span className="social-character-count">{text.length}/5000</span>
       </div>
       {error && <p className="social-error" role="alert">{error}</p>}
@@ -375,7 +456,7 @@ function SocialPost({ post, user, profile, people, onDelete, onLike, onComment, 
   </article>
 }
 
-function MessagesPanel({ user, people, followedUsers, initialConversations }) {
+function MessagesPanel({ user, people, followedUsers, initialConversations, recentEmojis, onRecentEmoji }) {
   const [search, setSearch] = useState('')
   const [newMessage, setNewMessage] = useState(false)
   const [query, setQuery] = useState('')
@@ -386,6 +467,8 @@ function MessagesPanel({ user, people, followedUsers, initialConversations }) {
   const [messageText, setMessageText] = useState('')
   const [attachment, setAttachment] = useState(null)
   const [notice, setNotice] = useState('')
+  const messageInputRef = useRef(null)
+  const messageSelectionRef = useRef([0, 0])
   const threadRef = useRef(null)
   const recipientPanelRef = useRef(null)
   const newMessageButtonRef = useRef(null)
@@ -482,6 +565,22 @@ function MessagesPanel({ user, people, followedUsers, initialConversations }) {
     event.target.value = ''
   }
 
+  function addMessageEmoji(emoji, unified) {
+    const input = messageInputRef.current
+    if (!input) return
+    const [start, end] = messageSelectionRef.current
+    const next = `${messageText.slice(0, start)}${emoji}${messageText.slice(end)}`
+    if (next.length > 2000) return
+    onRecentEmoji(unified)
+    setMessageText(next)
+    requestAnimationFrame(() => {
+      input.focus()
+      const cursor = start + emoji.length
+      input.setSelectionRange(cursor, cursor)
+      messageSelectionRef.current = [cursor, cursor]
+    })
+  }
+
   return <section className="social-messages" aria-label="Messages">
     <aside className={`social-inbox${mobileChat ? ' social-inbox--hidden' : ''}`}>
       <header className="social-inbox__header"><div><h2>Messages</h2><p>Your conversations</p></div><button ref={newMessageButtonRef} className="social-icon-button social-compose-button" type="button" aria-label="New message" title="New message" aria-expanded={newMessage} onClick={() => { setNewMessage(value => !value); setQuery(''); setRecipientSearchOpen(false) }}><Plus size={20} /></button></header>
@@ -536,9 +635,9 @@ function MessagesPanel({ user, people, followedUsers, initialConversations }) {
             <Paperclip size={18} /><span className="social-sr-only">Attach a file</span>
             <input type="file" onChange={chooseAttachment} />
           </label>
-          <button type="button" className="social-emoji-button" aria-label="Insert sparkle emoji" onClick={() => setMessageText(current => `${current}✨`)}><Smile size={18} /></button>
+          <SocialEmojiPicker label="Open emoji picker" triggerClassName="social-emoji-button" recentEmojis={recentEmojis} onTriggerPointerDown={() => { const input = messageInputRef.current; if (input) messageSelectionRef.current = [input.selectionStart, input.selectionEnd] }} onEmojiSelect={addMessageEmoji} />
           <label className="social-sr-only" htmlFor="social-message-input">Write a message</label>
-          <input id="social-message-input" value={messageText} onChange={event => setMessageText(event.target.value)} placeholder="Write a message…" maxLength={2000} />
+          <input ref={messageInputRef} id="social-message-input" autoComplete="off" autoCorrect="off" spellCheck={false} value={messageText} onBlur={event => { messageSelectionRef.current = [event.currentTarget.selectionStart, event.currentTarget.selectionEnd] }} onSelect={event => { messageSelectionRef.current = [event.currentTarget.selectionStart, event.currentTarget.selectionEnd] }} onChange={event => setMessageText(event.target.value)} placeholder="Write a message…" maxLength={2000} />
           <button className="social-send-button" type="submit" disabled={!messageText.trim() && !attachment} aria-label="Send message"><Send size={17} /></button>
           {attachment && <span className="social-attachment-preview"><Paperclip size={13} />{attachment.name}<button type="button" aria-label="Remove attachment" onClick={() => setAttachment(null)}><X size={13} /></button></span>}
         </form>
@@ -557,9 +656,17 @@ export function SocialPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [demo] = useState(() => createSocialDemoData(user))
   const [posts, setPosts] = useState(() => [...readCreatedSocialPosts(user.id), ...demo.posts].sort((a, b) => b.createdAt - a.createdAt))
+  const [recentEmojis, setRecentEmojis] = useState(readRecentSocialEmojis)
   const [notice, setNotice] = useState('')
   const [profileUnavailable, setProfileUnavailable] = useState('')
   const [profile] = useState(() => profileStore.read(user.id))
+
+  function rememberRecentEmoji(unified) {
+    if (!unified) return
+    const next = [unified, ...recentEmojis.filter(emoji => emoji !== unified)].slice(0, 12)
+    sessionStore.writeJSON(recentSocialEmojisKey, next)
+    setRecentEmojis(next)
+  }
 
   const visiblePosts = posts.filter(post => !search.trim() || `${post.author.full_name} ${post.author.username} ${post.text}`.toLowerCase().includes(search.trim().toLowerCase()))
   const ownPosts = posts.filter(post => post.author.id === user.id)
@@ -654,8 +761,8 @@ export function SocialPage() {
       </div>
     </div>
     <div className="social-messages-view" hidden={tab !== 'messages'}>
-      <MessagesPanel user={user} people={demo.users} followedUsers={demo.followedUsers} initialConversations={demo.conversations} />
+      <MessagesPanel user={user} people={demo.users} followedUsers={demo.followedUsers} initialConversations={demo.conversations} recentEmojis={recentEmojis} onRecentEmoji={rememberRecentEmoji} />
     </div>
-    {showCreate && <CreatePostDialog user={user} profile={profile} onClose={() => setShowCreate(false)} onPublish={publish} />}
+    {showCreate && <CreatePostDialog user={user} profile={profile} recentEmojis={recentEmojis} onRecentEmoji={rememberRecentEmoji} onClose={() => setShowCreate(false)} onPublish={publish} />}
   </div>
 }
