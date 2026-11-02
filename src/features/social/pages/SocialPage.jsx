@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { Link, useSearchParams } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import EmojiPicker, { Categories } from 'emoji-picker-react'
-import { ArrowLeft, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Heart, MessageCircle, MoreHorizontal, Paperclip, Plus, Search, Send, Share2, Smile, Trash2, Users, X } from 'lucide-react'
+import { ArrowLeft, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, FileText, Heart, Image as ImageIcon, MessageCircle, MoreHorizontal, Paperclip, Plus, Search, Send, Share2, Smile, Trash2, Users, X } from 'lucide-react'
 import { ProfileAvatar } from '../../../components/common/ProfileAvatar.jsx'
 import { useAuth } from '../../../hooks/use_auth.js'
 import { sessionStore } from '../../../services/storage/local_storage.js'
@@ -363,6 +363,7 @@ function ShareLinkDialog({ url, onClose }) {
 
 function SocialPost({ post, user, profile, people, onDelete, onLike, onComment, onUnavailableProfile }) {
   const [commentsOpen, setCommentsOpen] = useState(false)
+  const [textExpanded, setTextExpanded] = useState(false)
   const [likesOpen, setLikesOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [replyTo, setReplyTo] = useState(null)
@@ -377,6 +378,9 @@ function SocialPost({ post, user, profile, people, onDelete, onLike, onComment, 
   const mediaItems = post.media ? (Array.isArray(post.media) ? post.media : [post.media]) : []
   const activeMedia = mediaItems[activeMediaIndex]
   const likerPeople = post.likes.map(id => people.find(person => person.id === id)).filter(Boolean)
+  const textWords = post.text.trim().split(/\s+/)
+  const isLongText = textWords.length > 300
+  const visibleText = isLongText && !textExpanded ? textWords.slice(0, 300).join(' ') : post.text
 
   function showPreviousMedia() {
     setActiveMediaIndex(index => (index - 1 + mediaItems.length) % mediaItems.length)
@@ -417,7 +421,7 @@ function SocialPost({ post, user, profile, people, onDelete, onLike, onComment, 
         </>}
       </div></div>
     </header>
-    <p className="social-post__text">{post.text}</p>
+    <p className="social-post__text">{visibleText}{isLongText && <>{textExpanded ? ' ' : '… '}<button className="social-post__read-more" type="button" aria-expanded={textExpanded} onClick={() => setTextExpanded(expanded => !expanded)}>{textExpanded ? 'Show less' : 'Read more'}</button></>}</p>
     {mediaItems.length > 0 && <div className="social-post__carousel" onPointerDown={startMediaSwipe} onPointerUp={finishMediaSwipe} onPointerCancel={() => { swipeStartRef.current = null }} onPointerLeave={() => { swipeStartRef.current = null }} role="group" aria-label={`${activeMediaIndex + 1} of ${mediaItems.length} post images`}>
       <button className="social-post__media-item" type="button" onClick={() => setPreviewMediaIndex(activeMediaIndex)} aria-label={`Open image ${activeMediaIndex + 1} of ${mediaItems.length}`}>
         <img key={activeMediaIndex} className="social-post__media social-post__media--grid" src={activeMedia.src} alt={activeMedia.alt} loading="lazy" />
@@ -466,8 +470,12 @@ function MessagesPanel({ user, people, followedUsers, initialConversations, rece
   const [mobileChat, setMobileChat] = useState(false)
   const [messageText, setMessageText] = useState('')
   const [attachment, setAttachment] = useState(null)
+  const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false)
   const [notice, setNotice] = useState('')
   const messageInputRef = useRef(null)
+  const imageInputRef = useRef(null)
+  const documentInputRef = useRef(null)
+  const attachmentMenuRef = useRef(null)
   const messageSelectionRef = useRef([0, 0])
   const threadRef = useRef(null)
   const recipientPanelRef = useRef(null)
@@ -507,6 +515,22 @@ function MessagesPanel({ user, people, followedUsers, initialConversations, rece
       document.removeEventListener('keydown', handleKeyDown)
     }
   }, [newMessage])
+
+  useEffect(() => {
+    if (!attachmentMenuOpen) return undefined
+    function handlePointerDown(event) {
+      if (!attachmentMenuRef.current?.contains(event.target)) setAttachmentMenuOpen(false)
+    }
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') setAttachmentMenuOpen(false)
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [attachmentMenuOpen])
 
   useEffect(() => {
     if (recipientSearchOpen) recipientSearchRef.current?.focus()
@@ -559,9 +583,9 @@ function MessagesPanel({ user, people, followedUsers, initialConversations, rece
     setNotice('')
   }
 
-  function chooseAttachment(event) {
+  function chooseAttachment(event, kind) {
     const file = event.target.files?.[0]
-    if (file) setAttachment({ name: file.name, size: file.size })
+    if (file) setAttachment({ name: file.name, size: file.size, kind })
     event.target.value = ''
   }
 
@@ -623,7 +647,7 @@ function MessagesPanel({ user, people, followedUsers, initialConversations, rece
               {!ownMessage && <ProfileAvatar user={sender} />}
               <div className="social-message__bubble">
                 {message.text && <p>{message.text}</p>}
-                {message.attachment && <span className="social-message__attachment"><Paperclip size={14} />{message.attachment.name}</span>}
+                {message.attachment && <span className="social-message__attachment">{message.attachment.kind === 'image' ? <ImageIcon size={14} /> : <FileText size={14} />}{message.attachment.name}</span>}
                 <time dateTime={new Date(message.createdAt).toISOString()}>{messageTime(message.createdAt)}</time>
               </div>
             </article>
@@ -631,15 +655,20 @@ function MessagesPanel({ user, people, followedUsers, initialConversations, rece
         </div>
         {notice && <p className="social-chat__notice" role="status">{notice}</p>}
         <form className="social-message-composer" onSubmit={sendMessage}>
-          <label className="social-attach-button" title="Attach a local file">
-            <Paperclip size={18} /><span className="social-sr-only">Attach a file</span>
-            <input type="file" onChange={chooseAttachment} />
-          </label>
+          <div className="social-attach-wrap" ref={attachmentMenuRef}>
+            <button className="social-attach-button" type="button" title="Attach an image or document" aria-label="Attach an image or document" aria-haspopup="menu" aria-expanded={attachmentMenuOpen} onClick={() => setAttachmentMenuOpen(open => !open)}><Paperclip size={18} /></button>
+            {attachmentMenuOpen && <div className="social-attach-menu" role="menu" aria-label="Attachment type">
+              <button type="button" role="menuitem" onClick={() => { setAttachmentMenuOpen(false); imageInputRef.current?.click() }}><ImageIcon size={16} /><span>Image</span></button>
+              <button type="button" role="menuitem" onClick={() => { setAttachmentMenuOpen(false); documentInputRef.current?.click() }}><FileText size={16} /><span>Document</span></button>
+            </div>}
+            <input ref={imageInputRef} className="social-file-input" type="file" accept="image/*" onChange={event => chooseAttachment(event, 'image')} />
+            <input ref={documentInputRef} className="social-file-input" type="file" accept=".pdf,.doc,.docx,.txt,.rtf,.csv,.xls,.xlsx,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" onChange={event => chooseAttachment(event, 'document')} />
+          </div>
           <SocialEmojiPicker label="Open emoji picker" triggerClassName="social-emoji-button" recentEmojis={recentEmojis} onTriggerPointerDown={() => { const input = messageInputRef.current; if (input) messageSelectionRef.current = [input.selectionStart, input.selectionEnd] }} onEmojiSelect={addMessageEmoji} />
           <label className="social-sr-only" htmlFor="social-message-input">Write a message</label>
           <input ref={messageInputRef} id="social-message-input" autoComplete="off" autoCorrect="off" spellCheck={false} value={messageText} onBlur={event => { messageSelectionRef.current = [event.currentTarget.selectionStart, event.currentTarget.selectionEnd] }} onSelect={event => { messageSelectionRef.current = [event.currentTarget.selectionStart, event.currentTarget.selectionEnd] }} onChange={event => setMessageText(event.target.value)} placeholder="Write a message…" maxLength={2000} />
           <button className="social-send-button" type="submit" disabled={!messageText.trim() && !attachment} aria-label="Send message"><Send size={17} /></button>
-          {attachment && <span className="social-attachment-preview"><Paperclip size={13} />{attachment.name}<button type="button" aria-label="Remove attachment" onClick={() => setAttachment(null)}><X size={13} /></button></span>}
+          {attachment && <span className="social-attachment-preview">{attachment.kind === 'image' ? <ImageIcon size={13} /> : <FileText size={13} />}{attachment.name}<button type="button" aria-label="Remove attachment" onClick={() => setAttachment(null)}><X size={13} /></button></span>}
         </form>
         <p className="social-chat__demo-note">Demo conversation · messages and attachments stay in this browser session.</p>
       </> : <div className="social-chat__empty"><span className="social-chat__icon"><MessageCircle size={24} /></span><h2>Select a conversation</h2><p>Choose an existing conversation to see your messages here.</p></div>}
