@@ -311,6 +311,36 @@ export function createSocialDemoData(currentUser) {
         likes: [],
         comments: [],
       },
+      {
+        id: 'social-demo-post-mateo',
+        author: mateo,
+        text: 'We invited a few neighborhood shops to try our first shared catalog. Their feedback is helping us make product updates quicker and easier to understand.',
+        createdAt: minutesAgo(240),
+        audience: 'Everyone',
+        likes: [grace.id],
+        comments: [],
+      },
+      {
+        id: 'social-demo-post-grace',
+        author: grace,
+        text: 'Our latest clinic walkthrough showed that a calmer check-in can make a real difference. We are testing clearer language and fewer steps with the care team.',
+        createdAt: minutesAgo(280),
+        audience: 'Everyone',
+        likes: [ava.id, noah.id],
+        comments: [
+          { id: 'social-demo-comment-grace-1', author: noah, text: 'That sounds promising. What did the care team want to simplify first?', replyTo: null },
+        ],
+      },
+      {
+        id: 'social-demo-post-aiden',
+        author: aiden,
+        media: { src: '/social-demo/soil-sensor.svg', alt: 'Illustration of a connected device being tested outdoors' },
+        text: 'We tested a simpler setup guide for our connected climate monitor. Seeing people get started without extra help is a great signal for the next iteration.',
+        createdAt: minutesAgo(320),
+        audience: 'Everyone',
+        likes: [sam.id],
+        comments: [],
+      },
     ].sort((a, b) => b.createdAt - a.createdAt),
     conversations: [
       {

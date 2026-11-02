@@ -8,7 +8,7 @@ import { useAuth } from '../../../hooks/use_auth.js'
 import { sessionStore } from '../../../services/storage/local_storage.js'
 import { getRoleLabel } from '../../../utils/roles.js'
 import { profileStore } from '../../profile/services/profile_store.js'
-import { createSocialDemoData, readCreatedSocialPosts, saveCreatedSocialPost, writeCreatedSocialPosts } from '../services/social_demo_data.js'
+import { createSocialDemoData, findSocialDemoPerson, readCreatedSocialPosts, saveCreatedSocialPost, writeCreatedSocialPosts } from '../services/social_demo_data.js'
 import './SocialPage.css'
 
 const relativeTime = (date) => {
@@ -361,13 +361,15 @@ function ShareLinkDialog({ url, onClose }) {
   </dialog>
 }
 
-function SocialPost({ post, user, profile, people, onDelete, onLike, onComment, onUnavailableProfile }) {
+function SocialPost({ post, user, profile, people, recentEmojis, onRecentEmoji, onDelete, onLike, onComment, onUnavailableProfile }) {
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [textExpanded, setTextExpanded] = useState(false)
   const [likesOpen, setLikesOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [replyTo, setReplyTo] = useState(null)
   const [comment, setComment] = useState('')
+  const commentInputRef = useRef(null)
+  const commentSelectionRef = useRef([0, 0])
   const [shareOpen, setShareOpen] = useState(false)
   const [previewMediaIndex, setPreviewMediaIndex] = useState(null)
   const [activeMediaIndex, setActiveMediaIndex] = useState(0)
@@ -409,11 +411,28 @@ function SocialPost({ post, user, profile, people, onDelete, onLike, onComment, 
     onComment(post.id, comment.trim(), replyTo)
     setComment('')
     setReplyTo(null)
+    commentSelectionRef.current = [0, 0]
+  }
+
+  function addCommentEmoji(emoji, unified) {
+    const input = commentInputRef.current
+    if (!input) return
+    const [start, end] = commentSelectionRef.current
+    const next = `${comment.slice(0, start)}${emoji}${comment.slice(end)}`
+    if (next.length > 1000) return
+    onRecentEmoji(unified)
+    setComment(next)
+    requestAnimationFrame(() => {
+      input.focus()
+      const cursor = start + emoji.length
+      input.setSelectionRange(cursor, cursor)
+      commentSelectionRef.current = [cursor, cursor]
+    })
   }
 
   return <article className="social-post" id={`post-${post.id}`}>
     <header className="social-post__header">
-      <SocialIdentity user={post.author} profile={post.author.id === user.id ? profile : null} profileAvailable={post.author.id === user.id} onUnavailableProfile={onUnavailableProfile} />
+      <SocialIdentity user={post.author} profile={post.author.id === user.id ? profile : null} profileAvailable={post.author.id === user.id} profileHref={post.author.id !== user.id ? `/profile?userId=${encodeURIComponent(post.author.id)}` : undefined} onUnavailableProfile={onUnavailableProfile} />
       <div className="social-post__header-end"><time dateTime={new Date(post.createdAt).toISOString()}>{timestamp}</time><div className="social-post__menu-wrap">
         {post.author.id === user.id && <>
           <button className="social-icon-button" type="button" aria-label="Post options" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}><MoreHorizontal size={20} /></button>
@@ -451,7 +470,8 @@ function SocialPost({ post, user, profile, people, onDelete, onLike, onComment, 
         {replyTo && <span className="social-reply-label">Replying to a comment <button type="button" aria-label="Cancel reply" onClick={() => setReplyTo(null)}><X size={13} /></button></span>}
         <ProfileAvatar user={user} />
         <label className="social-sr-only" htmlFor={`comment-${post.id}`}>Write a comment</label>
-        <input id={`comment-${post.id}`} value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Write a comment…" maxLength={1000} />
+        <input ref={commentInputRef} id={`comment-${post.id}`} value={comment} onChange={event => setComment(event.target.value)} onBlur={event => { commentSelectionRef.current = [event.currentTarget.selectionStart, event.currentTarget.selectionEnd] }} onSelect={event => { commentSelectionRef.current = [event.currentTarget.selectionStart, event.currentTarget.selectionEnd] }} placeholder="Write a comment…" maxLength={1000} />
+        <SocialEmojiPicker label="Add emoji to comment" triggerClassName="social-emoji-button" recentEmojis={recentEmojis} onTriggerPointerDown={() => { const input = commentInputRef.current; if (input) commentSelectionRef.current = [input.selectionStart, input.selectionEnd] }} onEmojiSelect={addCommentEmoji} />
         <button type="submit" disabled={!comment.trim()} aria-label={replyTo ? 'Send reply' : 'Send comment'}><Send size={16} /></button>
       </form>
     </section>}
@@ -625,7 +645,7 @@ function MessagesPanel({ user, people, followedUsers, initialConversations, rece
           return <div className="social-conversation" key={conversation.id} aria-current={selectedId === conversation.id ? 'true' : undefined}>
             <button className="social-conversation__avatar" type="button" aria-label={`Open conversation with ${conversation.person.full_name}`} onClick={() => openConversation(conversation)}><ProfileAvatar user={conversation.person} /></button>
             <span className="social-conversation__copy">
-              <Link className="social-conversation__name" to={`/profile?userId=${encodeURIComponent(conversation.person.id)}`}>{conversation.person.full_name}</Link>
+              <button className="social-conversation__name" type="button" onClick={() => openConversation(conversation)}>{conversation.person.full_name}</button>
               <button className="social-conversation__preview" type="button" onClick={() => openConversation(conversation)}>{lastMessage?.text || (lastMessage?.attachment ? `Attachment: ${lastMessage.attachment.name}` : 'Start a conversation')}</button>
             </span>
             <button className="social-conversation__meta" type="button" aria-label={`Open conversation with ${conversation.person.full_name}`} onClick={() => openConversation(conversation)}><time>{lastMessage ? relativeTime(lastMessage.createdAt) : 'New'}</time>{conversation.unreadCount > 0 && <span className="social-unread">{conversation.unreadCount}</span>}</button>
@@ -680,6 +700,9 @@ export function SocialPage() {
   const { user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const requestedTab = searchParams.get('tab')
+  const requestedProfileId = searchParams.get('userId')
+  const requestedProfile = requestedProfileId ? findSocialDemoPerson(requestedProfileId) : null
+  const viewingOtherPosts = requestedTab === 'posts' && Boolean(requestedProfile && requestedProfile.id !== user.id)
   const tab = requestedTab === 'messages' || requestedTab === 'posts' ? requestedTab : 'home'
   const [search, setSearch] = useState('')
   const [showCreate, setShowCreate] = useState(false)
@@ -698,7 +721,7 @@ export function SocialPage() {
   }
 
   const visiblePosts = posts.filter(post => !search.trim() || `${post.author.full_name} ${post.author.username} ${post.text}`.toLowerCase().includes(search.trim().toLowerCase()))
-  const ownPosts = posts.filter(post => post.author.id === user.id)
+  const profilePosts = posts.filter(post => post.author.id === (viewingOtherPosts ? requestedProfile.id : user.id))
 
   function selectTab(nextTab) {
     setSearchParams(current => {
@@ -752,6 +775,8 @@ export function SocialPage() {
             user={user}
             profile={profile}
             people={demo.users}
+            recentEmojis={recentEmojis}
+            onRecentEmoji={rememberRecentEmoji}
             onUnavailableProfile={showUnavailableProfile}
             onLike={id => updatePost(id, item => ({
               ...item,
@@ -767,14 +792,16 @@ export function SocialPage() {
       </div>
     </div>
     <div className="social-my-posts" hidden={tab !== 'posts'}>
-      <header className="social-my-posts__header"><div><h2>My posts</h2><p>Your post history in this browser session</p></div><button className="social-secondary-button" type="button" onClick={() => selectTab('home')}><ArrowLeft size={15} />Back to Home</button></header>
+      <header className="social-my-posts__header"><div><h2>{viewingOtherPosts ? `${requestedProfile.full_name}'s posts` : 'My posts'}</h2><p>{viewingOtherPosts ? `Posts shared by ${requestedProfile.full_name}` : 'Your post history in this browser session'}</p></div>{viewingOtherPosts ? <Link className="social-secondary-button" to={`/profile?userId=${encodeURIComponent(requestedProfile.id)}`}><ArrowLeft size={15} />Back to profile</Link> : <button className="social-secondary-button" type="button" onClick={() => selectTab('home')}><ArrowLeft size={15} />Back to Home</button>}</header>
       <div className="social-feed social-feed--own">
-        {ownPosts.map(post => <SocialPost
+        {profilePosts.map(post => <SocialPost
           key={post.id}
           post={post}
           user={user}
           profile={profile}
           people={demo.users}
+          recentEmojis={recentEmojis}
+          onRecentEmoji={rememberRecentEmoji}
           onUnavailableProfile={showUnavailableProfile}
           onLike={id => updatePost(id, item => ({
             ...item,
@@ -786,7 +813,7 @@ export function SocialPage() {
           }))}
           onDelete={deletePost}
         />)}
-        {!ownPosts.length && <section className="social-empty"><span className="social-empty__icon"><Users size={23} /></span><h2>No posts yet</h2><p>Posts you create will be collected here.</p><button className="social-primary-button" type="button" onClick={() => setShowCreate(true)}><Plus size={16} />Create your first post</button></section>}
+        {!profilePosts.length && <section className="social-empty"><span className="social-empty__icon"><Users size={23} /></span><h2>No posts yet</h2><p>{viewingOtherPosts ? `${requestedProfile.full_name} has not shared any posts yet.` : 'Posts you create will be collected here.'}</p>{!viewingOtherPosts && <button className="social-primary-button" type="button" onClick={() => setShowCreate(true)}><Plus size={16} />Create your first post</button>}</section>}
       </div>
     </div>
     <div className="social-messages-view" hidden={tab !== 'messages'}>

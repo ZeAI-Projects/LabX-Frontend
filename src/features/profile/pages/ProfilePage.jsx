@@ -206,7 +206,7 @@ function DemoMemberProfile({ person }) {
   return <div className="pf-page">
     <section className="pf-dossier" aria-label={`${profile.full_name}'s view-only profile`}>
       <div className="pf-dossier-banner"><span className="pf-banner-grid" /><span className="pf-banner-orbit" /><span className="pf-banner-mark" aria-hidden="true">X</span><span className="pf-eyebrow"><Shield size={13} aria-hidden="true" />Community member</span><span className="pf-dossier-label">A BUILDER IN THE LABX COMMUNITY</span></div>
-      <div className="pf-dossier-body"><ProfileIdentity profile={profile} /><div className="pf-header-actions"><Link className="pf-button" to="/social?tab=messages">Back to messages<ArrowUpRight size={15} aria-hidden="true" /></Link></div></div>
+      <div className="pf-dossier-body"><ProfileIdentity profile={profile} /><div className="pf-header-actions"><Link className="pf-button" to={`/social?tab=posts&userId=${encodeURIComponent(person.id)}`}><FileText size={16} aria-hidden="true" />Posts</Link><Link className="pf-button" to="/social?tab=messages">Back to messages<ArrowUpRight size={15} aria-hidden="true" /></Link></div></div>
     </section>
     <nav className="pf-tabs" aria-label="Profile sections"><span className="pf-tab-caption">View-only demo profile</span></nav>
     <div className="pf-overview-grid">

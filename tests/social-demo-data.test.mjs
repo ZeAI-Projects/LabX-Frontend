@@ -14,7 +14,7 @@ const user = {
 
 test('Social mock data includes image and text-only posts, reactions, follows, and conversations', () => {
   const data = createSocialDemoData(user)
-  assert.equal(data.posts.length, 9)
+  assert.equal(data.posts.length, 12)
   assert.ok(data.posts.every((post, index) => index === 0 || data.posts[index - 1].createdAt >= post.createdAt))
   assert.ok(data.posts.every(post => {
     const media = post.media ? (Array.isArray(post.media) ? post.media : [post.media]) : []
@@ -33,6 +33,7 @@ test('Social mock data includes image and text-only posts, reactions, follows, a
   assert.ok(data.conversations.length >= 2)
   assert.ok(data.conversations.every(conversation => conversation.messages.length > 0))
   assert.ok(data.conversations.reduce((total, conversation) => total + conversation.messages.length, 0) >= 15)
+  assert.ok(data.conversations.every(conversation => data.posts.some(post => post.author.id === conversation.person.id)))
 
   for (const post of data.posts) {
     const media = post.media ? (Array.isArray(post.media) ? post.media : [post.media]) : []
