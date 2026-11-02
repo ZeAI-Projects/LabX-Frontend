@@ -358,7 +358,7 @@
 .social-media-preview > .social-icon-button { position: absolute; z-index: 1; top: 5px; right: 7px; }
 .social-media-preview > img { display: block; max-width: 100%; max-height: calc(92vh - 66px); margin: 0 auto; object-fit: contain; }
 .social-comments, .social-likes-popover, .social-post__menu, .social-recipient-panel, .social-audience__options, .social-dialog[open], .social-share-dialog[open] { animation: social-enter .18s ease-out both; }
-.social-home-view:not([hidden]), .social-messages-view:not([hidden]), .social-my-posts:not([hidden]) { animation: social-enter .2s ease-out both; }
+.social-messages-view:not([hidden]), .social-my-posts:not([hidden]) { animation: social-enter .2s ease-out both; }
 .social-conversation { transition: background-color .18s ease, border-color .18s ease; }
 .social-conversation[aria-current="true"] { transition: background-color .18s ease; }
 .social-media-preview[open] { animation: social-enter .18s ease-out both; }
@@ -371,7 +371,80 @@
   .social-post__media-grid--4 { aspect-ratio: 1.3; }
   .social-media-preview { width: calc(100% - 20px); padding: 40px 8px 8px; }
 }
+.social-emoji-picker-wrap { position: relative; }
+.social-emoji-picker { position: absolute; z-index: 8; bottom: calc(100% + 10px); left: 0; width: min(360px, calc(100vw - 56px)); padding: 5px; overflow: hidden; border: 1px solid rgba(103, 232, 249, .2); border-radius: 14px; background: #111a2b; box-shadow: 0 18px 48px rgba(0, 0, 0, .45); }
+.social-emoji-picker__widget { --epr-bg-color: #111a2b; --epr-category-label-bg-color: #111a2b; --epr-search-input-bg-color: #0b1220; --epr-search-input-bg-color-active: #0b1220; --epr-picker-border-color: rgba(148, 163, 184, .16); --epr-text-color: #dce8f5; --epr-highlight-color: #67e8f9; --epr-hover-bg-color: rgba(103, 232, 249, .1); --epr-focus-bg-color: rgba(103, 232, 249, .14); --epr-emoji-size: 27px; --epr-category-navigation-button-size: 30px; border: 0; border-radius: 10px; font-family: inherit; }
+.social-emoji-picker__widget [data-epr-part='search-input'] { color: #e2e8f0; font-family: inherit; }
+.social-emoji-picker__widget [data-epr-part='category-label'] { color: #9fb0c6; font-size: .7rem; font-weight: 700; letter-spacing: .04em; }
+.social-emoji-picker__widget [data-epr-part='emoji']:focus-visible, .social-emoji-picker__widget [data-epr-part='category-tab']:focus-visible { outline: 2px solid #67e8f9; outline-offset: 1px; }
+.social-emoji-picker__widget { scrollbar-color: #3b506a #111a2b; }
+.social-conversation__name { display: block; text-decoration: none; }
 @media (prefers-reduced-motion: reduce) {
-  .social-comments, .social-likes-popover, .social-post__menu, .social-recipient-panel, .social-audience__options, .social-dialog[open], .social-share-dialog[open], .social-home-view:not([hidden]), .social-messages-view:not([hidden]), .social-my-posts:not([hidden]), .social-media-preview[open], .social-media-preview > img { animation: none; }
+  .social-comments, .social-likes-popover, .social-post__menu, .social-recipient-panel, .social-audience__options, .social-dialog[open], .social-share-dialog[open], .social-messages-view:not([hidden]), .social-my-posts:not([hidden]), .social-media-preview[open], .social-media-preview > img, .social-emoji-picker, .social-post__carousel .social-post__media-item > .social-post__media { animation: none; }
+  .social-post__carousel-arrow { transition: none; }
   .social-conversation, .social-post__media-grid .social-post__media { transition: none; }
 }
+
+.app-shell .founder-world--social > .app-shell__page { overflow-x: hidden; overflow-y: auto; }
+.social-page { min-height: 100%; flex: 0 0 auto; }
+.social-home-view, .social-my-posts { flex: 0 0 auto; overflow: visible; }
+.social-feed { display: grid; width: min(920px, 100%); flex: 0 0 auto; grid-template-columns: minmax(0, 1fr); align-self: center; gap: 18px; overflow: visible; }
+.social-post { width: min(100%, 760px); justify-self: center; padding: 16px 18px 12px; }
+.social-post__media-grid--1 .social-post__media { max-height: none; aspect-ratio: auto; }
+.social-post__media-grid--2 { grid-template-columns: minmax(0, 1.45fr) minmax(0, .85fr); aspect-ratio: 1.8; }
+.social-post__media-grid--2 .social-post__media-item { height: 100%; }
+.social-post__actions > .social-post__action-group { display: flex; width: 100%; min-width: 0; min-height: 44px; align-items: center; justify-content: center; gap: 8px; padding: 0 10px; border: 1px solid rgba(148, 163, 184, .12); border-radius: 9px; background: rgba(148, 163, 184, .035); color: #aeb9ca; font-size: .76rem; font-weight: 650; cursor: pointer; }
+.social-post__actions > .social-post__action-group:hover { border-color: rgba(103, 232, 249, .3); background: rgba(34, 211, 238, .09); color: #e2e8f0; }
+.social-post__actions > .social-post__action-group.is-liked { color: #f472b6; }
+.social-post__actions > .social-post__action-group:focus-visible { outline: 2px solid rgba(103, 232, 249, .75); outline-offset: 2px; }
+.social-chat__back { display: inline-grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; border: 1px solid transparent; border-radius: 8px; color: #a5f3fc; }
+.social-chat__back:hover, .social-chat__back:focus-visible { border-color: rgba(148, 163, 184, .16); background: rgba(148, 163, 184, .08); color: #fff; }
+.social-recipient strong { color: #e2e8f0; font-size: .76rem; line-height: 1.25; }
+.social-recipient small { font-size: .68rem; line-height: 1.35; }
+.social-conversation__copy { justify-content: stretch; justify-items: stretch; }
+.social-conversation__name, .social-conversation__preview { width: 100%; min-width: 0; }
+.social-page .social-search input:focus-visible { outline: none; }
+.social-post__carousel { position: relative; width: 100%; margin: 0 0 10px; overflow: hidden; border: 1px solid rgba(148, 163, 184, .14); border-radius: 11px; background: #0b1220; touch-action: pan-y; }
+.social-post__carousel .social-post__media-item { display: block; width: 100%; min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; cursor: zoom-in; }
+.social-post__carousel .social-post__media { display: block; width: 100%; height: auto; max-height: clamp(280px, 55vh, 500px); aspect-ratio: auto; margin: 0; object-fit: contain; object-position: center; }
+.social-post__carousel .social-post__media-item > .social-post__media { animation: social-image-enter .22s ease-out both; }
+.social-post__carousel-arrow { position: absolute; z-index: 1; top: 50%; display: grid; width: 38px; height: 38px; place-items: center; border: 1px solid rgba(255, 255, 255, .24); border-radius: 50%; background: rgba(5, 10, 20, .64); color: white; opacity: 0; visibility: hidden; transform: translateY(-50%) scale(.94); transition: opacity .16s ease, transform .16s ease, visibility .16s ease, background-color .16s ease; }
+.social-post__carousel:hover .social-post__carousel-arrow, .social-post__carousel:focus-within .social-post__carousel-arrow { opacity: .9; visibility: visible; transform: translateY(-50%) scale(1); }
+.social-post__carousel-arrow:hover { background: rgba(5, 10, 20, .88); opacity: 1; }
+.social-post__carousel-arrow--previous { left: 12px; }
+.social-post__carousel-arrow--next { right: 12px; }
+.social-post__carousel-count { position: absolute; top: 12px; right: 12px; padding: 4px 9px; border-radius: 999px; background: rgba(5, 10, 20, .68); color: #fff; font-size: .68rem; }
+.social-post__text { margin: 12px 0 8px; font-size: .86rem; line-height: 1.55; }
+.social-post__header + .social-post__text { margin: 12px 0 14px; color: #e2e8f0; font-size: .9rem; line-height: 1.6; overflow-wrap: anywhere; white-space: pre-wrap; }
+.social-media-preview__nav { position: absolute; z-index: 1; top: 50%; display: grid; width: 38px; height: 38px; place-items: center; border: 1px solid rgba(148, 163, 184, .25); border-radius: 50%; background: rgba(7, 12, 23, .72); color: #e2e8f0; transform: translateY(-50%); }
+.social-media-preview__nav:hover { background: rgba(34, 211, 238, .2); color: #a5f3fc; }
+.social-media-preview__nav--previous { left: 10px; }
+.social-media-preview__nav--next { right: 10px; }
+.social-media-preview__count { position: absolute; top: 13px; left: 50%; color: #aeb9ca; font-size: .72rem; transform: translateX(-50%); }
+@media (max-width: 650px) {
+  .social-feed { width: 100%; grid-template-columns: minmax(0, 1fr); }
+  .social-post__media-grid--2 { aspect-ratio: 2; }
+  .social-chat__back { display: grid; }
+}
+.app-shell .founder-world--social > .app-shell__page:has(.social-page--messages) { overflow: hidden; }
+.social-page--messages { height: 100%; min-height: 0; flex: 1 1 auto; overflow: hidden; }
+.social-page--messages .social-messages-view { min-height: 0; flex: 1 1 auto; }
+.social-page--messages .social-messages { height: 100%; min-height: 0; }
+.social-chat__thread--empty { justify-content: center; }
+.social-chat__welcome { display: grid; max-width: 360px; justify-items: center; gap: 10px; align-self: center; margin: auto; padding: 28px; border: 1px solid rgba(148, 163, 184, .12); border-radius: 16px; background: rgba(148, 163, 184, .045); text-align: center; }
+.social-chat__welcome > span { display: grid; width: 46px; height: 46px; place-items: center; border: 1px solid rgba(103, 232, 249, .18); border-radius: 50%; background: rgba(6, 182, 212, .1); color: #67e8f9; }
+.social-chat__welcome strong { color: #e2e8f0; font-size: .9rem; }
+.social-chat__welcome p { color: #94a3b8; font-size: .76rem; line-height: 1.55; }
+body:has(.social-page--messages) .sharp-dock--app:not(.has-open-chat) { top: 112px; bottom: auto; transform: scale(.42); transform-origin: top right; }
+@media (max-width: 650px) {
+  .social-page--messages { padding-bottom: 7px; }
+  .social-post { padding: 13px 12px 9px; }
+  .social-post__carousel .social-post__media { max-height: 58vh; }
+  .social-post__carousel-arrow--previous { left: 8px; }
+  .social-post__carousel-arrow--next { right: 8px; }
+}
+.social-action-like { width: 100%; }
+.social-action-like > .social-post__action-group { width: 100%; min-height: 44px; border: 0; background: transparent; }
+.social-action-like > .social-post__action-group:hover, .social-post__actions > .social-post__action-group:hover { border: 0; background: rgba(148, 163, 184, .07); color: #e2e8f0; }
+.social-post__actions > .social-post__action-group { min-height: 44px; border: 0; background: transparent; }
+.social-action-like > .social-post__action-group:focus-visible, .social-post__actions > .social-post__action-group:focus-visible { outline: 2px solid rgba(103, 232, 249, .75); outline-offset: 2px; }

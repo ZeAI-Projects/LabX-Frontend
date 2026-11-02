@@ -14,6 +14,7 @@ import { ProfileEditor } from '../components/ProfileEditor.jsx'
 import { PassportPanel } from '../components/PassportPanel.jsx'
 import '../components/ProfilePage.css'
 import { Medal } from '../../../components/common/Medal.jsx'
+import { findSocialDemoPerson } from '../../social/services/social_demo_data.js'
 
 const badgeIcons = { flag: Flag, compass: Compass, mountain: Mountain, route: Route, zap: Zap, trophy: Trophy }
 const availabilityLabels = { unspecified: 'Not specified', open: 'Open to collaboration', selective: 'Open to selected opportunities', unavailable: 'Not available currently' }
@@ -155,7 +156,7 @@ function ProfileContent({ user, refreshUser }) {
   return <div className="pf-page" data-profile-revision={revision}>
     <section className="pf-dossier" aria-label="Your profile">
       <div className="pf-dossier-banner">{profile.banner?.dataUrl ? <img src={profile.banner.dataUrl} alt="Your profile banner" /> : <><span className="pf-banner-grid" /><span className="pf-banner-orbit" /><span className="pf-banner-mark" aria-hidden="true">X</span></>}<span className="pf-eyebrow"><Shield size={13} aria-hidden="true" />{getRoleLabel(user.role)} dossier</span><span className="pf-dossier-label">YOUR STORY. YOUR NEXT CHAPTER.</span></div>
-      <div className="pf-dossier-body"><ProfileIdentity profile={profile} /><div className="pf-header-actions"><button className="pf-button" type="button" onClick={openPreview}><Eye size={16} aria-hidden="true" />Public preview</button><button className="pf-button pf-button--primary" type="button" onClick={() => setEditor('basics')}><Pencil size={16} aria-hidden="true" />Edit profile</button></div></div>
+      <div className="pf-dossier-body"><ProfileIdentity profile={profile} /><div className="pf-header-actions"><button className="pf-button" type="button" onClick={openPreview}><Eye size={16} aria-hidden="true" />Public preview</button>{founder && <Link className="pf-button" to="/social?tab=posts"><FileText size={16} aria-hidden="true" />Posts</Link>}<button className="pf-button pf-button--primary" type="button" onClick={() => setEditor('basics')}><Pencil size={16} aria-hidden="true" />Edit profile</button></div></div>
       {founder && snapshot.achievements.badges.some(badge => badge.isEarned) && <div className="pf-featured-badges" aria-label="Featured earned badges"><span>Your collection</span>{snapshot.achievements.badges.filter(badge => badge.isEarned).slice(0, 3).map(badge => <Link key={badge.id} to={'/achievements?badge=' + badge.id} title={badge.name}><Medal icon={badgeIcons[badge.icon] || Award} size={25} tone={badge.metric === 'milestones' ? 'gold' : 'violet'}/><span>{badge.name}</span></Link>)}</div>}
       <div className="pf-account-strip"><span><LockKeyhole size={13} aria-hidden="true" /><span>Private account email</span><strong>{user.email}</strong></span><button type="button" className="pf-text-button" onClick={() => setEditor('visibility')}><Shield size={13} aria-hidden="true" />Manage visibility</button></div>
     </section>
@@ -180,5 +181,41 @@ function ProfileContent({ user, refreshUser }) {
 
 export function ProfilePage() {
   const { user, refreshUser } = useAuth()
-  return user ? <ProfileContent key={user.id} user={user} refreshUser={refreshUser} /> : null
+  const [params] = useSearchParams()
+  const requestedUserId = params.get('userId')
+  if (!user) return null
+  if (requestedUserId && requestedUserId !== user.id) {
+    const person = findSocialDemoPerson(requestedUserId)
+    if (!person) return <div className="pf-page"><section className="pf-panel"><PanelHeading icon={Users} title="Profile unavailable" /><p className="pf-note">This community profile is not available in the local demo.</p><Link className="pf-text-link" to="/social">Back to Social<ArrowUpRight size={14} aria-hidden="true" /></Link></section></div>
+    return <DemoMemberProfile person={person} />
+  }
+  return <ProfileContent key={user.id} user={user} refreshUser={refreshUser} />
+}
+
+function DemoMemberProfile({ person }) {
+  const profile = {
+    ...person,
+    bio: person.bio || `Building thoughtful ${person.domain} solutions through collaboration, experimentation, and community feedback.`,
+    skills: person.skills || ['Product discovery', 'Community research', `${person.domain} innovation`],
+    interests: person.interests || ['Inclusive design', 'Early-stage building', 'Knowledge sharing'],
+    goals: person.goals || `Learn from the ${person.domain} community and make a useful difference for the people this work serves.`,
+    professional_background: person.professional_background || `Founder exploring practical ideas in ${person.domain}.`,
+    education: person.education || 'Continuous learning through research, collaboration, and hands-on experiments.',
+    startup: person.startup || { name: `${person.full_name}'s ${person.domain} project`, description: `An early-stage ${person.domain} venture shaped by community feedback.` },
+  }
+  return <div className="pf-page">
+    <section className="pf-dossier" aria-label={`${profile.full_name}'s view-only profile`}>
+      <div className="pf-dossier-banner"><span className="pf-banner-grid" /><span className="pf-banner-orbit" /><span className="pf-banner-mark" aria-hidden="true">X</span><span className="pf-eyebrow"><Shield size={13} aria-hidden="true" />Community member</span><span className="pf-dossier-label">A BUILDER IN THE LABX COMMUNITY</span></div>
+      <div className="pf-dossier-body"><ProfileIdentity profile={profile} /><div className="pf-header-actions"><Link className="pf-button" to="/social?tab=messages">Back to messages<ArrowUpRight size={15} aria-hidden="true" /></Link></div></div>
+    </section>
+    <nav className="pf-tabs" aria-label="Profile sections"><span className="pf-tab-caption">View-only demo profile</span></nav>
+    <div className="pf-overview-grid">
+      <div className="pf-overview-side"><ProfileAbout profile={profile} publicMode /></div>
+      <div className="pf-overview-main">
+        <VentureDetails profile={profile} publicMode />
+        <section className="pf-panel" aria-label="Community focus"><PanelHeading icon={Compass} title="Community focus" /><dl className="pf-dossier-facts">{[['Focus area', person.domain], ['Current stage', person.stage], ['LabX level', `Level ${person.level}`]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></section>
+      </div>
+    </div>
+    <p className="pf-page-note"><Eye size={12} aria-hidden="true" />Mock profile · This view is read-only</p>
+  </div>
 }

@@ -13,6 +13,15 @@ const demoPeople = [
     domain: 'ClimateTech',
     stage: 'Prototype',
     level: 2,
+    bio: 'Building practical climate tools with the people who will use them every day.',
+    city: 'Pune',
+    country: 'India',
+    skills: ['Product research', 'Hardware prototyping', 'Climate innovation'],
+    interests: ['Regenerative farming', 'Open data', 'Community-led design'],
+    goals: 'Partner with farms to make soil health easier to understand and improve.',
+    professional_background: 'Product designer focused on accessible tools for local agriculture.',
+    education: 'Environmental design and human-centered technology.',
+    startup: { name: 'Groundwork', description: 'Affordable soil monitoring designed with small farms.', problem: 'Farmers often lack timely, practical soil health information.', solution: 'A simple sensor and clear guidance for everyday decisions.' },
     canMessage: true,
   },
   {
@@ -24,6 +33,15 @@ const demoPeople = [
     domain: 'HealthTech',
     stage: 'Early stage',
     level: 3,
+    bio: 'Making the first steps into care easier for patients and clinic teams.',
+    city: 'Seoul',
+    country: 'South Korea',
+    skills: ['Service design', 'User interviews', 'Healthcare operations'],
+    interests: ['Community health', 'Inclusive research', 'Thoughtful technology'],
+    goals: 'Help small clinics create calmer and more accessible patient experiences.',
+    professional_background: 'Product builder working with independent clinics and care teams.',
+    education: 'Public health and interaction design.',
+    startup: { name: 'Carepath', description: 'A clearer appointment journey for community clinics.', problem: 'Patients can find booking and preparation steps confusing.', solution: 'A lightweight flow that makes each next step clear.' },
     canMessage: true,
   },
   {
@@ -148,9 +166,41 @@ const demoPeople = [
   },
 ]
 
+export function findSocialDemoPerson(userId) {
+  return demoPeople.find(person => person.id === userId) || null
+}
+
 export function createSocialDemoData(currentUser) {
   const [ava, noah, mira, sam, leila, omar, priya, ethan, noor, elena, mateo, grace, aiden] = demoPeople
   const users = [currentUser, ...demoPeople]
+  const longPostSentences = [
+    'This week reminded me that building a useful product begins with listening carefully before deciding what the solution should become.',
+    'Our small team spent time with community members, taking notes about their routines, constraints, questions, and moments of uncertainty.',
+    'The most valuable insights were not dramatic announcements but ordinary details that changed how we understood the problem.',
+    'We learned to ask open questions, leave room for silence, and avoid turning an early assumption into a feature too quickly.',
+    'Every conversation helped us see that a promising idea needs patience, context, and a willingness to change direction.',
+    'Our first prototype was deliberately simple so people could react to the experience instead of being distracted by polish.',
+    'Some people understood the flow immediately, while others showed us exactly where our language and expectations were unclear.',
+    'We are treating those pauses as useful evidence and making the next version more welcoming, predictable, and accessible.',
+    'A thoughtful product should respect the time people give us and make its purpose clear without requiring a long explanation.',
+    'The team has started writing down what we know, what we still need to learn, and which questions deserve another conversation.',
+    'This process is slower than guessing, but it gives us a stronger foundation for decisions that affect real people.',
+    'We are also learning to make progress visible by sharing small experiments, honest results, and the next steps we can take.',
+    'Not every test confirmed our expectations, and that was a good reminder to stay curious rather than defend an early plan.',
+    'We will keep the scope focused, invite feedback from different perspectives, and improve one meaningful part of the experience at a time.',
+    'The goal is not to add more features but to make the essential task feel clear, trustworthy, and genuinely useful.',
+    'I am grateful to everyone who shared their time and helped us notice the details we would have otherwise missed.',
+    'Our next milestone is another round of testing with a more accessible prototype and a simpler introduction for first-time visitors.',
+    'We will compare what people expect with what they actually experience and use those observations to guide our next decisions.',
+    'Progress can look like a smaller plan, a better question, or the confidence to remove something that does not help.',
+    'I hope this update encourages other builders to share their learning while the work is still in progress.',
+  ]
+  const longPostWords = []
+  while (longPostWords.length < 3000) {
+    const sentence = longPostSentences[Math.floor(longPostWords.length / 20) % longPostSentences.length]
+    longPostWords.push(...sentence.split(/\s+/))
+  }
+  const longPostText = longPostWords.slice(0, 3000).join(' ')
   return {
     users,
     followedUsers: [ava, noah, sam, leila, omar, priya, ethan, noor, elena, mateo, grace, aiden],
@@ -183,11 +233,10 @@ export function createSocialDemoData(currentUser) {
       {
         id: 'social-demo-post-mira',
         author: mira,
-        media: { src: '/social-demo/classroom.svg', alt: 'Illustration of a bright collaborative classroom' },
         text: 'This week I am talking with teachers about the small classroom moments where students get stuck. If you have run a useful discovery interview, I would love to hear what helped you ask better questions.',
         createdAt: minutesAgo(360),
         audience: 'Everyone',
-        likes: [ava.id, noah.id, currentUser.id],
+        likes: [],
         comments: [],
       },
       {
@@ -247,14 +296,19 @@ export function createSocialDemoData(currentUser) {
       {
         id: 'social-demo-post-ethan',
         author: ethan,
-        media: [
-          { src: '/social-demo/soil-sensor.svg', alt: 'Illustration of a soil sensor in a green field' },
-          { src: '/social-demo/classroom.svg', alt: 'Illustration of a bright collaborative classroom' },
-        ],
         text: 'A useful reminder from our latest feedback session: accessibility needs to be part of the first draft, not the final checklist. We are updating our test plan to reflect that.',
         createdAt: minutesAgo(137),
         audience: 'Everyone',
-        likes: [priya.id, currentUser.id],
+        likes: [],
+        comments: [],
+      },
+      {
+        id: 'social-demo-post-long-text',
+        author: noor,
+        text: longPostText,
+        createdAt: minutesAgo(180),
+        audience: 'Everyone',
+        likes: [],
         comments: [],
       },
     ].sort((a, b) => b.createdAt - a.createdAt),
