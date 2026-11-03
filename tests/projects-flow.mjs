@@ -45,6 +45,7 @@ try {
     const node = page.locator('.rmj-level-node[aria-label^="Stage 1, Level 1:"][aria-label$=", current"]')
     await node.waitFor()
     await node.click()
+    await page.getByRole('button', { name: 'Enter Level', exact: true }).click()
     const level = page.locator('.rmj-mission-page')
     await level.waitFor()
     const firstMission = level.locator('.rmj-mission-tile').filter({ has: page.getByText('Problem statement', { exact: true }) })

@@ -1,62 +1,76 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, Flag, LockKeyhole, Mountain, Play, Trophy } from 'lucide-react';
-import { RoadsideScenery } from './RoadsideScenery.jsx';
-import './RoadmapHighway.css';
+import {
+  ArrowLeft, ArrowRight, BarChart3, Check, Flag, FlaskConical, Layers,
+  Leaf, LockKeyhole, Play, Rocket, Trophy,
+} from 'lucide-react';
 import './RoadmapJourney.css';
+import './RoadmapMountain.css';
 
+const STAGE_ICONS = [Leaf, FlaskConical, Layers, Rocket, BarChart3];
+const LEVEL_POSITIONS = [
+  { x: 7, y: 82 },
+  { x: 33, y: 66 },
+  { x: 48, y: 51 },
+  { x: 65, y: 36 },
+  { x: 80, y: 21 },
+];
+const COMPACT_LEVEL_POSITIONS = [
+  { x: 8, y: 61 },
+  { x: 31, y: 50 },
+  { x: 49, y: 39 },
+  { x: 67, y: 28 },
+  { x: 84, y: 17 },
+];
 const isCovered = (mission) => ['completed', 'credited', 'skipped'].includes(mission.state);
-
-function levelScrollTarget(viewport, node) {
-  const nodeTop = node.getBoundingClientRect().top - viewport.getBoundingClientRect().top + viewport.scrollTop;
-  return Math.max(0, Math.min(nodeTop - viewport.clientHeight * 0.62, viewport.scrollHeight - viewport.clientHeight));
-}
 
 function levelStatus(level, activeLevelId) {
   const missions = level.milestones;
   if (missions.every(isCovered)) return missions.some((mission) => mission.state === 'credited') ? 'credited' : 'completed';
-  return level.id === activeLevelId ? 'current' : 'locked';
+  if (level.id === activeLevelId || missions.some((mission) => mission.state === 'active')) return 'current';
+  if (missions.some((mission) => ['available', 'optional'].includes(mission.state))) return 'available';
+  return 'locked';
 }
 
-function buildJourneyGeometry(stages) {
-  const row = 226;
-  const mountainGap = 118;
-  const top = 120;
-  const bottom = 150;
-  const levels = stages.flatMap((stage, stageIndex) => stage.levels.map((level) => ({ stage, stageIndex, level })));
-  const total = levels.length;
-  const height = top + total * row + Math.max(0, stages.length - 1) * mountainGap + bottom;
-  const xs = [49, 62, 42, 59, 49, 43, 61, 48, 39, 57];
-  const points = [];
-  levels.forEach((entry, index) => {
-    const transitionsAfter = stages.length - entry.stageIndex - 1;
-    const y = top + (total - index - 1) * row + transitionsAfter * mountainGap + row / 2;
-    points.push({ ...entry, x: xs[index % xs.length], y, type: 'level', index });
-    if (entry.level.number === 5 && entry.stageIndex < stages.length - 1) {
-      points.push({ x: 50, y: y - row / 2 - mountainGap / 2, type: 'mountain', stage: stages[entry.stageIndex + 1], stageIndex: entry.stageIndex + 1 });
-    }
+function buildStageGeometry(stage, compact) {
+  const positions = compact ? COMPACT_LEVEL_POSITIONS : LEVEL_POSITIONS;
+  const points = stage.levels.map((level, index) => ({ level, ...positions[index] }));
+  const first = points[0];
+  const startY = compact ? 340 : 465;
+  const path = [`M 25 ${startY} C 25 ${startY - 21} 42 ${startY - 35} ${first.x * 10} ${first.y * 5}`];
+  points.slice(1).forEach((point, index) => {
+    const previous = points[index];
+    const dx = point.x - previous.x;
+    const dy = (point.y - previous.y) * 5;
+    path.push(`C ${(previous.x + dx * .42) * 10} ${previous.y * 5 + dy * .2}, ${(point.x - dx * .42) * 10} ${point.y * 5 - dy * .2}, ${point.x * 10} ${point.y * 5}`);
   });
-  const summit = { x: 50, y: 40, type: 'summit' };
-  points.push(summit);
-  const path = points.reduce((pathData, point, index) => {
-    const x = point.x * 10;
-    if (index === 0) return `M ${x} ${point.y}`;
-    const previous = points[index - 1];
-    const midY = (previous.y + point.y) / 2;
-    return `${pathData} C ${previous.x * 10} ${midY}, ${x} ${midY}, ${x} ${point.y}`;
-  }, '');
-  return { height, levels, points, path };
+  const last = points.at(-1);
+  path.push(`C ${last.x * 10 + 48} ${last.y * 5 - 24}, 860 49, 925 40`);
+  return { points, path: path.join(' ') };
 }
 
-function StageTransition({ stage, stageIndex, y, crossed }) {
-  return <div className={`rmj-transition${crossed ? ' is-crossed' : ''}`} style={{ top: y, '--stage-color': stage.tier.color }} aria-label={`${stage.name} stage begins${crossed ? ', mountain crossed' : ''}`}>
-    <svg viewBox="0 0 220 124" aria-hidden="true">
-      <path className="rmj-mountain-back" d="M4 112 56 41l24 30 39-55 94 96Z" />
-      <path className="rmj-mountain-front" d="m43 112 39-57 18 25 24-37 79 69Z" />
-      <path className="rmj-mountain-snow" d="m106 55 18-27 17 26-15-8-7 11-7-8Z" />
-      <path className="rmj-mountain-trail" d="m118 67 19 14-14 8 19 16" />
+function MountainArtwork({ stage, complete }) {
+  return <>
+    <svg className="rmj-mountain-art" viewBox="0 0 1000 500" preserveAspectRatio="none" aria-hidden="true">
+      <path className="rmj-cloud rmj-cloud--left" d="M18 232q8-18 25-12 8-24 34-13 12-15 28 1 19-4 22 17Z" />
+      <path className="rmj-cloud rmj-cloud--right" d="M778 190q9-22 31-15 11-27 37-14 17-17 33 1 22-4 26 19Z" />
+      <path className="rmj-mountain-range rmj-mountain-range--far" d="M0 390 120 291l90 68 111-138 130 153 126-123 122 93 98-122 203 147v131H0Z" />
+      <path className="rmj-mountain-range rmj-mountain-range--middle" d="M0 433 102 350l93 37 135-130 120 118 92-105 124 90 104-143 120 106 110-81v258H0Z" />
+      <path className="rmj-mountain-range rmj-mountain-range--front" d="M0 471 124 407l125 48 100-73 115 69 151-88 118 66 103-78 164 93v56H0Z" />
+      <path className="rmj-mountain-snowcap" d="m772 237 104-198 105 199-69-41-34 25-32-37Z" />
+      <path className="rmj-mountain-ridge-light" d="m772 237 104-198-35 157 33-4-31 34-21-26-18 21Z" />
+      <path className="rmj-mountain-vegetation" d="M0 468q92-45 177-12t165 0q83-39 174-2t169-8q92-44 172-5t143 3v56H0Z" />
+      <g className="rmj-mountain-stars">
+        <circle cx="102" cy="111" r="1.5" /><circle cx="264" cy="87" r="1.2" />
+        <circle cx="414" cy="133" r="1.4" /><circle cx="712" cy="92" r="1.3" />
+        <circle cx="952" cy="128" r="1.5" />
+      </g>
     </svg>
-    <span>STAGE {String(stageIndex + 1).padStart(2, '0')} · {stage.name.toUpperCase()}</span>
-  </div>;
+    <div className={`rmj-summit-flag${complete ? ' is-complete' : ''}${stage.id === 'grow' ? ' is-premium' : ''}`} aria-label={complete ? `${stage.name} complete` : `${stage.name} summit`}>
+      <span className="rmj-summit-beacon" />
+      <Flag size={23} fill="currentColor" />
+      <small>{complete ? 'SUMMIT REACHED' : stage.tier.name}</small>
+    </div>
+  </>;
 }
 
 function LevelMissionsPage({ level, stage, status, canOpen, onOpenMission, onBack }) {
@@ -97,77 +111,75 @@ export function RoadmapJourney({
   project, roadmap, currentMission, selectedLevelId, onSelectLevel, canOpen,
   onOpenMission, headerBar, operations, showOperations = false,
 }) {
-  const viewportRef = useRef(null);
-  const nodeRefs = useRef(new Map());
-  const positionedRef = useRef(false);
+  const currentStage = roadmap.stages.find((stage) => stage.isCurrent) || roadmap.stages[roadmap.currentStageIndex] || roadmap.stages[0];
+  const [selectedStageId, setSelectedStageId] = useState(currentStage.id);
+  const previousCurrentStageId = useRef(currentStage.id);
   const [levelPageId, setLevelPageId] = useState(null);
-  const geometry = useMemo(() => buildJourneyGeometry(roadmap.stages), [roadmap.stages]);
-  const sceneryPoints = geometry.levels.map(({ level }) => ({
-    id: level.id,
-    y: geometry.points.find((point) => point.type === 'level' && point.level.id === level.id).y,
-  }));
+  const [compact, setCompact] = useState(() => window.matchMedia('(max-width: 520px)').matches);
+  const selectedStage = roadmap.stages.find((stage) => stage.id === selectedStageId) || currentStage;
+  const geometry = useMemo(() => buildStageGeometry(selectedStage, compact), [selectedStage, compact]);
   const activeLevelId = currentMission ? `${currentMission.stageName.toLowerCase()}-level-${currentMission.level}` : null;
-  const pageEntry = geometry.levels.find(({ level }) => level.id === levelPageId);
-  const completedLevels = geometry.levels.filter(({ level }) => level.milestones.every(isCovered)).length;
+  const pageEntry = selectedStage.levels.find((level) => level.id === levelPageId);
+  const completedLevels = roadmap.stages.flatMap((stage) => stage.levels).filter((level) => level.milestones.every(isCovered)).length;
   const coveredMissionCount = roadmap.completedCount + (roadmap.creditedCount || 0);
   const resolvedMissionCount = project.visualDemo ? roadmap.resolvedCount ?? coveredMissionCount : coveredMissionCount;
+  const selectedLevel = selectedStage.levels.find((level) => level.id === selectedLevelId)
+    || selectedStage.levels.find((level) => level.id === activeLevelId)
+    || selectedStage.levels[0];
+  const selectedStatus = levelStatus(selectedLevel, activeLevelId);
+  const stageComplete = selectedStage.levels.every((level) => level.milestones.every(isCovered));
+  const stageCompletedLevels = selectedStage.levels.filter((level) => level.milestones.every(isCovered)).length;
+  const currentLevelLabel = currentMission ? `${currentStage.name} · Level ${currentMission.level}` : 'Roadmap complete';
 
   useEffect(() => {
-    const viewport = viewportRef.current;
-    if (!viewport || !activeLevelId) return undefined;
-    let frame = 0;
-    const positionActiveLevel = () => {
-      const node = nodeRefs.current.get(activeLevelId);
-      if (!node) return;
-      viewport.scrollTo({ top: levelScrollTarget(viewport, node), behavior: positionedRef.current ? 'smooth' : 'auto' });
-      positionedRef.current = true;
-    };
-    const observer = new ResizeObserver(() => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(positionActiveLevel);
-    });
-    observer.observe(viewport);
-    frame = requestAnimationFrame(() => {
-      frame = requestAnimationFrame(positionActiveLevel);
-    });
-    return () => { observer.disconnect(); cancelAnimationFrame(frame); };
-  }, [activeLevelId, geometry.height]);
+    const media = window.matchMedia('(max-width: 520px)');
+    const updateCompact = () => setCompact(media.matches);
+    media.addEventListener('change', updateCompact);
+    return () => media.removeEventListener('change', updateCompact);
+  }, []);
+  useEffect(() => {
+    if (previousCurrentStageId.current === currentStage.id) return;
+    if (selectedStageId === previousCurrentStageId.current) setSelectedStageId(currentStage.id);
+    previousCurrentStageId.current = currentStage.id;
+  }, [currentStage.id, selectedStageId]);
 
   const stageStatus = (stage) => {
-    const stageLevels = stage.levels;
-    if (stageLevels.every((level) => level.milestones.every(isCovered))) return 'complete';
+    if (stage.levels.every((level) => level.milestones.every(isCovered))) return 'complete';
     return stage.isCurrent ? 'current' : 'locked';
   };
-  const openMission = (mission) => {
-    onOpenMission(mission);
-  };
-  const crossedStage = (stageIndex) => roadmap.stages[stageIndex - 1]?.levels.every((level) => level.milestones.every(isCovered)) ?? false;
-  const scrollToLevel = (levelId) => {
-    const viewport = viewportRef.current;
-    const node = nodeRefs.current.get(levelId);
-    if (!viewport || !node) return;
-    viewport.scrollTo({ top: levelScrollTarget(viewport, node), behavior: 'smooth' });
-  };
+  const openMission = (mission) => onOpenMission(mission);
   const selectStage = (stage) => {
     if (!stage.isUnlocked && stageStatus(stage) !== 'complete') return;
-    const firstLevel = stage.levels[0];
+    setSelectedStageId(stage.id);
     setLevelPageId(null);
-    onSelectLevel(firstLevel.id);
-    requestAnimationFrame(() => requestAnimationFrame(() => scrollToLevel(firstLevel.id)));
+    const target = stage.levels.find((level) => level.id === activeLevelId)
+      || stage.levels.find((level) => levelStatus(level, activeLevelId) !== 'locked')
+      || stage.levels[0];
+    onSelectLevel(target.id);
+  };
+  const selectLevel = (level) => {
+    onSelectLevel(level.id);
+  };
+  const enterSelectedLevel = () => {
+    if (selectedStatus === 'locked') return;
+    setLevelPageId(selectedLevel.id);
   };
 
-  return <section className="rmj-shell" aria-label={`${project.name} roadmap journey`}>
+  return <section className="rmj-shell" aria-label={`${project.name} roadmap journey`} style={{ '--stage-color': selectedStage.tier.color }}>
     <header className="rmj-header">
-    {headerBar && <div className="rmj-breadcrumb">{headerBar}</div>}
-    <div className="rmj-title-row">
-        <div className="rmj-project-title"><span className="rmj-eyebrow">{roadmap.domain} · FOUNDER ROADMAP</span><h2>{project.name} Roadmap</h2></div>
+      {headerBar && <div className="rmj-breadcrumb">{headerBar}</div>}
+      <div className="rmj-title-row">
+        <div className="rmj-project-title">
+          <span className="rmj-eyebrow">{roadmap.domain} · FOUNDER ROADMAP</span>
+          <h2>{project.name} Roadmap</h2>
+        </div>
         <div className="rmj-progress-summary">
           <div className="rmj-progress-label"><span>Roadmap progress</span><strong>{roadmap.progressPercent}%</strong></div>
           <div className="rmj-progress-track" role="progressbar" aria-label="Roadmap progress" aria-valuemin={0} aria-valuemax={75} aria-valuenow={resolvedMissionCount} aria-valuetext={`${roadmap.completedCount} completed, ${roadmap.skippedCount || 0} optional missions skipped, ${roadmap.creditedCount || 0} placement credits, 75 total missions`}><span style={{ width: `${roadmap.progressPercent}%` }} /></div>
           <div className="rmj-progress-stats" aria-label="Roadmap summary">
+            <span><strong>{currentLevelLabel}</strong><small>Current focus</small></span>
+            <span><strong>{completedLevels}/25</strong><small>Levels</small></span>
             <span><strong>{resolvedMissionCount}/75</strong><small>Missions</small></span>
-            <span><strong>{completedLevels}/25</strong><small>Levels done</small></span>
-            <span><strong>{25 - completedLevels}</strong><small>Levels left</small></span>
           </div>
         </div>
       </div>
@@ -176,11 +188,13 @@ export function RoadmapJourney({
           const status = stageStatus(stage);
           const count = stage.levels.filter((level) => level.milestones.every(isCovered)).length;
           const unlocked = stage.isUnlocked || status === 'complete';
-          return <button key={stage.id} type="button" className={`rmj-stage-step is-${status}`} style={{ '--stage-color': stage.tier.color }}
+          const StageIcon = STAGE_ICONS[index];
+          return <button key={stage.id} type="button" className={`rmj-stage-step is-${status}${selectedStage.id === stage.id ? ' is-selected' : ''}`} style={{ '--stage-color': stage.tier.color }}
             disabled={!unlocked} aria-label={`Stage ${index + 1}: ${stage.name}, ${count} of 5 levels complete${unlocked ? '' : ', locked'}`}
             aria-current={stage.isCurrent ? 'step' : undefined} onClick={() => selectStage(stage)}>
-            <span className="rmj-stage-number">{status === 'complete' ? <Check size={14} /> : String(index + 1).padStart(2, '0')}</span>
-            <span className="rmj-stage-name">{stage.name}</span><small>{count}/5 levels</small>
+            <span className="rmj-stage-icon">{status === 'complete' ? <Check size={17} /> : <StageIcon size={18} />}</span>
+            <span className="rmj-stage-copy"><span className="rmj-stage-name">{stage.name}</span><small>Stage {index + 1} · {count}/5</small></span>
+            {status === 'locked' && <LockKeyhole className="rmj-stage-lock" size={14} aria-hidden="true" />}
           </button>;
         })}
       </nav>
@@ -188,52 +202,63 @@ export function RoadmapJourney({
     </header>
 
     {pageEntry
-      ? <div className="rmj-viewport rmj-viewport--missions" role="region" aria-label={`${pageEntry.stage.name} level ${pageEntry.level.number} missions`}>
-        <LevelMissionsPage level={pageEntry.level} stage={pageEntry.stage}
-          status={levelStatus(pageEntry.level, activeLevelId)} canOpen={canOpen}
-          onOpenMission={openMission} onBack={() => setLevelPageId(null)} />
+      ? <div className="rmj-viewport rmj-viewport--missions" role="region" aria-label={`${selectedStage.name} level ${pageEntry.number} missions`}>
+        <LevelMissionsPage level={pageEntry} stage={selectedStage} status={levelStatus(pageEntry, activeLevelId)}
+          canOpen={canOpen} onOpenMission={openMission} onBack={() => setLevelPageId(null)} />
       </div>
-      : <div ref={viewportRef} className="rmj-viewport" role="region" aria-label="Roadmap journey from Discover to Grow" tabIndex={0}>
-      <div className="rmj-canvas" style={{ height: geometry.height }}>
-        <div className="rmj-atmosphere" aria-hidden="true" />
-        <RoadsideScenery points={sceneryPoints} reached={Math.floor(coveredMissionCount / 3) - 1} stageIndex={roadmap.currentStageIndex} />
-        <svg className="rmj-road" viewBox={`0 0 1000 ${geometry.height}`} preserveAspectRatio="none" aria-hidden="true">
-          <path className="rmj-road-shadow" d={geometry.path} />
-          <path className="rmj-road-bed" d={geometry.path} />
-          <path className="rmj-road-center" d={geometry.path} />
-          <path className="rmj-road-lanes" d={geometry.path} />
-          <path className="rmj-road-progress" d={geometry.path} pathLength="1000" style={{ strokeDasharray: `${roadmap.progressPercent * 10} 1000` }} />
-        </svg>
-        {geometry.points.filter((point) => point.type === 'mountain').map((point) => <StageTransition key={`mountain-${point.stageIndex}`} stage={point.stage} stageIndex={point.stageIndex} y={point.y} crossed={crossedStage(point.stageIndex)} />)}
-        <div className={`rmj-summit${roadmap.isComplete ? ' is-complete' : ''}`} style={{ top: 40 }}>
-          <span className="rmj-summit-icon">{roadmap.isComplete ? <Trophy size={20} /> : <Mountain size={20} />}</span>
-          <span><small>{roadmap.isComplete ? 'SUMMIT REACHED' : 'THE SUMMIT AHEAD'}</small><strong>{roadmap.isComplete ? 'Roadmap complete' : 'Build toward what’s next'}</strong></span>
+      : <div className="rmj-mountain-viewport" role="region" aria-label={`${selectedStage.name} stage mountain roadmap`}>
+        <div className={`rmj-mountain-canvas${selectedStage.id === 'grow' ? ' is-premium' : ''}`}>
+          <MountainArtwork stage={selectedStage} complete={stageComplete} />
+          <svg className="rmj-mountain-road" viewBox="0 0 1000 500" preserveAspectRatio="none" aria-hidden="true">
+            <path className="rmj-mountain-road-shadow" d={geometry.path} />
+            <path className="rmj-mountain-road-bed" d={geometry.path} />
+            <path className="rmj-mountain-road-lane" d={geometry.path} />
+            <path className="rmj-mountain-road-progress" d={geometry.path} pathLength="1000"
+              style={{ strokeDasharray: `${Math.min(1000, (stageCompletedLevels + (selectedStage.levels.some((level) => level.id === activeLevelId) ? .22 : 0)) * 200)} 1000` }} />
+          </svg>
+          <div className="rmj-start-marker" aria-hidden="true"><span className="rmj-start-pulse" /><small>START HERE</small></div>
+          {geometry.points.map((point) => {
+            const level = point.level;
+            const status = levelStatus(level, activeLevelId);
+            const isSelected = selectedLevel.id === level.id;
+            const cardSide = point.x < 15 ? 'right' : 'left';
+            const completedMissions = level.milestones.filter(isCovered).length;
+            const description = level.description || level.milestones[0]?.description;
+            return <div key={level.id} className={`rmj-level-stop is-${status} is-card-${cardSide}${isSelected ? ' is-selected' : ''}`}
+              style={{ top: `${point.y}%`, '--node-x': `${point.x}%`, '--level-color': selectedStage.tier.color }}>
+              {isSelected && <article className="rmj-level-card rmj-level-card--desktop" aria-label={`${selectedStage.name}, Level ${level.number}: ${level.name}`}>
+                <span className="rmj-level-overline">{selectedStage.name} · Level {level.number}</span>
+                <strong>{level.name}</strong>
+                <p>{description}</p>
+                <div className="rmj-level-card-footer">
+                  <span>{completedMissions}/{level.milestones.length} Missions</span>
+                  <button type="button" className="rmj-launch-button" disabled={status === 'locked'} onClick={enterSelectedLevel}>
+                    {status === 'locked' ? <><LockKeyhole size={14} />Locked</> : <>{status === 'completed' || status === 'credited' ? 'Review Level' : 'Enter Level'}<ArrowRight size={14} /></>}
+                  </button>
+                </div>
+              </article>}
+              <button type="button" className="rmj-level-node" aria-label={`Stage ${selectedStage.index + 1}, Level ${level.number}: ${level.name}, ${status}`}
+                aria-pressed={isSelected} onClick={() => selectLevel(level)}>
+                {status === 'completed' || status === 'credited' ? <Check size={20} /> : status === 'current' || status === 'available' ? <Play size={16} /> : <LockKeyhole size={16} />}
+              </button>
+              <span className="rmj-level-label">L{level.number}</span>
+            </div>;
+          })}
+          <article className="rmj-level-card rmj-level-card--mobile" aria-label={`${selectedStage.name}, Level ${selectedLevel.number}: ${selectedLevel.name}`}>
+            <span className="rmj-level-overline">{selectedStage.name} · Level {selectedLevel.number}</span>
+            <strong>{selectedLevel.name}</strong>
+            <p>{selectedLevel.description || selectedLevel.milestones[0]?.description}</p>
+            <div className="rmj-level-card-footer">
+              <span>{selectedLevel.milestones.filter(isCovered).length}/{selectedLevel.milestones.length} Missions</span>
+              <button type="button" className="rmj-launch-button" disabled={selectedStatus === 'locked'} onClick={enterSelectedLevel}>
+                {selectedStatus === 'locked' ? <><LockKeyhole size={14} />Locked</> : <>{selectedStatus === 'completed' || selectedStatus === 'credited' ? 'Review Level' : 'Enter Level'}<ArrowRight size={14} /></>}
+              </button>
+            </div>
+          </article>
+          <div className={`rmj-mountain-finish${stageComplete ? ' is-complete' : ''}`}>
+            <Trophy size={15} /><span>{roadmap.isComplete ? 'Roadmap complete' : stageComplete ? `${selectedStage.name} complete` : 'Summit'}</span>
+          </div>
         </div>
-        {geometry.levels.map(({ stage, stageIndex, level }) => {
-          const point = geometry.points.find((entry) => entry.type === 'level' && entry.level.id === level.id);
-          const status = levelStatus(level, activeLevelId);
-          const side = point.x > 50 ? 'left' : 'right';
-          const selectedLevel = selectedLevelId === level.id;
-          return <div key={level.id} className={`rmj-level-stop is-${status} is-card-${side}${selectedLevel ? ' is-selected' : ''}`}
-            style={{ top: point.y, '--node-x': `${point.x}%`, '--stage-color': stage.tier.color }}>
-            <article className="rmj-level-card" aria-label={`Stage ${stageIndex + 1}, Level ${level.number}: ${level.name}, ${status}`}>
-              <span className="rmj-level-overline">STAGE {String(stageIndex + 1).padStart(2, '0')} · LEVEL {String(level.number).padStart(2, '0')}</span>
-              <strong>{level.name}</strong>
-              <span className="rmj-card-state">{status === 'current' ? 'Current level' : status === 'completed' ? 'Level complete' : status === 'credited' ? 'Covered by placement' : 'Locked ahead'}</span>
-            </article>
-            <span className="rmj-connector" aria-hidden="true" />
-            <button type="button" className="rmj-level-node" ref={(node) => {
-              if (node) nodeRefs.current.set(level.id, node);
-              else nodeRefs.current.delete(level.id);
-            }} aria-label={`Stage ${stageIndex + 1}, Level ${level.number}: ${level.name}, ${status}`} aria-pressed={selectedLevel}
-              onClick={() => { onSelectLevel(level.id); setLevelPageId(level.id); }}>
-              {status === 'completed' || status === 'credited' ? <Check size={23} /> : status === 'current' ? <Play size={19} /> : <LockKeyhole size={18} />}
-              <span>{level.number}</span>
-            </button>
-          </div>;
-        })}
-        <div className="rmj-start-marker" style={{ top: geometry.height - 70 }}><Flag size={17} /><span>YOUR JOURNEY STARTS HERE</span></div>
-      </div>
-    </div>}
+      </div>}
   </section>;
 }

@@ -363,6 +363,7 @@ try {
   await page.getByRole('link', { name: `Open joined roadmap: ${project.name}`, exact: true }).click();
   await page.getByRole('region', { name: `${project.name} roadmap journey`, exact: true }).waitFor();
   await page.locator('.rmj-level-node[aria-label$=", current"]').click();
+  await page.getByRole('button', { name: 'Enter Level', exact: true }).click();
   await page.locator('.rmj-mission-tile').filter({ has: page.getByText('User context', { exact: true }) }).locator('.rmj-mission-unavailable').getByText('Awaiting founder', { exact: true }).waitFor();
   await switchAccount('stranger');
   await go('/roadmap?join=1&joinView=activity');
@@ -393,6 +394,7 @@ try {
   const openMemberWork = async (name = 'User context') => {
     await go(joinedPath);
     await page.locator('.rmj-level-node[aria-label$=", current"]').click();
+    await page.getByRole('button', { name: 'Enter Level', exact: true }).click();
     const level = page.locator('.rmj-mission-page');
     await level.locator('.rmj-mission-tile').filter({ has: page.getByText(name, { exact: true }) }).getByRole('button', { name: 'Open mission', exact: true }).click();
     await page.getByRole('dialog', { name, exact: true }).waitFor();

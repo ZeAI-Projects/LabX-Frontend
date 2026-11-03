@@ -30,7 +30,7 @@ test('prototype begins at Happora Discover Level 1 Mission 1 and exposes 25 leve
   assert.equal(ROADMAP_OPTIONAL_MISSION_IDS.length, 25);
   assert.deepEqual(levels[0].milestones.map(({ name }) => name), ['Problem Identification', 'Problem Research', 'Problem Validation']);
   assert.deepEqual(levels[0].milestones.map(({ state }) => state), ['active', 'locked', 'locked']);
-  assert.equal(levels[0].milestones[2].isOptional, true);
+  assert.equal(levels[0].milestones.every(({ isOptional }) => !isOptional), true);
 });
 
 test('prototype progress is sequential, persists, and unlocks levels and stages', () => {
@@ -49,28 +49,29 @@ test('prototype progress is sequential, persists, and unlocks levels and stages'
   assert.equal(store.read(project, 'founder-2').completedCount, 0);
 });
 
-test('prototype unlocks optional missions without blocking the next required mission', () => {
+test('prototype unlocks all three missions in order before advancing to the next level', () => {
   const store = createRoadmapProgressionMockStore(memoryStorage());
   store.completeMission(project, 'founder-1', 'discover-l1-m1', submission);
-  store.completeMission(project, 'founder-1', 'discover-l1-m2', submission);
-  const roadmap = store.read(project, 'founder-1');
+  let roadmap = store.read(project, 'founder-1');
+  assert.deepEqual(roadmap.stages[0].levels[0].milestones.map(({ state }) => state), ['completed', 'active', 'locked']);
+  assert.equal(roadmap.currentMilestoneId, 'discover-l1-m2');
 
-  const missions = roadmap.stages[0].levels[0].milestones;
-  assert.equal(roadmap.currentMilestoneId, 'discover-l2-m1');
-  assert.equal(missions[2].state, 'optional');
+  store.completeMission(project, 'founder-1', 'discover-l1-m2', submission);
+  roadmap = store.read(project, 'founder-1');
+  assert.deepEqual(roadmap.stages[0].levels[0].milestones.map(({ state }) => state), ['completed', 'completed', 'active']);
+  assert.equal(roadmap.currentMilestoneId, 'discover-l1-m3');
+  assert.equal(roadmap.stages[0].levels[1].milestones[0].state, 'locked');
+
+  roadmap = store.completeMission(project, 'founder-1', 'discover-l1-m3', submission);
+  assert.equal(roadmap.stages[0].levels[0].milestones.every(({ state }) => state === 'completed'), true);
   assert.equal(roadmap.stages[0].levels[1].milestones[0].state, 'active');
-  const advanced = store.completeMission(project, 'founder-1', 'discover-l2-m1', submission);
-  assert.equal(advanced.stages[0].levels[0].milestones[2].state, 'skipped');
-  assert.equal(advanced.skippedCount, 1);
-  const completedOptional = store.completeMission(project, 'founder-1', 'discover-l1-m3', submission);
-  assert.equal(completedOptional.stages[0].levels[0].milestones[2].state, 'completed');
-  assert.equal(completedOptional.skippedCount, 0);
+  assert.equal(roadmap.currentMilestoneId, 'discover-l2-m1');
 });
 
 test('prototype rejects locked missions and reports invalid saved records', () => {
   const storage = memoryStorage();
   const store = createRoadmapProgressionMockStore(storage);
-  assert.throws(() => store.completeMission(project, 'founder-1', 'discover-l1-m2', submission), /unlocked required or optional mission/);
+  assert.throws(() => store.completeMission(project, 'founder-1', 'discover-l1-m2', submission), /next unlocked mission/);
   const key = 'labx:roadmap-prototype:v1:founder-2:happora';
   storage.writeJSONStrict(key, { completedMissionIds: ['not-a-roadmap-mission'], submissionsByMissionId: {} });
   assert.throws(() => store.read(project, 'founder-2'), /Saved prototype progress is invalid/);

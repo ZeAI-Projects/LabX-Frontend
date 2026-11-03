@@ -41,8 +41,9 @@ export function createRoadmapProgressionMockStore(storage = localStore) {
     const progress = readProgress(storage, keyFor(userId, project.id), project);
     return {
       ...createMockRoadmap({
-      domain: project.domain,
-      prototype: true,
+        domain: project.domain,
+        prototype: true,
+        requireEveryMission: true,
         completedMissionIds: progress.completedMissionIds,
       }),
       submissionsByMissionId: progress.submissionsByMissionId,
@@ -52,11 +53,11 @@ export function createRoadmapProgressionMockStore(storage = localStore) {
   function completeMission(project, userId, missionId, submission) {
     const key = keyFor(userId, project.id);
     const progress = readProgress(storage, key, project);
-    const roadmap = createMockRoadmap({ domain: project.domain, prototype: true, completedMissionIds: progress.completedMissionIds });
+    const roadmap = createMockRoadmap({ domain: project.domain, prototype: true, requireEveryMission: true, completedMissionIds: progress.completedMissionIds });
     const mission = roadmap.stages.flatMap((stage) => stage.levels.flatMap((level) => level.milestones))
       .find((entry) => entry.id === missionId);
-    if (!mission || (!['active', 'optional'].includes(mission.state) && !(mission.isOptional && mission.state === 'skipped'))) {
-      throw new Error('Only an unlocked required or optional mission can be completed.');
+    if (!mission || mission.state !== 'active') {
+      throw new Error('Only the next unlocked mission can be completed.');
     }
     const notes = typeof submission?.notes === 'string' ? submission.notes.trim() : '';
     const url = typeof submission?.url === 'string' ? submission.url.trim() : '';
@@ -76,7 +77,7 @@ export function createRoadmapProgressionMockStore(storage = localStore) {
     };
     storage.writeJSONStrict(key, { completedMissionIds, submissionsByMissionId });
     return {
-      ...createMockRoadmap({ domain: project.domain, prototype: true, completedMissionIds }),
+      ...createMockRoadmap({ domain: project.domain, prototype: true, requireEveryMission: true, completedMissionIds }),
       submissionsByMissionId,
     };
   }

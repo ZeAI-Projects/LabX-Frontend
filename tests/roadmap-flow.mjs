@@ -114,10 +114,21 @@ try {
   }
   const missionItem = (name) => page.locator('.rmj-mission-tile').filter({ has: page.getByText(name, { exact: true }) })
   const levelNode = (level, stage = 1) => page.locator(`.rmj-level-node[aria-label^="Stage ${stage}, Level ${level}:"]`)
+  const stageStep = (stage) => page.locator(`.rmj-stage-step[aria-label^="Stage ${stage}:"]`)
+  const selectStage = async (stage) => {
+    const step = stageStep(stage)
+    if (await step.isDisabled()) throw new Error(`Stage ${stage} is still locked`)
+    if (!(await step.getAttribute('class')).includes('is-selected')) await step.click()
+  }
   const openLevel = async (level, stage = 1) => {
+    await selectStage(stage)
     const node = levelNode(level, stage)
     await node.scrollIntoViewIfNeeded()
     await node.click()
+    const card = page.locator('.rmj-level-card:visible').first()
+    const launch = card.getByRole('button', { name: /Enter Level|Review Level/ })
+    if (await launch.isDisabled()) throw new Error(`Level ${level} in stage ${stage} is locked`)
+    await launch.click()
     const levelPage = page.locator('.rmj-mission-page')
     await levelPage.waitFor()
     return levelPage
@@ -131,6 +142,8 @@ try {
   const openCurrent = async (name) => {
     const missionPage = page.locator('.rmj-mission-page')
     if (await missionPage.count()) await missionPage.getByRole('button', { name: 'Back to journey', exact: true }).click()
+    const currentStageStep = page.locator('.rmj-stage-step[aria-current="step"]')
+    if (!(await currentStageStep.getAttribute('class')).includes('is-selected')) await currentStageStep.click()
     const activeNode = page.locator('.rmj-level-node[aria-label$=", current"]')
     await activeNode.waitFor()
     const label = await activeNode.getAttribute('aria-label')
@@ -141,6 +154,8 @@ try {
   const assertCurrent = async (name, level, order, canOpen = true) => {
     const missionPage = page.locator('.rmj-mission-page')
     if (await missionPage.count()) await missionPage.getByRole('button', { name: 'Back to journey', exact: true }).click()
+    const currentStageStep = page.locator('.rmj-stage-step[aria-current="step"]')
+    if (!(await currentStageStep.getAttribute('class')).includes('is-selected')) await currentStageStep.click()
     const activeNode = page.locator('.rmj-level-node[aria-label$=", current"]')
     await activeNode.waitFor()
     const label = await activeNode.getAttribute('aria-label')
@@ -187,24 +202,20 @@ try {
       await page.evaluate(() => document.fonts.ready)
       await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, `${name} fits ${width}px`)
-      const viewport = page.locator('.rmj-viewport')
+      const viewport = page.locator('.rmj-mountain-viewport')
       if (await viewport.count()) {
         assert.equal(await page.locator('.rmj-stage-step').count(), 5, 'The journey summarizes all five stages')
-        const missionPage = page.locator('.rmj-mission-page')
-        if (await missionPage.count()) {
-          assert.equal(await missionPage.locator('.rmj-mission-tile').count(), 3, 'A level page displays its three mission tiles')
-          assert.equal(await page.locator('.rmj-level-node').count(), 0, 'Mission page replaces the map instead of opening a popup')
-        } else {
-          assert.equal(await page.locator('.rmj-level-node').count(), 25, 'The journey renders all 25 level nodes')
-        }
+        assert.equal(await page.locator('.rmj-level-node').count(), 5, 'The selected stage displays all five level nodes')
         const scroll = await viewport.evaluate((element) => ({
           clientHeight: element.clientHeight, scrollHeight: element.scrollHeight,
           clientWidth: element.clientWidth, scrollWidth: element.scrollWidth,
           overflowY: getComputedStyle(element).overflowY,
         }))
-        if (!(await missionPage.count())) assert.ok(scroll.scrollHeight > scroll.clientHeight, 'The roadmap scroll stays within the journey viewport')
+        assert.ok(scroll.scrollHeight <= scroll.clientHeight + 1, 'The complete stage fits without vertical roadmap scrolling')
         assert.ok(scroll.scrollWidth <= scroll.clientWidth + 1, 'The journey has no horizontal overflow')
-        assert.match(scroll.overflowY, /auto|scroll/)
+        assert.equal(scroll.overflowY, 'hidden')
+      } else if (await page.locator('.rmj-mission-page').count()) {
+        assert.equal(await page.locator('.rmj-mission-tile').count(), 3, 'A level page displays its three mission tiles')
       }
       const open = page.locator('dialog[open]')
       if (await open.count()) {
@@ -251,15 +262,16 @@ try {
   await page.getByText('No team missions yet. Invite a member and assign a mission from Manage team.', { exact: true }).waitFor()
   await reviewToggle.click()
   assert.equal(await reviewToggle.getAttribute('aria-expanded'), 'false')
-  const transitionColors = await page.locator('.rmj-transition').evaluateAll((mountains) => mountains.map((mountain) => mountain.style.getPropertyValue('--stage-color')))
-  assert.equal(new Set(transitionColors).size, 4, 'Each stage-crossing mountain uses a distinct stage accent')
+  const stageColors = await page.locator('.rmj-stage-step').evaluateAll((steps) => steps.map((step) => step.style.getPropertyValue('--stage-color')))
+  assert.equal(new Set(stageColors).size, 5, 'Stage navigation uses distinct stage accents')
   assert.equal(await page.getByRole('progressbar', { name: 'Roadmap progress', exact: true }).getAttribute('aria-valuenow'), '0')
   await assertCurrent('Problem statement', 1, 1)
   await assertMissionLocked('User context', 1)
   await layout('initial-roadmap')
-  const lockedLevel = await openLevel(5, 5)
-  await lockedLevel.getByText('This level unlocks after you complete the missions before it.', { exact: false }).waitFor()
-  await lockedLevel.getByRole('button', { name: 'Back to journey', exact: true }).click()
+  await selectStage(1)
+  await levelNode(5, 1).click()
+  assert.equal(await page.locator('.rmj-level-card:visible').getByRole('button', { name: 'Locked', exact: true }).isDisabled(), true, 'Locked levels cannot be launched')
+  assert.equal(await page.locator('.rmj-mission-page').count(), 0, 'Locked levels remain previews, not mission pages')
   await assertCurrent('Problem statement', 1, 1)
 
   // Invalid work produces persistent feedback without unlocking the next mission.
@@ -357,7 +369,7 @@ try {
   await go(joinedPath)
   await heading('Roadmap unavailable').waitFor()
   assert.equal(await page.getByLabel('Your work', { exact: true }).count(), 0)
-  assert.equal(await page.locator('.rmj-viewport').count(), 0, 'A pending invitation does not grant roadmap access')
+  assert.equal(await page.locator('.rmj-mountain-viewport').count(), 0, 'A pending invitation does not grant roadmap access')
   await joinPortal()
   await layout('join-roadmap-invitation', [320, 1440])
   const invitation = () => page.getByRole('listitem', { name: `Invitation: ${projectName}`, exact: true })
@@ -369,7 +381,7 @@ try {
   assert.equal(await page.getByRole('link', { name: `Open joined roadmap: ${projectName}`, exact: true }).count(), 0)
   await go(joinedPath)
   await heading('Roadmap unavailable').waitFor()
-  assert.equal(await page.locator('.rmj-viewport').count(), 0, 'A declined invitation grants no access')
+  assert.equal(await page.locator('.rmj-mountain-viewport').count(), 0, 'A declined invitation grants no access')
   await signOut()
   await login(acceptedMember.email)
   await joinPortal()
@@ -508,7 +520,7 @@ try {
   await closeDialog()
   await assertCurrent('Growth priorities', 5, 1)
   assert.equal(await page.getByRole('progressbar', { name: 'Roadmap progress' }).getAttribute('aria-valuenow'), '72')
-  assert.equal(await page.locator('.rmj-transition.is-crossed').count(), 4, 'Placement that covers four stages illuminates all four crossed mountains')
+  assert.equal(await page.locator('.rmj-stage-step.is-complete').count(), 4, 'Placement credits complete the four covered stage indicators')
   for (const mission of ['Growth priorities', 'Experiment roadmap', 'Growth review']) {
     await openCurrent(mission)
     await acceptMission(mission)
@@ -516,11 +528,11 @@ try {
   }
   const completedLevelPage = page.locator('.rmj-mission-page')
   if (await completedLevelPage.count()) await completedLevelPage.getByRole('button', { name: 'Back to journey', exact: true }).click()
-  await page.locator('.rmj-summit').getByText('Roadmap complete', { exact: true }).waitFor()
+  await page.locator('.rmj-mountain-finish').getByText('Roadmap complete', { exact: true }).waitFor()
   assert.equal(await page.locator('.rmj-level-node[aria-label$=", current"]').count(), 0)
   assert.equal(await page.getByRole('progressbar', { name: 'Roadmap progress' }).getAttribute('aria-valuenow'), '75')
   await page.reload()
-  await page.locator('.rmj-summit').getByText('Roadmap complete', { exact: true }).waitFor()
+  await page.locator('.rmj-mountain-finish').getByText('Roadmap complete', { exact: true }).waitFor()
   await layout('completed-roadmap', [390, 1440])
   await go('/dashboard')
   await heading('Dashboard').waitFor()

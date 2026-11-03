@@ -1,0 +1,285 @@
+.rm-page-journey { min-height: 0; height: 100%; }
+.rmj-shell {
+  height: 100%;
+  min-height: 0;
+  background:
+    radial-gradient(ellipse at 86% 34%, color-mix(in srgb,var(--stage-color) 13%,transparent),transparent 30%),
+    radial-gradient(ellipse at 38% 72%,#102b465c,transparent 54%),
+    linear-gradient(180deg,#071020,#09172b 72%,#0a1422);
+}
+.rmj-header { padding: 9px clamp(14px,2.2vw,34px) 9px; }
+.rmj-title-row { gap: 18px; }
+.rmj-project-title h2 { font-size: clamp(1.05rem,1.8vw,1.55rem); }
+.rmj-progress-summary { flex-basis: 410px; }
+.rmj-progress-stats { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.rmj-progress-stats > span { flex-direction: column; align-items: flex-start; gap: 1px; }
+.rmj-progress-stats strong { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.rmj-stage-track { gap: 7px; margin-top: 9px; }
+.rmj-stage-step {
+  position: relative;
+  grid-template-columns: 31px minmax(0,1fr) auto;
+  min-height: 46px;
+  padding: 6px 10px;
+  border-color: #283a55;
+  border-radius: 10px;
+  background: linear-gradient(135deg,#101d34,#0d1729);
+}
+.rmj-stage-step.is-current,
+.rmj-stage-step.is-selected:not(.is-locked) {
+  border-color: color-mix(in srgb,var(--stage-color) 80%,#a78bfa);
+  background: linear-gradient(125deg,color-mix(in srgb,var(--stage-color) 27%,#111a30),#101a30);
+  box-shadow: 0 0 20px color-mix(in srgb,var(--stage-color) 24%,transparent),inset 0 0 18px color-mix(in srgb,var(--stage-color) 12%,transparent);
+}
+.rmj-stage-step.is-complete { border-color: #2e7b96; background: #102539; }
+.rmj-stage-step.is-complete .rmj-stage-icon { border-color: #42c8e5; color: #58d8ed; }
+.rmj-stage-step.is-complete .rmj-stage-name { color: #c1f3fc; }
+.rmj-stage-step.is-locked { opacity: .58; }
+.rmj-stage-icon { display: grid; place-items: center; width: 28px; height: 28px; color: var(--stage-color); }
+.rmj-stage-step.is-complete .rmj-stage-icon { border: 1px solid #337c97; border-radius: 50%; }
+.rmj-stage-copy { display: block; min-width: 0; }
+.rmj-stage-name { display: block; color: #d7e5f6; font-size: .73rem; font-weight: 800; }
+.rmj-stage-copy small { display: block; margin-top: 2px; color: #8095b2; font-size: .53rem; }
+.rmj-stage-lock { color: #8091ac; }
+.rmj-mountain-viewport {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  isolation: isolate;
+}
+.rmj-mountain-canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  isolation: isolate;
+}
+.rmj-mountain-art,
+.rmj-mountain-road {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.rmj-mountain-art { z-index: -2; }
+.rmj-cloud { fill: #132d53; opacity: .48; }
+.rmj-cloud--right { fill: #1c2854; opacity: .56; }
+.rmj-mountain-range--far { fill: #101f46; opacity: .78; }
+.rmj-mountain-range--middle { fill: #0d2b50; opacity: .92; }
+.rmj-mountain-range--front { fill: #08243d; }
+.rmj-mountain-snowcap { fill: color-mix(in srgb,var(--stage-color) 64%,#9fb5ff); filter: drop-shadow(0 0 15px color-mix(in srgb,var(--stage-color) 85%,transparent)); }
+.rmj-mountain-ridge-light { fill: color-mix(in srgb,var(--stage-color) 48%,#5467d5); opacity: .8; }
+.rmj-mountain-vegetation { fill: #071d2b; opacity: .9; }
+.rmj-mountain-stars { fill: #9ab9ef; opacity: .72; }
+.rmj-mountain-road { z-index: -1; overflow: visible; }
+.rmj-mountain-road path { fill: none; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.rmj-mountain-road-shadow { stroke: #020712; stroke-width: 42px; opacity: .78; }
+.rmj-mountain-road-bed { stroke: #263a5b; stroke-width: 34px; filter: drop-shadow(0 5px 13px #020713b8); }
+.rmj-mountain-road-lane { stroke: #b7c9e6; stroke-width: 2px; stroke-dasharray: 8 12; opacity: .73; }
+.rmj-mountain-road-progress { stroke: #45d9f3; stroke-width: 3px; filter: drop-shadow(0 0 7px #45d9f3); }
+.rmj-start-marker {
+  position: absolute;
+  left: 4%;
+  top: 92%;
+  z-index: 3;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  transform: translate(-50%,-50%);
+}
+.rmj-start-pulse {
+  width: 22px;
+  height: 22px;
+  border: 2px solid #8df5ff;
+  border-radius: 50%;
+  background: #12c9ee66;
+  box-shadow: 0 0 0 6px #16c9f426,0 0 24px #23d9ff;
+}
+.rmj-start-marker small { padding: 4px 8px; border: 1px solid #30d8ec; border-radius: 5px; background: #05253d; color: #9df9ff; font-size: .55rem; font-weight: 900; white-space: nowrap; }
+.rmj-summit-flag {
+  position: absolute;
+  top: 7%;
+  left: 92.5%;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  color: #a78bfa;
+  filter: drop-shadow(0 0 12px color-mix(in srgb,var(--stage-color) 90%,transparent));
+  transform: translate(-50%,-50%);
+}
+.rmj-summit-beacon { position: absolute; z-index: -1; top: -5px; width: 50px; height: 50px; border-radius: 50%; background: color-mix(in srgb,var(--stage-color) 45%,transparent); filter: blur(18px); }
+.rmj-summit-flag small { color: #c3b4ff; font-size: .47rem; font-weight: 900; letter-spacing: .1em; white-space: nowrap; }
+.rmj-mountain-canvas.is-premium .rmj-summit-flag { color: #e8cb72; filter: drop-shadow(0 0 16px #f0c967); }
+.rmj-mountain-canvas.is-premium .rmj-summit-flag small { color: #f3dfa0; }
+.rmj-level-stop { position: absolute; inset: 0 0 auto; z-index: 2; height: 0; pointer-events: none; }
+.rmj-level-stop { left: 0; right: 0; width: auto; transform: none; }
+.rmj-level-stop .rmj-level-node { left: var(--node-x); }
+.rmj-level-node {
+  position: absolute;
+  top: 0;
+  left: var(--node-x);
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: clamp(42px,4.2vw,55px);
+  height: clamp(42px,4.2vw,55px);
+  padding: 0;
+  border: 2px solid #526584;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 25%,#243752,#10192b);
+  color: #9fb3d0;
+  box-shadow: 0 0 0 5px #121e3780,0 5px 15px #0009;
+  cursor: pointer;
+  pointer-events: auto;
+  transform: translate(-50%,-50%);
+  transition: transform .18s ease,border-color .18s ease,box-shadow .18s ease;
+}
+.rmj-level-node:hover { border-color: #a4efff; transform: translate(-50%,-50%) scale(1.08); }
+.rmj-level-node:focus-visible { outline: 3px solid #9af4ff; outline-offset: 5px; }
+.rmj-level-node svg { stroke-width: 2.8px; }
+.rmj-level-stop.is-current .rmj-level-node,
+.rmj-level-stop.is-available .rmj-level-node {
+  border-color: #72edff;
+  background: linear-gradient(140deg,#21c8e4,#2378a9);
+  color: #f3fdff;
+  box-shadow: 0 0 0 6px #1a9db73d,0 0 26px #40d9f1a8;
+}
+.rmj-level-stop.is-completed .rmj-level-node,
+.rmj-level-stop.is-credited .rmj-level-node {
+  border-color: #62ddf2;
+  background: linear-gradient(140deg,#18b9d5,#176c9a);
+  color: #f2fdff;
+  box-shadow: 0 0 0 5px #1598bd35,0 0 20px #39cce987;
+}
+.rmj-level-stop.is-locked .rmj-level-node { border-color: #3b4a67; color: #8392ad; }
+.rmj-level-label {
+  position: absolute;
+  top: 0;
+  left: var(--node-x);
+  z-index: 3;
+  min-width: 30px;
+  padding: 3px 7px;
+  border: 1px solid #475b7e;
+  border-radius: 999px;
+  background: #192541;
+  color: #aab9d4;
+  font-size: .5rem;
+  font-weight: 850;
+  text-align: center;
+  transform: translate(-50%,25px);
+}
+.rmj-level-stop.is-current .rmj-level-label,
+.rmj-level-stop.is-available .rmj-level-label,
+.rmj-level-stop.is-completed .rmj-level-label,
+.rmj-level-stop.is-credited .rmj-level-label { border-color: #3b9ab9; background: #14324e; color: #94e8f4; }
+.rmj-level-card {
+  position: absolute;
+  top: 50%;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: min(300px,28vw);
+  min-width: 220px;
+  padding: 13px 15px;
+  border: 1px solid #1cc9e5;
+  border-radius: 13px;
+  background: linear-gradient(135deg,#061a2bf5,#0b172df5);
+  box-shadow: 0 0 0 1px #11c7e42e,0 0 26px #18b9df4a,0 12px 30px #0008;
+  color: #e8f5ff;
+  pointer-events: auto;
+  transform: translateY(-50%);
+}
+.rmj-level-card--mobile { display: none; }
+.rmj-level-stop.is-card-right .rmj-level-card {
+  left: clamp(8px,calc(var(--node-x) + 24px),calc(100% - min(300px,28vw) - 8px));
+}
+.rmj-level-stop.is-card-left .rmj-level-card { right: calc(100% - var(--node-x) + 25px); }
+.rmj-level-overline { color: #6de5f4; font-size: .56rem; font-weight: 850; letter-spacing: .06em; text-transform: uppercase; }
+.rmj-level-card > strong { color: #f2f8ff; font-size: .91rem; font-weight: 820; line-height: 1.25; }
+.rmj-level-card > p { display: -webkit-box; margin: 0; overflow: hidden; color: #a8bbd2; font-size: .64rem; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.rmj-level-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 7px; border-top: 1px solid #29415b; }
+.rmj-level-card-footer > span { color: #a6c4d7; font-size: .6rem; font-weight: 750; white-space: nowrap; }
+.rmj-level-card .rmj-launch-button { min-height: 31px; padding: 6px 9px; border-radius: 8px; font-size: .61rem; }
+.rmj-level-stop.is-selected .rmj-level-node { z-index: 5; }
+.rmj-mountain-finish {
+  position: absolute;
+  right: 3%;
+  bottom: 3%;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  border: 1px solid #455b79;
+  border-radius: 999px;
+  background: #0a1627b8;
+  color: #aabbd4;
+  font-size: .55rem;
+  font-weight: 800;
+}
+.rmj-mountain-finish.is-complete { border-color: #36bfd9; color: #7de8f6; box-shadow: 0 0 17px #28c6de3b; }
+.rmj-viewport--missions { flex: 1 1 auto; min-height: 0; overflow: auto; }
+.rmj-mission-page { padding: 16px 18px 24px; }
+
+@media (max-width: 760px) {
+  .rmj-header { padding: 8px 10px; }
+  .rmj-title-row { gap: 9px; }
+  .rmj-progress-summary { flex-basis: 55%; min-width: 0; }
+  .rmj-progress-stats > span { padding: 3px; }
+  .rmj-progress-stats strong { font-size: .52rem; }
+  .rmj-progress-stats small { font-size: .46rem; }
+  .rmj-stage-track { grid-template-columns: repeat(5,minmax(0,1fr)); gap: 4px; }
+  .rmj-stage-step { grid-template-columns: 22px minmax(0,1fr); min-height: 42px; gap: 4px; padding: 4px 5px; }
+  .rmj-stage-icon { width: 21px; height: 24px; }
+  .rmj-stage-name { font-size: .61rem; }
+  .rmj-stage-copy small { font-size: .43rem; }
+  .rmj-stage-lock { display: none; }
+  .rmj-level-card { width: min(260px,43vw); min-width: 190px; padding: 10px 11px; }
+  .rmj-level-stop.is-card-right .rmj-level-card { left: clamp(6px,calc(var(--node-x) + 18px),calc(100% - min(260px,43vw) - 6px)); }
+  .rmj-level-stop.is-card-left .rmj-level-card { right: calc(100% - var(--node-x) + 20px); }
+}
+@media (max-width: 520px) {
+  .rmj-breadcrumb { gap: 5px; }
+  .rmj-title-row { align-items: flex-start; flex-direction: column; }
+  .rmj-progress-summary { width: 100%; flex-basis: auto; }
+  .rmj-progress-stats { display: none; }
+  .rmj-stage-track { grid-template-columns: repeat(5,minmax(0,1fr)); }
+  .rmj-stage-step { display: flex; min-height: 39px; flex-direction: column; justify-content: center; gap: 1px; padding: 3px 2px; text-align: center; }
+  .rmj-stage-icon { width: 19px; height: 20px; }
+  .rmj-stage-name { font-size: .54rem; }
+  .rmj-stage-copy small { margin-top: 0; font-size: .4rem; }
+  .rmj-level-node { width: 39px; height: 39px; }
+  .rmj-level-label { min-width: 25px; padding: 2px 5px; font-size: .43rem; transform: translate(-50%,16px); }
+  .rmj-level-card--desktop { display: none; }
+  .rmj-level-card--mobile {
+    position: absolute;
+    top: auto;
+    right: auto;
+    bottom: 8px;
+    left: 50%;
+    display: flex;
+    width: min(300px,calc(100% - 20px));
+    min-width: 0;
+    min-height: 0;
+    padding: 9px 10px;
+    transform: translateX(-50%);
+  }
+  .rmj-level-card--mobile > p { -webkit-line-clamp: 1; }
+  .rmj-start-marker { top: 67%; left: 5%; }
+  .rmj-summit-flag { left: 91%; }
+  .rmj-mountain-finish { right: 2%; bottom: 2%; }
+}
+@media (max-height: 700px) and (min-width: 761px) {
+  .rmj-header { padding-top: 5px; padding-bottom: 5px; }
+  .rmj-stage-track { margin-top: 6px; }
+  .rmj-stage-step { min-height: 39px; }
+  .rmj-progress-stats { margin-top: 4px; }
+  .rmj-progress-stats > span { padding-block: 2px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rmj-level-node,.rmj-stage-step { transition: none; }
+}

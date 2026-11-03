@@ -49,7 +49,7 @@ export function createMockRoadmap(result = {}) {
   const isPrototype = result.prototype === true || Array.isArray(result.completedMissionIds);
   const missionIds = ROADMAP_MOCK_MISSION_IDS;
   const validIds = new Set(missionIds);
-  const optionalIds = new Set(ROADMAP_OPTIONAL_MISSION_IDS);
+  const optionalIds = new Set(result.requireEveryMission ? [] : ROADMAP_OPTIONAL_MISSION_IDS);
   const completedIds = new Set(isPrototype && Array.isArray(result.completedMissionIds)
     ? result.completedMissionIds.filter((id) => validIds.has(id))
     : []);
