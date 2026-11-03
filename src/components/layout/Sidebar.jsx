@@ -1,11 +1,11 @@
 import { Award, Bot, Calendar, Home, LogOut, Map, MessageCircle, Trophy, User, Users } from 'lucide-react'
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import labxLogo from '../../assets/images/labx-logo.png'
 import { soundManager } from '../../features/authentication/components/gamified/soundEffects.js'
 import { getRoleLabel } from '../../utils/roles.js'
 import { ProfileAvatar } from '../common/ProfileAvatar.jsx'
 
-export function Sidebar({ user, onSignOut }) {
+export function Sidebar({ user, onSignOut, roadmapTo = '/roadmap' }) {
   const isFounder = user.role === 'founder'
   const displayName = user.full_name || user.username || 'LabX Member'
   const displayHandle = `@${user.username || user.email?.split('@')[0] || user.role}`
@@ -23,7 +23,7 @@ export function Sidebar({ user, onSignOut }) {
         <SidebarItem to="/dashboard" icon={<Home size={18} />} label="Dashboard" />
         <SidebarItem to="/chats" icon={<MessageCircle size={18} />} label="Chats" />
         {isFounder && <>
-          <SidebarItem to="/roadmap" icon={<Map size={18} />} label="Roadmap" />
+          <SidebarItem to={roadmapTo} icon={<Map size={18} />} label="Roadmap" />
           <SidebarItem to="/leaderboard" icon={<Trophy size={18} />} label="Leaderboard" />
           <SidebarItem to="/guild" icon={<Bot size={18} />} label="Guilds" />
           <SidebarItem to="/social" icon={<Users size={18} />} label="Social" />
@@ -51,12 +51,13 @@ export function Sidebar({ user, onSignOut }) {
 }
 
 function SidebarItem({ to, icon, label }) {
+  const { pathname } = useLocation()
   return (
     <NavLink
       to={to}
       data-roadmap-entry={to === '/roadmap' ? '' : undefined}
       onClick={soundManager.playHover}
-      className={({ isActive }) => `labx-nav-item ${isActive ? 'active' : ''}`}
+      className={({ isActive }) => `labx-nav-item ${isActive || (label === 'Roadmap' && pathname.startsWith('/roadmap')) ? 'active' : ''}`}
     >
       <span className="labx-nav-icon" aria-hidden="true">{icon}</span>
       <span className="labx-nav-label">{label}</span>

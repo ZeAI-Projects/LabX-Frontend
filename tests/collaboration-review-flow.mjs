@@ -361,8 +361,9 @@ try {
   await assertNoPointOffers(invitation(), 'Accepted invitation history');
   assert.equal(await invitation().getByRole('button', { name: /Accept|Decline/ }).count(), 0);
   await page.getByRole('link', { name: `Open joined roadmap: ${project.name}`, exact: true }).click();
-  await page.getByRole('heading', { name: project.name, exact: true, level: 1 }).waitFor();
-  assert.equal(await button('Open current mission').count(), 0, 'Joined members need an assignment before working');
+  await page.getByRole('region', { name: `${project.name} roadmap journey`, exact: true }).waitFor();
+  await page.locator('.rmj-level-node[aria-label$=", current"]').click();
+  await page.locator('.rmj-mission-tile').filter({ has: page.getByText('User context', { exact: true }) }).locator('.rmj-mission-unavailable').getByText('Awaiting founder', { exact: true }).waitFor();
   await switchAccount('stranger');
   await go('/roadmap?join=1&joinView=activity');
   assert.equal(await page.getByText(/Private application/).count(), 0);
@@ -389,8 +390,19 @@ try {
   const mission = () => page.getByRole('dialog', { name: 'User context', exact: true });
   const work = async () => (await read(workflowKey)).missionWorkflowsById['discover-l1-m2'];
   const status = (label) => mission().locator('.mr-status').filter({ hasText: label }).waitFor();
-  const openMemberWork = async () => { await go(joinedPath); await button('Open current mission').click(); await mission().waitFor(); };
-  const openFounderReview = async () => { await go(ownPath); await button('Open team mission: User context').click(); await mission().waitFor(); };
+  const openMemberWork = async (name = 'User context') => {
+    await go(joinedPath);
+    await page.locator('.rmj-level-node[aria-label$=", current"]').click();
+    const level = page.locator('.rmj-mission-page');
+    await level.locator('.rmj-mission-tile').filter({ has: page.getByText(name, { exact: true }) }).getByRole('button', { name: 'Open mission', exact: true }).click();
+    await page.getByRole('dialog', { name, exact: true }).waitFor();
+  };
+  const openFounderReview = async () => {
+    await go(ownPath);
+    await button(/Mission review and approval/).click();
+    await page.locator('.rmj-operation-list').getByRole('listitem').filter({ hasText: 'User context' }).getByRole('button', { name: 'Review', exact: true }).click();
+    await mission().waitFor();
+  };
   const revise = async (version, note) => {
     await switchAccount('public');
     await openMemberWork();
@@ -492,12 +504,12 @@ try {
   await layout('approved-version-history', '.mr-dialog', [320, 1440]);
   await closeDialog();
   await page.reload();
-  assert.equal(await page.getByRole('progressbar', { name: 'Roadmap coverage', exact: true }).getAttribute('aria-valuenow'), '2');
+  assert.equal(await page.getByRole('progressbar', { name: 'Roadmap progress', exact: true }).getAttribute('aria-valuenow'), '2');
   await go(`/roadmap/${otherProject.id}`);
-  assert.equal(await page.getByRole('progressbar', { name: 'Roadmap coverage', exact: true }).getAttribute('aria-valuenow'), '0', 'Other project progress is unchanged');
+  assert.equal(await page.getByRole('progressbar', { name: 'Roadmap progress', exact: true }).getAttribute('aria-valuenow'), '0', 'Other project progress is unchanged');
   await switchAccount('direct');
   await go(joinedPath);
-  await button('Open current mission').click();
+  await openMemberWork('Opportunity brief');
   await page.getByRole('dialog', { name: 'Opportunity brief', exact: true }).waitFor();
   assert.equal(await page.getByText(evidence, { exact: true }).count(), 0, 'A teammate cannot read another member’s submitted evidence');
   await closeDialog();

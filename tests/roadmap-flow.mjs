@@ -4,6 +4,7 @@ import { mkdir } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { preview } from 'vite'
 import { chromium } from 'playwright'
+import { AUTH_STORAGE_KEYS } from '../src/features/authentication/services/mock_auth.js'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const output = fileURLToPath(new URL('../test-results/roadmap/', import.meta.url))
@@ -87,8 +88,9 @@ try {
     await at('/roadmap/new')
     await go('/join-roadmap')
     await dialog('Join Roadmap').waitFor()
-    account.id = (await page.locator('.join-roadmap-account code').innerText()).trim()
-    assert.ok(account.id, 'Registered members can find their exact Member ID in the portal')
+    const profiles = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || '[]'), AUTH_STORAGE_KEYS.profiles)
+    account.id = profiles.find((entry) => entry.user?.email === account.email)?.user?.id
+    assert.ok(account.id, 'Registered members are persisted for invitation lookup')
   }
   const createRoadmap = async (name) => {
     await go('/roadmap/new')
@@ -106,18 +108,65 @@ try {
     await at(`${path}/result`)
     await button('Enter My Roadmap').click()
     await at(path)
-    await heading(name).waitFor()
+    await page.getByRole('heading', { name: 'Roadmap', exact: true, level: 1 }).waitFor()
+    await page.getByRole('heading', { name: `${name} Roadmap`, exact: true, level: 2 }).waitFor()
     return path
   }
-  const missionButton = (name, level, order, state) => button(`${name}, Level ${level}, Mission ${order}, ${state}`)
-  const openCurrent = async (name) => {
-    await button('Open current mission').click()
+  const missionItem = (name) => page.locator('.rmj-mission-tile').filter({ has: page.getByText(name, { exact: true }) })
+  const levelNode = (level, stage = 1) => page.locator(`.rmj-level-node[aria-label^="Stage ${stage}, Level ${level}:"]`)
+  const openLevel = async (level, stage = 1) => {
+    const node = levelNode(level, stage)
+    await node.scrollIntoViewIfNeeded()
+    await node.click()
+    const levelPage = page.locator('.rmj-mission-page')
+    await levelPage.waitFor()
+    return levelPage
+  }
+  const openMission = async (name, level, stage = 1, action = 'Open') => {
+    await openLevel(level, stage)
+    await missionItem(name).getByRole('button', { name: action === 'Review' ? 'Review mission' : 'Open mission', exact: true }).click()
     await dialog(name).waitFor()
     return dialog(name)
   }
+  const openCurrent = async (name) => {
+    const missionPage = page.locator('.rmj-mission-page')
+    if (await missionPage.count()) await missionPage.getByRole('button', { name: 'Back to journey', exact: true }).click()
+    const activeNode = page.locator('.rmj-level-node[aria-label$=", current"]')
+    await activeNode.waitFor()
+    const label = await activeNode.getAttribute('aria-label')
+    const level = Number(label.match(/Level (\d+):/)?.[1])
+    const stage = Number(label.match(/Stage (\d+),/)?.[1])
+    return openMission(name, level, stage)
+  }
   const assertCurrent = async (name, level, order, canOpen = true) => {
-    await missionButton(name, level, order, 'active').waitFor()
-    assert.equal(await missionButton(name, level, order, 'active').isDisabled(), !canOpen)
+    const missionPage = page.locator('.rmj-mission-page')
+    if (await missionPage.count()) await missionPage.getByRole('button', { name: 'Back to journey', exact: true }).click()
+    const activeNode = page.locator('.rmj-level-node[aria-label$=", current"]')
+    await activeNode.waitFor()
+    const label = await activeNode.getAttribute('aria-label')
+    assert.match(label, new RegExp(`Level ${level}:`), `Level ${level} contains the current mission`)
+    const stage = Number(label.match(/Stage (\d+),/)?.[1])
+    const levelDialog = await openLevel(level, stage)
+    const item = missionItem(name)
+    await item.waitFor()
+    if (canOpen) await item.getByRole('button', { name: 'Open mission', exact: true }).waitFor()
+    else {
+      await item.locator('.rmj-mission-unavailable').getByText('Awaiting founder', { exact: true }).waitFor()
+      assert.equal(await item.getByRole('button').count(), 0, 'Unassigned missions cannot be opened')
+    }
+    await levelDialog.getByRole('button', { name: 'Back to journey', exact: true }).click()
+  }
+  const assertMissionLocked = async (name, level, stage = 1) => {
+    const levelDialog = await openLevel(level, stage)
+    const item = missionItem(name)
+    await item.locator('.rmj-mission-unavailable').getByText('Locked', { exact: true }).waitFor()
+    assert.equal(await item.getByRole('button').count(), 0, 'Locked missions cannot be opened')
+    await levelDialog.getByRole('button', { name: 'Back to journey', exact: true }).click()
+  }
+  const assertMissionReviewable = async (name, level, stage = 1) => {
+    const levelDialog = await openLevel(level, stage)
+    await missionItem(name).getByRole('button', { name: 'Review mission', exact: true }).waitFor()
+    await levelDialog.getByRole('button', { name: 'Back to journey', exact: true }).click()
   }
   const acceptMission = async (name, { file = false, retry = false } = {}) => {
     const active = dialog(name)
@@ -132,127 +181,34 @@ try {
     assert.equal(await active.getByRole('button', { name: /submit for evaluation/i }).count(), 0, 'Accepted work cannot be submitted twice')
     await active.getByText('This was a simulated evaluation. No AI review or LabX points were awarded.', { exact: true }).waitFor()
   }
-  const stageCards = async (statuses, selectedId) => {
-    const cards = page.getByRole('navigation', { name: 'Roadmap stages', exact: true }).locator('button[data-stage-id]')
-    const actual = await cards.evaluateAll((buttons) => buttons.map((item) => ({
-      id: item.dataset.stageId,
-      status: item.dataset.stageStatus,
-      selected: item.getAttribute('aria-pressed') === 'true',
-    })))
-    const ids = ['discover', 'validate', 'build', 'launch', 'grow']
-    assert.deepEqual(actual.map((item) => item.id), ids, 'All five stage cards retain their progression order')
-    assert.deepEqual(actual.map((item) => item.status), statuses, 'Stage progress is independent of the selected stage')
-    assert.deepEqual(actual.filter((item) => item.selected).map((item) => item.id), [selectedId], 'Exactly one stage card is selected')
-  }
-  const highway = async ({ currentId, fullyLit = false, locked = false } = {}) => {
-    const viewport = page.locator('.rm-highway-viewport')
-    await viewport.waitFor()
-    const svg = page.locator('.rm-highway-svg--desktop:visible, .rm-highway-svg--mobile:visible')
-    assert.equal(await svg.count(), 1, 'Exactly one responsive road is rendered')
-    const nodes = await page.locator('.rm-highway-canvas [data-mission-id]').evaluateAll((items) => items.map((item) => {
-      const marker = item.querySelector('[data-road-node]')
-      const bounds = marker.getBoundingClientRect()
-      const card = item.querySelector('.rm-highway-card').getBoundingClientRect()
-      return {
-        id: item.dataset.missionId, x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2,
-        marker: { left: bounds.left, right: bounds.right, top: bounds.top, bottom: bounds.bottom },
-        card: { left: card.left, right: card.right, top: card.top, bottom: card.bottom, centerX: card.x + card.width / 2 },
-      }
-    }))
-    assert.equal(nodes.length, 15, 'Each stage contains fifteen mission checkpoints')
-    for (let index = 1; index < nodes.length; index += 1) {
-      assert.ok(nodes[index - 1].y > nodes[index].y, `Mission ${index + 1} appears above mission ${index}`)
-    }
-    assert.ok(Math.max(...nodes.map((node) => node.x)) - Math.min(...nodes.map((node) => node.x)) > 20, 'Checkpoints follow a winding road rather than a straight vertical list')
-    const canvas = await page.locator('.rm-highway-canvas').boundingBox()
-    if (canvas.width >= 1000 && await svg.evaluate((element) => element.classList.contains('rm-highway-svg--desktop'))) {
-      const midpoint = canvas.x + canvas.width / 2
-      for (let index = 0; index < nodes.length; index += 1) {
-        const { marker, card, id } = nodes[index]
-        const overlap = marker.left < card.right && marker.right > card.left
-          && marker.top < card.bottom && marker.bottom > card.top
-        assert.equal(overlap, false, `${id} keeps its road node clear of the mission card`)
-        if (index > 0) {
-          assert.ok((card.centerX - midpoint) * (nodes[index - 1].card.centerX - midpoint) < 0,
-            `${id} alternates to the other side of the road canvas`)
-        }
-      }
-    }
-    const scroll = await viewport.evaluate((element) => ({
-      scrollHeight: element.scrollHeight, clientHeight: element.clientHeight,
-      scrollWidth: element.scrollWidth, clientWidth: element.clientWidth,
-      overflowY: getComputedStyle(element).overflowY,
-      scrollTop: element.scrollTop,
-      tabIndex: element.getAttribute('tabindex'),
-      canvasHeight: element.querySelector('.rm-highway-canvas').getBoundingClientRect().height,
-      documentHeight: document.documentElement.scrollHeight,
-      windowHeight: window.innerHeight,
-    }))
-    assert.equal(scroll.overflowY, 'visible', 'The highway flows with the page instead of creating its own scroll container')
-    assert.ok(scroll.scrollHeight <= scroll.clientHeight + 1, 'The full highway height is visible in document flow')
-    assert.ok(scroll.clientHeight >= scroll.canvasHeight - 1, 'The highway wrapper contains the complete canvas height')
-    assert.equal(scroll.scrollTop, 0, 'The highway has no independent scroll position')
-    assert.equal(scroll.tabIndex, null, 'A non-scrollable highway wrapper is not an extra keyboard stop')
-    assert.ok(scroll.documentHeight > scroll.windowHeight, 'The document scrolls through the complete roadmap')
-    assert.ok(scroll.scrollWidth <= scroll.clientWidth + 1, 'The highway has no horizontal overflow')
-    const lit = svg.locator('[data-road-path="lit"]')
-    const base = svg.locator('[data-road-path="base"]')
-    assert.equal(await base.count(), 1)
-    if (locked) {
-      assert.equal(await lit.count(), 0, 'A locked stage has no illuminated road segment')
-      const road = page.locator('.rm-road-content')
-      assert.equal(await road.getAttribute('inert'), null, 'Locked stages retain accessible map exploration')
-      assert.equal(await road.getAttribute('aria-hidden'), null, 'Locked stage missions remain readable')
-      assert.equal(await road.evaluate((element) => getComputedStyle(element).filter), 'none', 'Locked stage previews are clear instead of blurred')
-      assert.ok(await road.evaluate((element) => element.clientHeight) >= 3920, 'A locked stage retains the entire highway height')
-      const checkpoints = page.locator('.rm-highway-canvas [data-mission-id] button')
-      assert.equal(await checkpoints.count(), 15)
-      assert.equal(await checkpoints.evaluateAll((buttons) => buttons.every((item) => item.disabled)), true, 'Locked road checkpoints cannot be opened')
-    } else {
-      assert.equal(await lit.count(), 1)
-      if (fullyLit) {
-        assert.equal(await lit.getAttribute('d'), await base.getAttribute('d'), 'A covered stage illuminates the entire road')
-      } else {
-        const endpoint = await lit.evaluate((path) => {
-          const point = path.getPointAtLength(path.getTotalLength())
-          const screen = new DOMPoint(point.x, point.y).matrixTransform(path.getScreenCTM())
-          return { x: screen.x, y: screen.y }
-        })
-        const current = nodes.find((node) => node.id === currentId)
-        assert.ok(current, `The current checkpoint ${currentId} exists`)
-        assert.ok(Math.hypot(endpoint.x - current.x, endpoint.y - current.y) <= 6,
-          `Illumination ends at the current checkpoint, not a later mission: ${JSON.stringify({ endpoint, current })}`)
-        assert.notEqual(await lit.getAttribute('d'), await base.getAttribute('d'), 'Unfinished road beyond the current mission stays dim')
-      }
-    }
-  }
   const layout = async (name, widths = [320, 390, 768, 1440, 1920]) => {
     for (const width of widths) {
       await page.setViewportSize({ width, height: width < 600 ? 844 : 1000 })
       await page.evaluate(() => document.fonts.ready)
-      // Let responsive layout settle before comparing screen coordinates.
       await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, `${name} fits ${width}px`)
+      const viewport = page.locator('.rmj-viewport')
+      if (await viewport.count()) {
+        assert.equal(await page.locator('.rmj-stage-step').count(), 5, 'The journey summarizes all five stages')
+        const missionPage = page.locator('.rmj-mission-page')
+        if (await missionPage.count()) {
+          assert.equal(await missionPage.locator('.rmj-mission-tile').count(), 3, 'A level page displays its three mission tiles')
+          assert.equal(await page.locator('.rmj-level-node').count(), 0, 'Mission page replaces the map instead of opening a popup')
+        } else {
+          assert.equal(await page.locator('.rmj-level-node').count(), 25, 'The journey renders all 25 level nodes')
+        }
+        const scroll = await viewport.evaluate((element) => ({
+          clientHeight: element.clientHeight, scrollHeight: element.scrollHeight,
+          clientWidth: element.clientWidth, scrollWidth: element.scrollWidth,
+          overflowY: getComputedStyle(element).overflowY,
+        }))
+        if (!(await missionPage.count())) assert.ok(scroll.scrollHeight > scroll.clientHeight, 'The roadmap scroll stays within the journey viewport')
+        assert.ok(scroll.scrollWidth <= scroll.clientWidth + 1, 'The journey has no horizontal overflow')
+        assert.match(scroll.overflowY, /auto|scroll/)
+      }
       const open = page.locator('dialog[open]')
       if (await open.count()) {
         assert.equal(await open.evaluate((element) => element.scrollWidth <= element.clientWidth + 1), true, `${name} dialog has no horizontal overflow at ${width}px`)
-      }
-      if (name === 'initial-roadmap') await highway({ currentId: 'discover-l1-m1' })
-      if (name === 'progressed-roadmap') {
-        await highway({ currentId: 'discover-l2-m1' })
-        await page.locator('[data-mission-id="discover-l1-m1"]').getByText('Conquered', { exact: true }).first().waitFor()
-      }
-      if (name === 'locked-roadmap') await highway({ locked: true })
-      if (name === 'completed-roadmap') await highway({ fullyLit: true })
-      if (['initial-roadmap', 'progressed-roadmap', 'locked-roadmap'].includes(name)) {
-        await stageCards(['current', 'locked', 'locked', 'locked', 'locked'], name === 'locked-roadmap' ? 'grow' : 'discover')
-      }
-      if (name === 'completed-roadmap') {
-        await stageCards(['credited', 'credited', 'credited', 'credited', 'credited'], 'grow')
-        const creditedMission = page.locator('[data-mission-id="grow-l1-m1"]')
-        await creditedMission.getByText('Placement credit', { exact: true }).first().waitFor()
-        assert.equal(await creditedMission.getByText('Conquered', { exact: true }).count(), 0, 'Placement credit is not presented as completed work')
-        await page.locator('[data-mission-id="grow-l5-m3"]').getByText('Conquered', { exact: true }).first().waitFor()
       }
       await page.screenshot({ path: `${output}${name}-${width}.png`, fullPage: true, animations: 'disabled' })
     }
@@ -276,6 +232,9 @@ try {
   await register(decliningMember)
   await signOut()
   await login()
+  await go('/dashboard')
+  const pointsBeforeMissions = await page.locator('[data-dashboard-stat="LabX Points"]').innerText()
+  const badgesBeforeMissions = await page.locator('[data-dashboard-stat="Earned badges"]').innerText()
   await joinPortal()
   await page.getByText('No roadmap invitations yet. Share your Member ID with a founder.', { exact: true }).waitFor()
   await page.getByText('No joined roadmaps yet. Accept an invitation or have a join request accepted to find your team here.', { exact: true }).waitFor()
@@ -283,73 +242,30 @@ try {
   const projectName = 'Community Health Workflow'
   const projectPath = await createRoadmap(projectName)
   const joinedPath = `/roadmap/joined/demo-founder/${projectPath.split('/').at(-1)}`
-  assert.equal(await button('Discover, Stage 1, current').getAttribute('aria-pressed'), 'true')
-  assert.equal(await page.getByRole('progressbar', { name: 'Roadmap coverage', exact: true }).getAttribute('aria-valuenow'), '0')
+  await page.getByRole('region', { name: `${projectName} roadmap journey`, exact: true }).waitFor()
+  const reviewToggle = button(/Mission review and approval/)
+  await reviewToggle.waitFor()
+  assert.equal(await reviewToggle.getAttribute('aria-expanded'), 'false')
+  await reviewToggle.click()
+  await page.getByRole('region', { name: 'Mission review and approval', exact: true }).waitFor()
+  await page.getByText('No team missions yet. Invite a member and assign a mission from Manage team.', { exact: true }).waitFor()
+  await reviewToggle.click()
+  assert.equal(await reviewToggle.getAttribute('aria-expanded'), 'false')
+  const transitionColors = await page.locator('.rmj-transition').evaluateAll((mountains) => mountains.map((mountain) => mountain.style.getPropertyValue('--stage-color')))
+  assert.equal(new Set(transitionColors).size, 4, 'Each stage-crossing mountain uses a distinct stage accent')
+  assert.equal(await page.getByRole('progressbar', { name: 'Roadmap progress', exact: true }).getAttribute('aria-valuenow'), '0')
   await assertCurrent('Problem statement', 1, 1)
-  assert.equal(await missionButton('User context', 1, 2, 'locked').isDisabled(), true)
+  await assertMissionLocked('User context', 1)
   await layout('initial-roadmap')
-  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
-  await button('Find current mission').scrollIntoViewIfNeeded()
-  const pageScroll = await page.evaluate(() => window.scrollY)
-  await button('Find current mission').click()
-  const currentIsInView = await page.locator('[data-mission-id="discover-l1-m1"] [data-road-node]').evaluate((node) => {
-    const bounds = node.getBoundingClientRect()
-    return bounds.top >= 0 && bounds.bottom <= window.innerHeight
-  })
-  assert.equal(currentIsInView, true, 'Find current mission brings the first checkpoint into the browser viewport')
-  assert.ok(await page.evaluate(() => window.scrollY) > pageScroll + 100, 'Finding the first mission scrolls the page toward the bottom of the roadmap')
-  assert.equal(await page.locator('.rm-highway-viewport').evaluate((element) => element.scrollTop), 0, 'Finding a mission does not create an internal road scroll offset')
-  assert.equal(await page.getByRole('dialog').count(), 0, 'Finding the current mission does not open its dialog')
-  await page.locator('[data-mission-id="discover-l1-m1"] [data-road-node]').hover()
-  const beforeWheel = await page.evaluate(() => window.scrollY)
-  await page.mouse.wheel(0, -500)
-  await page.waitForFunction((previous) => window.scrollY < previous, beforeWheel)
-  assert.equal(await page.locator('.rm-highway-viewport').evaluate((element) => element.scrollTop), 0, 'Wheel input over the roadmap scrolls the document, not an inner container')
-  // Switching stages keeps the same page, map dimensions, and viewport position.
-  for (const width of [320, 768, 1440]) {
-    await page.setViewportSize({ width, height: width < 600 ? 844 : 1000 })
-    await button('Discover, Stage 1, current').click()
-    await button('Grow, Stage 5, locked').scrollIntoViewIfNeeded()
-    const before = await page.evaluate(() => ({
-      y: window.scrollY,
-      height: document.documentElement.scrollHeight,
-      canvasY: document.querySelector('.rm-highway-canvas').getBoundingClientRect().top + window.scrollY,
-    }))
-    await button('Grow, Stage 5, locked').click()
-    await page.getByText('Grow is locked', { exact: true }).waitFor()
-    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
-    const after = await page.evaluate(() => ({
-      y: window.scrollY,
-      height: document.documentElement.scrollHeight,
-      canvasY: document.querySelector('.rm-highway-canvas').getBoundingClientRect().top + window.scrollY,
-    }))
-    assert.ok(Math.abs(after.y - before.y) <= 2, `Stage switching keeps the viewport at ${width}px: ${JSON.stringify({ before, after })}`)
-    assert.ok(Math.abs(after.canvasY - before.canvasY) <= 2, `Every stage shares the same map origin at ${width}px`)
-    assert.ok(Math.abs(after.height - before.height) <= 2, `Every stage keeps the full page height at ${width}px`)
-    assert.equal(await button('Grow, Stage 5, locked').evaluate((element) => element === document.activeElement), true, 'Selected stage keeps keyboard focus')
-    assert.equal(await page.locator('.rm-highway').evaluate((element) => element.getAnimations().length), 0, 'Reduced motion disables stage fades')
-    await highway({ locked: true })
-    assert.equal(new URL(page.url()).pathname, projectPath, 'Stage selection keeps the current project route')
-  }
-  await page.emulateMedia({ reducedMotion: 'no-preference' })
-  await button('Validate, Stage 2, locked').click()
-  assert.ok(await page.locator('.rm-highway').evaluate((element) => element.getAnimations().some((animation) => animation.effect.getTiming().duration === 240)), 'Stage changes use a short in-place fade')
-  await page.locator('.rm-highway').evaluate((element) => Promise.all(element.getAnimations().map((animation) => animation.finished)))
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await button('Grow, Stage 5, locked').click()
-  await layout('locked-roadmap', [320, 1440])
-  await button('Return to Active Stage').click()
+  const lockedLevel = await openLevel(5, 5)
+  await lockedLevel.getByText('This level unlocks after you complete the missions before it.', { exact: false }).waitFor()
+  await lockedLevel.getByRole('button', { name: 'Back to journey', exact: true }).click()
   await assertCurrent('Problem statement', 1, 1)
 
   // Invalid work produces persistent feedback without unlocking the next mission.
-  const firstMission = missionButton('Problem statement', 1, 1, 'active')
-  await firstMission.scrollIntoViewIfNeeded()
-  const missionPageScroll = await page.evaluate(() => window.scrollY)
-  await firstMission.click()
-  const first = dialog('Problem statement')
-  await first.waitFor()
-  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
-  assert.equal(await page.evaluate(() => window.scrollY), missionPageScroll, 'Opening a mission dialog preserves the page position')
+  const first = await openCurrent('Problem statement')
+  assert.equal(await page.locator('.rmj-mission-page').count(), 1, 'Opening a mission keeps its mission page in the background')
+  assert.equal(await page.locator('.rmj-mission-page').isVisible(), true, 'The mission dialog overlays rather than replaces the mission page')
   await first.getByLabel('Your work', { exact: true }).fill('Not enough detail.')
   await first.getByRole('button', { name: 'Submit for evaluation', exact: true }).click()
   await first.getByRole('heading', { name: 'Improve your evidence', exact: true }).waitFor()
@@ -372,7 +288,7 @@ try {
   }
   assert.equal(await page.evaluate(() => {
     const modal = document.querySelector('dialog[open]')
-    document.querySelector('.rm-stage-context button').focus()
+    document.querySelector('.rmj-level-node').focus()
     return modal.contains(document.activeElement)
   }), true, 'The open native dialog keeps background actions inert')
   await layout('accepted-mission', [320, 1440])
@@ -392,23 +308,21 @@ try {
   await acceptMission('Opportunity brief')
   await closeDialog()
   await assertCurrent('Audience segments', 2, 1)
-  assert.equal(await missionButton('Problem statement', 1, 1, 'completed').isDisabled(), false)
-  assert.equal(await missionButton('User needs', 2, 2, 'locked').isDisabled(), true)
+  await assertMissionReviewable('Problem statement', 1)
+  await assertMissionLocked('User needs', 2)
   await page.reload()
-  await heading(projectName).waitFor()
+  await page.getByRole('heading', { name: 'Roadmap', exact: true, level: 1 }).waitFor()
+  await page.getByRole('heading', { name: `${projectName} Roadmap`, exact: true, level: 2 }).waitFor()
   await assertCurrent('Audience segments', 2, 1)
-  assert.equal(await page.getByRole('progressbar', { name: 'Roadmap coverage', exact: true }).getAttribute('aria-valuenow'), '3')
+  assert.equal(await page.getByRole('progressbar', { name: 'Roadmap progress', exact: true }).getAttribute('aria-valuenow'), '3')
   await layout('progressed-roadmap')
 
-  // Approved work updates badges while the illustrative points balance stays unchanged.
+  // Approved work updates earned badges but does not award LabX Points.
   await go('/dashboard')
   await heading('Dashboard').waitFor()
-  await page.getByLabel('Active project', { exact: true }).selectOption(projectPath.split('/').at(-1))
-  const progress = page.getByRole('progressbar', { name: 'Roadmap progress', exact: true })
-  assert.equal(await progress.getAttribute('aria-valuenow'), '3')
-  assert.equal(await progress.getAttribute('aria-valuemax'), '75')
-  await button('450 LabX Coins').waitFor()
-  assert.equal(await page.locator('[data-dashboard-stat="Earned badges"]').innerText(), '4')
+  await page.getByLabel('Select Roadmap', { exact: true }).selectOption(projectPath.split('/').at(-1))
+  assert.equal(await page.locator('[data-dashboard-stat="LabX Points"]').innerText(), pointsBeforeMissions)
+  assert.ok(Number(await page.locator('[data-dashboard-stat="Earned badges"]').innerText()) > Number(badgesBeforeMissions))
   await page.getByRole('region', { name: 'Current project', exact: true }).getByText('Up next: Audience segments', { exact: true }).waitFor()
   assert.equal(await page.locator('[data-dashboard-stat="Completed missions"]').innerText(), '3')
   assert.equal(await page.locator('[data-dashboard-stat="Missions remaining"]').innerText(), '72')
@@ -443,7 +357,7 @@ try {
   await go(joinedPath)
   await heading('Roadmap unavailable').waitFor()
   assert.equal(await page.getByLabel('Your work', { exact: true }).count(), 0)
-  assert.equal(await button('Open current mission').count(), 0, 'A pending invitation does not grant roadmap access')
+  assert.equal(await page.locator('.rmj-viewport').count(), 0, 'A pending invitation does not grant roadmap access')
   await joinPortal()
   await layout('join-roadmap-invitation', [320, 1440])
   const invitation = () => page.getByRole('listitem', { name: `Invitation: ${projectName}`, exact: true })
@@ -455,7 +369,7 @@ try {
   assert.equal(await page.getByRole('link', { name: `Open joined roadmap: ${projectName}`, exact: true }).count(), 0)
   await go(joinedPath)
   await heading('Roadmap unavailable').waitFor()
-  assert.equal(await button('Open current mission').count(), 0, 'A declined invitation grants no access')
+  assert.equal(await page.locator('.rmj-viewport').count(), 0, 'A declined invitation grants no access')
   await signOut()
   await login(acceptedMember.email)
   await joinPortal()
@@ -467,7 +381,7 @@ try {
   await dialog('Join Roadmap').waitFor()
   await page.getByRole('link', { name: `Open joined roadmap: ${projectName}`, exact: true }).click()
   await at(joinedPath)
-  await heading(projectName).waitFor()
+  await page.getByRole('region', { name: `${projectName} roadmap journey`, exact: true }).waitFor()
   await openTeam()
   await team().getByText('Read-only team overview', { exact: true }).waitFor()
   await team().getByRole('article', { name: 'Owner: Founder', exact: true }).waitFor()
@@ -481,10 +395,8 @@ try {
   assert.equal(await button(`Edit ${projectName}`).count(), 0)
   assert.equal(await button(`Delete ${projectName}`).count(), 0)
   await assertCurrent('Audience segments', 2, 1, false)
-  assert.equal(await button('Open current mission').count(), 0, 'An unassigned member cannot submit the current mission')
-  await page.getByText('The main founder can assign the current mission to you.', { exact: true }).waitFor()
   await go(`${joinedPath}?milestone=discover-l2-m1`)
-  await heading(projectName).waitFor()
+  await page.getByRole('region', { name: `${projectName} roadmap journey`, exact: true }).waitFor()
   assert.equal(await page.getByRole('dialog').count(), 0, 'A direct mission URL does not bypass assignment restrictions')
   for (const suffix of ['', '/assessment', '/result']) {
     await go(`${projectPath}${suffix}`)
@@ -524,7 +436,7 @@ try {
   assert.equal(await memberOverview.getByRole('button').count(), 0, 'Members cannot remove or change assignments')
   await layout('member-team-assignments', [320, 1440])
   await closeDialog()
-  assert.equal(await missionButton('User needs', 2, 2, 'locked').isDisabled(), true)
+  await assertMissionLocked('User needs', 2)
   await openCurrent('Audience segments')
   const memberMission = dialog('Audience segments')
   await memberMission.getByRole('button', { name: 'Start mission', exact: true }).click()
@@ -537,7 +449,7 @@ try {
   assert.equal(await memberMission.getByRole('button', { name: 'Upload Approved Submission for AI Evaluation', exact: true }).count(), 0)
   await closeDialog()
   await assertCurrent('Audience segments', 2, 1)
-  assert.equal(await page.getByRole('progressbar', { name: 'Roadmap coverage', exact: true }).getAttribute('aria-valuenow'), '3', 'Member submission does not auto-complete the mission')
+  assert.equal(await page.getByRole('progressbar', { name: 'Roadmap progress', exact: true }).getAttribute('aria-valuenow'), '3', 'Member submission does not auto-complete the mission')
   await signOut()
   await login()
   await go(projectPath)
@@ -565,7 +477,6 @@ try {
   await login(acceptedMember.email)
   await go(joinedPath)
   await assertCurrent('User needs', 2, 2, false)
-  assert.equal(await button('Open current mission').count(), 0, 'Completing an assignment does not grant the next unassigned mission')
   await layout('joined-read-only', [320, 1440])
   await page.reload()
   await assertCurrent('User needs', 2, 2, false)
@@ -573,7 +484,7 @@ try {
   await login()
   await go(projectPath)
   await assertCurrent('User needs', 2, 2)
-  await missionButton('Audience segments', 2, 1, 'completed').click()
+  await openMission('Audience segments', 2, 1, 'Review')
   await dialog('Audience segments').locator('.mr-status').getByText('Evaluation Completed', { exact: true }).waitFor()
   await closeDialog()
   await go(independentPath)
@@ -596,32 +507,34 @@ try {
   await dialog('Growth priorities').waitFor()
   await closeDialog()
   await assertCurrent('Growth priorities', 5, 1)
-  await page.getByText('+ 71 covered by placement', { exact: true }).waitFor()
-  assert.equal(await page.getByRole('progressbar', { name: 'Roadmap coverage' }).getAttribute('aria-valuenow'), '72')
+  assert.equal(await page.getByRole('progressbar', { name: 'Roadmap progress' }).getAttribute('aria-valuenow'), '72')
+  assert.equal(await page.locator('.rmj-transition.is-crossed').count(), 4, 'Placement that covers four stages illuminates all four crossed mountains')
   for (const mission of ['Growth priorities', 'Experiment roadmap', 'Growth review']) {
     await openCurrent(mission)
     await acceptMission(mission)
     await closeDialog()
   }
-  await page.getByRole('heading', { name: 'Roadmap completed!', exact: true }).waitFor()
-  assert.equal(await button('Open current mission').count(), 0)
-  assert.equal(await page.getByRole('progressbar', { name: 'Roadmap coverage' }).getAttribute('aria-valuenow'), '75')
+  const completedLevelPage = page.locator('.rmj-mission-page')
+  if (await completedLevelPage.count()) await completedLevelPage.getByRole('button', { name: 'Back to journey', exact: true }).click()
+  await page.locator('.rmj-summit').getByText('Roadmap complete', { exact: true }).waitFor()
+  assert.equal(await page.locator('.rmj-level-node[aria-label$=", current"]').count(), 0)
+  assert.equal(await page.getByRole('progressbar', { name: 'Roadmap progress' }).getAttribute('aria-valuenow'), '75')
   await page.reload()
-  await page.getByRole('heading', { name: 'Roadmap completed!', exact: true }).waitFor()
+  await page.locator('.rmj-summit').getByText('Roadmap complete', { exact: true }).waitFor()
   await layout('completed-roadmap', [390, 1440])
   await go('/dashboard')
   await heading('Dashboard').waitFor()
-  await page.getByLabel('Active project', { exact: true }).selectOption(independentPath.split('/').at(-1))
+  await page.getByLabel('Select Roadmap', { exact: true }).selectOption(independentPath.split('/').at(-1))
   await page.getByRole('region', { name: 'Current project' }).getByText('Roadmap complete', { exact: true }).waitFor()
   assert.equal(await page.locator('[data-dashboard-stat="Missions remaining"]').innerText(), '0')
   await page.getByRole('region', { name: 'Project journey' }).getByRole('link', { name: 'Open roadmap', exact: true }).waitFor()
-  await button('450 LabX Coins').waitFor()
+  assert.equal(await page.locator('[data-dashboard-stat="LabX Points"]').innerText(), pointsBeforeMissions)
 
   assert.deepEqual(runtimeErrors, [], 'No browser runtime errors')
   assert.deepEqual(httpErrors, [], 'All assets are available locally')
   assert.deepEqual(externalRequests, [], 'No evidence links or external services are contacted')
   assert.deepEqual(backendRequests, [], 'All progress and invitations stay local without backend requests')
-  console.log('PASS: highway geometry and progression, owner evidence and placement, exact Member ID invitations with final history, reviewed assignments, member submission frozen for founder approval, explicit approved upload and simulated evaluation states, restricted members, dashboard integration, and responsive layouts.')
+  console.log('PASS: continuous journey progression, owner evidence and placement, exact Member ID invitations with final history, reviewed assignments, member submission frozen for founder approval, explicit approved upload and simulated evaluation states, restricted members, dashboard integration, and responsive layouts.')
 } catch (error) {
   await page?.screenshot({ path: `${output}failure.png`, fullPage: true, animations: 'disabled' }).catch(() => {})
   throw error

@@ -9,6 +9,7 @@ import { ASSESSMENT_QUESTIONS, validateAssessmentStep } from '../features/assess
 import { legacyJoinRoadmapUrl } from '../features/roadmap/services/join_roadmap_navigation.js'
 import { getLoginDestination } from '../utils/onboarding.js'
 import { getCompanionRoadmapRoute, getCompanionUrl } from '../features/companion/services/companion_navigation.js'
+import { ROADMAP_VISUAL_MY_DATA } from '../features/projects/services/roadmap_visual_mock_data.js'
 
 const lazyPage = (load, name) => lazy(() => load().then((module) => ({ default: module[name] })))
 const IntroVideo = lazyPage(() => import('../features/authentication/pages/IntroVideo.jsx'), 'IntroVideo')
@@ -114,6 +115,14 @@ function ProjectRoute({ view }) {
     : <RoadmapPage key={project.id} project={project} />
 }
 
+function MockRoadmapRoute() {
+  const { user } = useAuth()
+  const { projectId } = useParams()
+  const project = ROADMAP_VISUAL_MY_DATA.find((entry) => entry.id === projectId)
+  if (!project) return <Navigate to="/roadmap" replace />
+  return <RoadmapPage key={`${user.id}:${project.id}`} project={{ ...project, owner_id: user.id, created_by: user.full_name, visualDemo: true }} />
+}
+
 function MentorRoute() {
   const { user } = useAuth()
   if (user.role !== 'mentor') return <Navigate to="/dashboard" replace />
@@ -155,6 +164,7 @@ export default function AppRouter() {
           <Route path="/q1" element={<Navigate to="/dashboard" replace />} />
           <Route path="/roadmap" element={<FounderOnly><ProjectsPage /></FounderOnly>} />
           <Route path="/roadmap/new" element={<FounderOnly><NewProjectPage /></FounderOnly>} />
+          <Route path="/roadmap/demo/:projectId" element={<FounderOnly><MockRoadmapRoute /></FounderOnly>} />
           <Route path="/join-roadmap" element={<FounderOnly><LegacyJoinRoadmapRoute /></FounderOnly>} />
           <Route path="/roadmap/join" element={<FounderOnly><LegacyJoinRoadmapRoute /></FounderOnly>} />
           <Route path="/roadmap/joined/:ownerId/:projectId" element={<JoinedRoadmapRoute />} />

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, ChevronRight, Ellipsis, Filter, Folder, FolderPlus, Pencil, Plus, Route, Search, Trash2, X } from 'lucide-react';
 import { useAuth } from '../../../hooks/use_auth.js';
 import { useProjects } from '../hooks/use_projects.js';
@@ -248,6 +248,7 @@ function ProjectPreviewDialog({ project, onClose }) {
 
 export function ProjectsPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { projects, renameProject, deleteProject } = useProjects();
   const [searchParams, setSearchParams] = useSearchParams();
   const view = ['joined', 'invitations'].includes(searchParams.get('view')) ? searchParams.get('view') : 'my';
@@ -334,6 +335,13 @@ export function ProjectsPage() {
   };
   const sortBy = (value) => updateControl('sort', value);
   const openDialog = (project, mode) => { setNotice(''); setDialog({ project, mode }); };
+  const openRoadmapPreview = (project) => {
+    if (project.visualDemo && project.visualCollection === 'my') {
+      navigate(`/roadmap/demo/${encodeURIComponent(project.id)}`);
+      return;
+    }
+    setPreviewProject(project);
+  };
   const saveChange = async (id, name) => {
     if (dialog.project.visualDemo && dialog.mode === 'edit') {
       setDemoProjects((items) => items.map((item) => item.id === id ? { ...item, name } : item));
@@ -365,7 +373,7 @@ export function ProjectsPage() {
         <div className="roadmap-collection-actions"><JoinRoadmapTrigger className="projects-button">Join roadmap<ArrowRight size={16} aria-hidden="true" /></JoinRoadmapTrigger><Link to="/roadmap/new" className="projects-button projects-button--primary"><Plus size={18} aria-hidden="true" />New project</Link></div>
       </div>
       <div key={view} className="projects-collection-content">
-      {view === 'joined' ? <JoinedRoadmaps demoProjects={demoJoinedProjects} onPreview={setPreviewProject} compact /> : view === 'invitations' ? <RoadmapInvitations demoInvitations={demoInvitations} onDemoRespond={respondToDemoInvitation} /> : <>
+      {view === 'joined' ? <JoinedRoadmaps demoProjects={demoJoinedProjects} onPreview={openRoadmapPreview} compact /> : view === 'invitations' ? <RoadmapInvitations demoInvitations={demoInvitations} onDemoRespond={respondToDemoInvitation} /> : <>
       {notice && <p className="projects-feedback" role="status">{notice}</p>}
       {roadmapProjects.length ? <section ref={listingRef} tabIndex={-1} className="projects-listing" aria-label="My roadmaps">
         <div className="projects-controls" aria-label="Search and filter projects">
@@ -398,7 +406,7 @@ export function ProjectsPage() {
               <th scope="col" aria-sort={sort === 'progress-asc' ? 'ascending' : sort === 'progress-desc' ? 'descending' : 'none'}><SortHeading label="Progress" ascending="progress-asc" descending="progress-desc" sort={sort} onSort={sortBy} /></th>
               <th scope="col" aria-hidden="true" />
             </tr></thead>
-            <tbody>{visibleProjects.map((project) => <ProjectRow key={project.id} project={project} onEdit={(item) => openDialog(item, 'edit')} onDelete={(item) => openDialog(item, 'delete')} onPreview={setPreviewProject} />)}</tbody>
+            <tbody>{visibleProjects.map((project) =>             <ProjectRow key={project.id} project={project} onEdit={(item) => openDialog(item, 'edit')} onDelete={(item) => openDialog(item, 'delete')} onPreview={openRoadmapPreview} />)}</tbody>
           </table>
           {visibleProjects.length < results.total && <p className="projects-list__more" role="status">Scroll to load more roadmaps</p>}
         </div> : <section className="projects-no-results" aria-labelledby="projects-no-results-title"><Search size={28} aria-hidden="true" /><h3 id="projects-no-results-title">No projects match your search</h3><p>Try another name, status, or domain.</p><button type="button" className="projects-button" onClick={clearFilters}>Clear search and filters</button></section>}
