@@ -267,7 +267,7 @@ try {
   const joinPortal = async () => {
     await go('/join-roadmap')
     await dialog('Join Roadmap').waitFor()
-    await page.getByRole('navigation', { name: 'Collaboration views', exact: true }).getByRole('button', { name: 'My activity', exact: true }).click()
+    await page.getByRole('navigation', { name: 'Collaboration views', exact: true }).getByRole('tab', { name: 'My activity', exact: true }).click()
   }
 
   // Accounts are created through the public UI in an isolated browser context.

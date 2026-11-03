@@ -8,7 +8,6 @@ import { collaborationStore } from '../services/roadmap_collaboration.js';
 import { MissionDialog } from '../components/MissionDialog.jsx';
 import { RoadmapTeam } from '../components/RoadmapTeam.jsx';
 import { RoadmapHighway } from '../components/RoadmapHighway.jsx';
-import { JoinRoadmapTrigger } from '../components/JoinRoadmapTrigger.jsx';
 import { MISSION_WORKFLOW_LABELS } from '../services/mission_review.js';
 import '../components/MissionWorkQueue.css';
 import '../components/RoadmapWorkflow.css';
@@ -89,7 +88,7 @@ function RoadmapSession({ project, ownerId }) {
         <Link className="rm-back" to={isOwner ? '/roadmap' : '/roadmap?view=joined'}><ArrowLeft size={14} />All roadmaps</Link>
         <span aria-hidden="true">/</span><span className="rm-project-name">{project.name}</span>
       </div>
-      <div className="roadmap-team-toolbar">{!isOwner && <span className="rm-member-badge"><Users size={15} />Joined roadmap</span>}{isOwner && <JoinRoadmapTrigger projectId={project.id} view="founder" className="roadmap-team-button">Find collaborators<ArrowRight size={15} /></JoinRoadmapTrigger>}<RoadmapTeam project={project} roadmap={roadmap} onChange={refresh} /></div>
+      <div className="roadmap-team-toolbar">{!isOwner && <span className="rm-member-badge"><Users size={15} />Joined roadmap</span>}<RoadmapTeam project={project} roadmap={roadmap} onChange={refresh} /></div>
     </div>
 
     <header className="rm-domain-header">

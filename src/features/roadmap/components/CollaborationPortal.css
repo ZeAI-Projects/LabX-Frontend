@@ -16,6 +16,7 @@
 .collab-convergence > strong { display:inline-flex; align-items:center; gap:9px; margin-top:13px; padding:12px 18px; border:1px solid #6ed0bd40; border-radius:12px; background:#59bcaa0c; color:#b3ebdf; font-size:.91rem; }
 .collab-convergence p { font-size:.73rem; color:#8ea6c0; margin:10px 0 0; }
 .collab-navigation { display:flex; gap:4px; border-bottom:1px solid #536c903e; margin:26px 0 24px; }
+.collab-navigation > [role="tablist"] { display:flex;gap:4px; }
 .collab-navigation button { min-height:46px; padding:11px 16px; border:0; border-bottom:2px solid transparent; background:transparent; color:#8fa8c3; font:inherit; font-size:.81rem; cursor:pointer; }
 .collab-navigation button.is-active { color:#9ce3ee; border-bottom-color:#85dbe8; background:linear-gradient(0deg,#65cbd913,transparent); }
 .collab-section { margin:26px 0; }

@@ -2,7 +2,8 @@
 .roadmap-team-button:hover { border-color: #70cbdc; background: #223b53; }
 .roadmap-team-button--primary { background: #65d5e7; color: #08242e; border-color: #65d5e7; }
 .roadmap-team-button--primary:hover { background: #97e5ef; color: #08242e; }
-.roadmap-team-dialog { position: fixed; inset: 0; margin: auto; width: min(680px, calc(100vw - 28px)); max-height: calc(100dvh - 36px); overflow-y: auto; padding: 25px; border: 1px solid #3e536f; border-radius: 16px; background: #101b2d; color: #d9e5f4; box-shadow: 0 20px 80px #0009; }
+.roadmap-team-dialog { position: fixed; inset: 0; margin: auto; width: min(680px, calc(100vw - 28px)); max-height: calc(100dvh - 36px); overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none; padding: 25px; border: 1px solid #3e536f; border-radius: 16px; background: #101b2d; color: #d9e5f4; box-shadow: 0 20px 80px #0009; }
+.roadmap-team-dialog::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .roadmap-team-dialog::backdrop { background: #020713bd; backdrop-filter: blur(5px); }
 .roadmap-team-dialog *, .roadmap-collaboration-list * { box-sizing: border-box; }
 .roadmap-team-dialog :is(button, input, select):focus-visible, .roadmap-team-button:focus-visible, .roadmap-collaboration-list :is(button, a):focus-visible { outline: 2px solid #7fe6f6; outline-offset: 3px; }
@@ -82,10 +83,11 @@
 .join-roadmap-help { border-top: 1px solid #41557355; padding-top: 20px; color: #8da5c2; font-size: .78rem; line-height: 1.8; }
 .join-roadmap-page a:focus-visible { outline: 2px solid #7fe6f6; outline-offset: 3px; }
 .roadmap-team-membership { display:flex; align-items:center; gap:5px; font-size:.66rem; color:#93cfb8; margin:10px 0 0; }
-.roadmap-team-portal-link { margin:4px 0 18px; border:0; background:none; padding:0; text-align:left; cursor:pointer; }
 .roadmap-team-invite-details { border:1px solid #4a69854a; border-radius:10px; overflow:hidden; }
-.roadmap-team-invite-details > summary { padding:15px; cursor:pointer; color:#aedce7; font-size:.83rem; }
+.roadmap-team-invite-details > summary { padding:15px; cursor:pointer; color:#aedce7; font-size:.9rem; font-weight:650; }
 .roadmap-team-invite-details > .collab-form { border:0; border-radius:0; }
+.roadmap-team-opportunity > .collab-form { border:0; border-bottom:1px solid #4a69854a; border-radius:0; }
+.roadmap-team-opportunity > .roadmap-collaboration-list { padding:18px; }
 .roadmap-team-assignment > .roadmap-assignment-instructions { display:block; margin-top:14px; }
 .roadmap-assignment-review { padding:16px; border:1px solid #9ab6de40; border-radius:8px; background:#0f1c2e; }
 .roadmap-assignment-review h4 { display:flex; align-items:center; gap:7px; color:#9bdbe7; margin:0 0 15px; font-size:.85rem; }

@@ -95,6 +95,8 @@ try {
   assert.equal(await page.locator('.labx-sidebar-nav').getByRole('link', { name: 'Join Roadmap', exact: true }).count(), 0, 'Joining is part of Roadmap, not a separate navigation destination');
   await button('Join roadmap').click();
   await joinPopup().waitFor();
+  assert.equal(await joinPopup().locator('.join-roadmap-account strong').textContent(), 'Alice Founder', 'Join Roadmap shows the member name');
+  assert.doesNotMatch(await joinPopup().locator('.join-roadmap-account').innerText(), new RegExp(accounts.owner.id), 'Join Roadmap does not expose the member ID');
   assert.equal(new URL(page.url()).pathname, '/roadmap');
   assert.equal(new URL(page.url()).searchParams.get('q'), 'Shared');
   assert.equal(await page.evaluate(() => document.body.style.overflow), 'hidden');
@@ -116,9 +118,10 @@ try {
   assert.equal(new URL(page.url()).searchParams.get('joinProject'), project.id);
   assert.equal(new URL(page.url()).searchParams.get('notice'), 'accepted');
 
-  const tab = (name) => page.getByRole('navigation', { name: 'Collaboration views' }).getByRole('button', { name, exact: true });
+  const tab = (name) => page.getByRole('navigation', { name: 'Collaboration views' }).getByRole('tab', { name, exact: true });
   const opportunity = () => page.getByRole('article', { name: 'Opportunity: Research with our startup', exact: true });
   const requestRow = (name) => page.locator('.collab-request-row').filter({ hasText: name });
+  const team = () => page.getByRole('dialog', { name: 'Roadmap team', exact: true });
   const inviteRegion = () => page.getByRole('region', { name: 'Direct Member Invitation', exact: true });
   const invitation = () => page.getByRole('listitem', { name: `Invitation: ${project.name}`, exact: true });
   const founderWorkspace = async () => { await go(`/roadmap?join=1&joinProject=${project.id}&joinView=founder`); await page.getByLabel('Startup / project', { exact: true }).waitFor(); };
@@ -281,6 +284,28 @@ try {
   await assertNoPointOffers(opportunity(), 'Reloaded opportunity');
   assert.equal(await opportunity().getByRole('button', { name: 'Request to Join', exact: true }).count(), 0, 'Owner cannot apply to own startup');
   await layout('join-popup-browse', '.join-roadmap-page', [390, 1440]);
+  await closeDialog();
+  await go(ownPath);
+  assert.equal(await button('Find collaborators').count(), 0, 'Collaboration entry lives in Manage team');
+  await button('Manage team').click();
+  assert.equal(await team().evaluate((element) => getComputedStyle(element).scrollbarWidth), 'none', 'Manage team keeps scrolling without showing scrollbar chrome');
+  await team().locator('summary').filter({ hasText: 'Publish collaboration opportunity' }).click();
+  assert.equal(await team().evaluate((element) => element.scrollHeight > element.clientHeight), true, 'Expanded team tools retain their scroll behavior');
+  await team().evaluate((element) => { element.scrollTo(0, element.scrollHeight); });
+  assert.ok(await team().evaluate((element) => element.scrollTop > 0), 'Manage team scrolls without displaying a scrollbar');
+  await team().evaluate((element) => { element.scrollTo(0, 0); });
+  const opportunityForm = team().locator('.roadmap-team-opportunity').locator('form.collab-form');
+  await opportunityForm.getByLabel('Opportunity title', { exact: true }).fill('Founder-posted team opportunity');
+  await opportunityForm.getByLabel('Opportunity description', { exact: true }).fill('A clear sample collaboration opportunity published directly from Manage team.');
+  await opportunityForm.getByLabel('Role or contribution needed', { exact: true }).fill('Product research');
+  await opportunityForm.getByLabel('Skills or experience', { exact: true }).fill('User interviews and synthesis');
+  await opportunityForm.getByRole('button', { name: 'Publish Collaboration Post', exact: true }).click();
+  await team().getByRole('status').filter({ hasText: 'Collaboration post published' }).waitFor();
+  assert.ok((await read(COLLABORATION_KEY)).opportunities.some((item) => item.title === 'Founder-posted team opportunity'), 'Manage team saves the founder opportunity');
+  await closeDialog();
+  await go('/roadmap?join=1&joinView=browse');
+  await joinPopup().waitFor();
+  await opportunity().waitFor();
   await page.locator('.cw-overview > summary').click();
   await layout('joining-workflow', '.join-roadmap-page');
   for (const label of ['Declined by Founder', 'Declined by Member', 'Member Joins Startup Team', 'Founder Uploads Approved Mission Submission', 'Evaluation Failed', 'Resubmitted to Founder']) {
@@ -307,6 +332,8 @@ try {
   assert.equal(await membershipCount(accounts.declined), 0);
   assert.equal(await requestRow(accounts.public.full_name).getByRole('button', { name: 'Accept', exact: true }).count(), 0);
   await page.getByLabel('Startup / project', { exact: true }).selectOption(otherProject.id);
+  await page.waitForFunction((id) => document.querySelector('#collaboration-project')?.value === id, otherProject.id);
+  await page.waitForFunction(() => document.querySelectorAll('.collab-request-row').length === 0);
   assert.equal(await page.locator('.collab-request-row').count(), 0, 'Switching projects isolates incoming requests');
   await switchAccount('public');
   await go('/roadmap?join=1&joinView=activity');
@@ -345,26 +372,8 @@ try {
 
   await switchAccount('owner');
   await go(`${ownPath}?stage=Validate`);
-  await button('Find collaborators').scrollIntoViewIfNeeded();
-  const roadmapScrollBeforeJoin = await page.evaluate(() => window.scrollY);
-  await button('Find collaborators').click();
-  await joinPopup().waitFor();
-  assert.equal(new URL(page.url()).pathname, ownPath, 'Project collaboration opens over the current roadmap');
-  assert.equal(new URL(page.url()).searchParams.get('stage'), 'Validate');
-  assert.equal(await page.evaluate(() => window.scrollY), roadmapScrollBeforeJoin, 'Opening collaboration preserves the roadmap scroll position');
-  assert.equal(await page.getByLabel('Startup / project', { exact: true }).inputValue(), project.id);
-  await closeDialog();
-  await page.waitForFunction(() => document.activeElement?.matches('[data-join-roadmap-trigger]'));
-  assert.equal(await button('Find collaborators').evaluate((element) => element === document.activeElement), true);
-  assert.equal(await page.evaluate(() => window.scrollY), roadmapScrollBeforeJoin, 'Closing collaboration preserves the roadmap scroll position');
+  assert.equal(await button('Find collaborators').count(), 0, 'Collaboration entry lives in Manage team');
   await button('Manage team').click();
-  await button('Publish a post or review incoming join requests').click();
-  await joinPopup().waitFor();
-  assert.equal(await page.locator('dialog[open]').count(), 1, 'Moving from team management opens one popup');
-  await closeDialog();
-  await go(ownPath);
-  await button('Manage team').click();
-  const team = () => page.getByRole('dialog', { name: 'Roadmap team', exact: true });
   for (const [key, missionId] of [['public', 'discover-l1-m2'], ['direct', 'discover-l1-m3']]) {
     const member = team().getByRole('article', { name: `Member: ${accounts[key].full_name}`, exact: true });
     await member.getByLabel(`Mission for ${accounts[key].full_name}`, { exact: true }).selectOption(missionId);

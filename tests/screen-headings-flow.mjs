@@ -60,7 +60,7 @@ try {
   const routes = [
     { path: '/dashboard', title: 'Dashboard', header: '.db-header' },
     { path: '/chats', title: 'Chats' },
-    { path: '/roadmap', title: 'Roadmap', header: '.projects-header' },
+    { path: '/roadmap', title: 'Roadmap', header: '.projects-collection-bar' },
     { path: '/roadmap/new', title: 'New Project', header: '.labx-navbar-title' },
     { path: projectPath, title: 'Header layout project', header: '.rm-project-bar' },
     { path: '/leaderboard', title: 'LabX Leaderboard', header: '.lb-header' },

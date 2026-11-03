@@ -4,13 +4,23 @@ import { ROADMAP_CHANGE_EVENT } from '../services/roadmap_collaboration.js';
 export const collaborationDate = (value) => value ? new Date(value).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '';
 export const collaborationStatus = (item, kind = 'invitation') => item.statusLabel || ({ pending: kind === 'request' ? 'Pending Founder Review' : 'Pending Member Response', accepted: 'Member Joins Startup Team', resolved: 'Already a team member', declined: kind === 'request' ? 'Declined by Founder' : 'Declined by Member' })[item.status] || item.status;
 
-export function useCollaborationRefresh() {
-  const [, refresh] = useReducer((value) => value + 1, 0);
+function useCollaborationRevision() {
+  const [revision, refresh] = useReducer((value) => value + 1, 0);
   useEffect(() => {
     for (const event of ['storage', 'focus', ROADMAP_CHANGE_EVENT]) window.addEventListener(event, refresh);
     return () => { for (const event of ['storage', 'focus', ROADMAP_CHANGE_EVENT]) window.removeEventListener(event, refresh); };
   }, []);
+  return { revision, refresh };
+}
+
+export function useCollaborationRefresh() {
+  const { refresh } = useCollaborationRevision();
   return refresh;
+}
+
+export function useCollaborationVersion() {
+  const { revision } = useCollaborationRevision();
+  return revision;
 }
 
 // Local operations remain visible while processing. Unmounting an account or

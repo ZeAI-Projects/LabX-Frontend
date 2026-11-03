@@ -49,7 +49,7 @@ export function AppShell({ children }) {
       <a className="labx-skip-link" href="#app-page-content">Skip to page content</a>
       <Sidebar user={user} onSignOut={signOut} />
       <MobileNavigation user={user} onSignOut={signOut} />
-      <main className={`main-content founder-world founder-world--${section}`}>
+      <main className={`main-content founder-world founder-world--${section}`} tabIndex={pathname === '/roadmap' ? 0 : undefined}>
         <div className="founder-world__backdrop" aria-hidden="true" />
         <Navbar
           user={user}

@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { JoinRoadmapTrigger } from './JoinRoadmapTrigger.jsx';
-import { ArrowRight, Check, ClipboardCheck, Crown, LockKeyhole, Plus, Users, X } from 'lucide-react';
+import { Check, ClipboardCheck, Crown, LockKeyhole, Plus, Users, X } from 'lucide-react';
 import { useAuth } from '../../../hooks/use_auth.js';
 import { collaborationStore } from '../services/roadmap_collaboration.js';
 import { createMockRoadmap } from '../services/mock_roadmap.js';
 import { MISSION_NOTES_MIN_LENGTH } from '../services/roadmap_workflow.js';
-import { CollaborationBadge, CollaborationFeedback, DirectInvitationForm } from './CollaborationPortal.jsx';
+import { CollaborationBadge, CollaborationFeedback, DirectInvitationForm, JoinRequests, PublishOpportunityForm } from './CollaborationPortal.jsx';
 import { collaborationDate, useCollaborationAction, useCollaborationRefresh } from './collaboration_ui.js';
 import './RoadmapTeam.css';
 
@@ -56,7 +55,7 @@ function TeamDialog({ project, roadmap, user, onClose, onChange }) {
     {readError && <p className="roadmap-team-error" role="alert">{readError}</p>}
     {!readError && <><div className="roadmap-team-access" aria-label="Your team access"><span>Your role<strong>{roleLabel(team.memberRole)}</strong></span><span>{isOwner ? <><Crown size={15} />Team management</> : <><LockKeyhole size={15} />Read-only team overview</>}</span></div>
       <article className="roadmap-team-member roadmap-team-owner" aria-label={`Owner: ${team.owner.full_name}`}><div className="roadmap-team-member-heading"><div><strong>{team.owner.full_name}{isOwner && ' (you)'}</strong><span>Manages the roadmap, membership, assignments, and founder review</span></div><small><Crown size={12} aria-hidden="true" />Owner</small></div></article>
-      {isOwner && <><JoinRoadmapTrigger className="collab-text-link roadmap-team-portal-link" projectId={project.id} view="founder" onOpen={onClose}>Publish a post or review incoming join requests<ArrowRight size={15} /></JoinRoadmapTrigger><details className="roadmap-team-invite-details"><summary>Direct Member Invitation</summary><DirectInvitationForm key={`${user.id}:${project.id}`} project={project} user={user} onChange={changed} /></details></>}
+      {isOwner && <><details className="roadmap-team-invite-details"><summary>Publish collaboration opportunity</summary><div className="roadmap-team-opportunity"><PublishOpportunityForm key={`opportunity:${user.id}:${project.id}`} project={project} user={user} onChange={changed} /><JoinRequests key={`requests:${user.id}:${project.id}`} project={project} user={user} founder /></div></details><details className="roadmap-team-invite-details"><summary>Direct Member Invitation</summary><DirectInvitationForm key={`${user.id}:${project.id}`} project={project} user={user} onChange={changed} /></details></>}
       <section className="roadmap-team-members" aria-labelledby="roadmap-team-members-title"><h3 id="roadmap-team-members-title">Members <span>{team.members.length}</span></h3><p className="roadmap-team-note">{isOwner ? 'Only joined members can receive assignments. The first mission belongs to the owner. Future missions can be assigned now and become actionable when they unlock.' : 'You can submit your assigned missions from the roadmap when they unlock. Contact the owner if you need an assignment.'}</p>{team.members.length === 0 ? <p className="roadmap-team-empty">No members yet. Accepted requests and invitations appear here.</p> : team.members.map((member) => <MemberAssignments key={member.id} member={member} project={project} missionCatalog={missionCatalog} assignments={assignments} user={user} isOwner={isOwner} onChange={changed} />)}</section>
       {isOwner && <section className="roadmap-team-pending" aria-labelledby="roadmap-team-invitations-title"><h3 id="roadmap-team-invitations-title">Invitation history</h3>{team.invitations.length ? <ul>{team.invitations.map((invitation) => <li key={invitation.id}><div><strong>{invitation.recipientName}</strong><span>Member ID: <code>{invitation.recipientId}</code> · {roleLabel(invitation.memberRole)}</span>{invitation.message && <span>{invitation.message}</span>}<span>{collaborationDate(invitation.createdAt)}</span></div><CollaborationBadge item={invitation} /></li>)}</ul> : <p className="roadmap-team-empty">No direct invitations for this startup yet.</p>}</section>}
     </>}

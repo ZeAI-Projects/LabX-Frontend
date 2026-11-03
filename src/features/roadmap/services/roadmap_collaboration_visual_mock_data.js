@@ -1,0 +1,46 @@
+export const ROADMAP_COLLABORATION_VISUAL_MOCK_DATA = Object.freeze({
+  opportunities: [
+    {
+      id: 'visual-opportunity-circular-design',
+      project: { id: 'visual-project-circular-design', name: 'Circular Design Studio', created_by: 'Maya Chen' },
+      founder: { full_name: 'Maya Chen' },
+      title: 'Circular packaging research partner',
+      description: 'Help us test reusable packaging concepts with neighborhood food businesses and turn interviews into a practical pilot.',
+      contribution: 'Customer research and pilot planning',
+      skills: 'Interviewing, service design, or sustainable packaging',
+      expectations: 'A few hours each week for a four-week discovery sprint.',
+      relationship: 'available',
+      status: 'published',
+      createdAt: '2026-10-28T10:00:00Z',
+      visualDemo: true,
+    },
+    {
+      id: 'visual-opportunity-community-health',
+      project: { id: 'visual-project-community-health', name: 'Harbor Health', created_by: 'Daniel Brooks' },
+      founder: { full_name: 'Daniel Brooks' },
+      title: 'Community clinic product advisor',
+      description: 'Shape a clearer appointment and follow-up experience for patients and the small clinics that care for them.',
+      contribution: 'Product feedback and workflow mapping',
+      skills: 'Healthcare operations, UX research, or product design',
+      expectations: 'Join two short feedback sessions and share actionable notes.',
+      relationship: 'available',
+      status: 'published',
+      createdAt: '2026-10-25T13:30:00Z',
+      visualDemo: true,
+    },
+  ],
+  founder: {
+    project: { id: 'visual-founder-happora', name: 'Happora', domain: 'Retail & Commerce', stage: 'Validate', level: 2 },
+    opportunity: { title: 'Local experience research partner', status: 'published', requests: 3 },
+    request: { name: 'Nora Shah', role: 'Product researcher', summary: 'Can help interview local hosts and synthesize early feedback.' },
+    invitation: { name: 'Alex Morgan', role: 'Co-founder', message: 'Join us for the next product discovery sprint.' },
+  },
+  activity: {
+    invitation: { projectName: 'Northstar AI', inviter: 'Noah Patel', role: 'Member', message: 'We would value your perspective on responsible product research.' },
+    request: { projectName: 'Harbor Health', title: 'Community clinic product advisor', status: 'Pending Founder Review' },
+    joined: [
+      { projectName: 'Aurora Materials', owner: 'Maya Chen', role: 'Member', stage: 'Build', level: 2 },
+      { projectName: 'Fieldnote', owner: 'Priya Nair', role: 'Co-founder', stage: 'Grow', level: 5 },
+    ],
+  },
+});
