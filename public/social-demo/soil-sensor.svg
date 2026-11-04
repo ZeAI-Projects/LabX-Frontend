@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img">
+  <defs>
+    <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#11364a"/><stop offset="1" stop-color="#8ec6a3"/></linearGradient>
+    <linearGradient id="soil" x2="0" y2="1"><stop stop-color="#53684b"/><stop offset="1" stop-color="#1b2630"/></linearGradient>
+    <linearGradient id="sensor" x2="1" y2="1"><stop stop-color="#67e8f9"/><stop offset="1" stop-color="#6366f1"/></linearGradient>
+  </defs>
+  <rect width="1200" height="675" fill="url(#sky)"/>
+  <circle cx="958" cy="142" r="72" fill="#f3d28a" opacity=".8"/>
+  <path d="M0 335 202 250l180 92 213-132 205 122 210-104 190 96v351H0z" fill="#526c62" opacity=".65"/>
+  <path d="M0 398q260-88 532 5t668-16v288H0z" fill="url(#soil)"/>
+  <path d="M0 472q282-90 600 0t600-12M0 547q285-82 600 0t600-10M0 618q280-68 600 0t600-10" fill="none" stroke="#90b47d" stroke-width="8" opacity=".68"/>
+  <g fill="#88c987">
+    <path d="M117 421q-5-88 39-132 25 68-4 137m20-5q10-77 71-104-1 67-55 114"/>
+    <path d="M850 415q0-104 52-158 27 78-14 164m28-4q12-81 77-113-2 72-61 126"/>
+    <path d="M1040 402q-3-69 36-112 22 55-2 116m17-4q12-62 61-86 0 56-46 97"/>
+  </g>
+  <g transform="translate(538 262)">
+    <path d="M61 112v171" stroke="#d7e5cb" stroke-width="18" stroke-linecap="round"/>
+    <rect x="0" y="0" width="124" height="130" rx="25" fill="url(#sensor)" stroke="#d8fbff" stroke-width="5"/>
+    <circle cx="62" cy="57" r="24" fill="#102c3c"/><circle cx="62" cy="57" r="10" fill="#a5f3fc"/>
+    <path d="M37 99h50" stroke="#d9fbff" stroke-width="8" stroke-linecap="round"/>
+  </g>
+  <path d="M215 178q86-74 172 0m-132-16q46-39 92 0" fill="none" stroke="#c5f6e5" stroke-width="7" stroke-linecap="round" opacity=".76"/>
+  <text x="54" y="80" fill="#eafff6" font-family="Arial,sans-serif" font-size="29" font-weight="700" letter-spacing="5">FIELD NOTES · 01</text>
+</svg>

@@ -78,7 +78,7 @@
     radial-gradient(ellipse at 92% 22%, rgba(168, 85, 247, 0.17), transparent 34%),
     linear-gradient(135deg, rgba(6, 182, 212, 0.045), transparent 42%, rgba(99, 102, 241, 0.055));
   background-size: 120% 120%;
-  animation: social-mesh-drift 16s ease-in-out infinite alternate;
+  animation: none;
 }
 
 .app-shell .founder-world--social .founder-world__backdrop::before {
@@ -90,7 +90,7 @@
     linear-gradient(108deg, transparent 24%, rgba(34, 211, 238, 0.08) 38%, transparent 51%, rgba(168, 85, 247, 0.07) 66%, transparent 79%);
   filter: blur(0.2px);
   transform: translateX(-7%) rotate(-2deg);
-  animation: social-data-waves 18s linear infinite alternate;
+  animation: none;
 }
 
 .app-shell .founder-world--social .founder-world__backdrop::after {
@@ -103,7 +103,7 @@
   background-size: 64px 64px, 64px 64px, 96px 96px;
   background-position: 0 0, 0 0, 24px 31px;
   mask-image: linear-gradient(to bottom, black 5%, rgba(0, 0, 0, 0.82) 70%, transparent 100%);
-  animation: social-grid-flow 14s linear infinite;
+  animation: none;
 }
 
 /* Events: moving aurora ribbons and a faint broadcast grid. */
@@ -215,6 +215,11 @@
   background-position: 18px 22px, 54px 64px;
   background-size: 96px 96px, 127px 127px;
   animation: achievement-stars 5s ease-in-out infinite alternate;
+}
+
+.app-shell .main-content.founder-world.founder-world--social .founder-world__backdrop,
+.app-shell .main-content.founder-world.founder-world--social .founder-world__backdrop::after {
+  animation: none;
 }
 
 @keyframes guild-grid-drift {

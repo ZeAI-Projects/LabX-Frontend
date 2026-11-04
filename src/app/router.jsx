@@ -30,6 +30,7 @@ const ProfilePage = lazyPage(() => import('../features/profile/pages/ProfilePage
 const ProjectsPage = lazyPage(() => import('../features/projects/pages/ProjectsPage.jsx'), 'ProjectsPage')
 const NewProjectPage = lazyPage(() => import('../features/projects/pages/NewProjectPage.jsx'), 'NewProjectPage')
 const JoinedRoadmapRoute = lazyPage(() => import('../features/roadmap/pages/JoinedRoadmaps.jsx'), 'JoinedRoadmapRoute')
+const SocialPage = lazyPage(() => import('../features/social/pages/SocialPage.jsx'), 'SocialPage')
 
 function EntryRoute() {
   const { user, isAuthenticated } = useAuth()

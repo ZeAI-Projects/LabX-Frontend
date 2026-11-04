@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img">
+  <defs>
+    <linearGradient id="classroom" x2="0" y2="1"><stop stop-color="#26376a"/><stop offset="1" stop-color="#654e86"/></linearGradient>
+    <linearGradient id="board" x2="1" y2="1"><stop stop-color="#d8f3e8"/><stop offset="1" stop-color="#a9d8d1"/></linearGradient>
+  </defs>
+  <rect width="1200" height="675" fill="url(#classroom)"/>
+  <circle cx="154" cy="120" r="170" fill="#22d3ee" opacity=".1"/>
+  <circle cx="1070" cy="582" r="240" fill="#c084fc" opacity=".12"/>
+  <rect x="112" y="78" width="976" height="446" rx="28" fill="#efe9df"/>
+  <rect x="165" y="126" width="870" height="286" rx="15" fill="url(#board)"/>
+  <path d="M222 332h220m-220-55h300m-300-55h168" stroke="#648f87" stroke-width="11" stroke-linecap="round" opacity=".7"/>
+  <g transform="translate(673 180)">
+    <circle cx="96" cy="59" r="41" fill="#e8b58c"/>
+    <path d="M54 57q3-61 48-61 51 3 48 60-25-24-47-21-26 5-49 22" fill="#34405c"/>
+    <path d="M30 204q4-112 68-112 71 0 80 112" fill="#526bc0"/>
+    <circle cx="220" cy="65" r="39" fill="#8a5d50"/>
+    <path d="M179 62q0-55 43-55 41 2 43 58-26-23-44-22-21 0-42 19" fill="#302b46"/>
+    <path d="M158 204q7-104 65-104 63 0 72 104" fill="#d98379"/>
+  </g>
+  <g fill="#dcae65">
+    <rect x="204" y="472" width="292" height="18" rx="9"/>
+    <rect x="706" y="472" width="292" height="18" rx="9"/>
+  </g>
+  <text x="204" y="189" fill="#344d63" font-family="Arial,sans-serif" font-size="26" font-weight="700" letter-spacing="4">LEARN BY ASKING BETTER QUESTIONS</text>
+  <text x="55" y="620" fill="#f5eaff" font-family="Arial,sans-serif" font-size="26" font-weight="700" letter-spacing="5">ED TECH · FIELD RESEARCH</text>
+</svg>

@@ -17,6 +17,7 @@ import { ProfileSocialSummary } from '../components/ProfileSocialSummary.jsx'
 import { PassportPanel } from '../components/PassportPanel.jsx'
 import '../components/ProfilePage.css'
 import { Medal } from '../../../components/common/Medal.jsx'
+import { findSocialDemoPerson } from '../../social/services/social_demo_data.js'
 
 const badgeIcons = { flag: Flag, compass: Compass, mountain: Mountain, route: Route, zap: Zap, trophy: Trophy }
 const availabilityLabels = { unspecified: 'Not specified', open: 'Open to collaboration', selective: 'Open to selected opportunities', unavailable: 'Not available currently' }
