@@ -99,6 +99,7 @@ function ProjectJourney({ project }) {
 function AchievementPanel({ achievements }) {
   const badges = achievements.badges
   const next = badges.find(badge => !badge.isEarned) ?? null
+  const NextIcon = badgeIcons[next?.icon] || Trophy
   const badgeTotal = achievements.badges.length
   const earned = badges.map((badge, index) => ({ badge, index }))
     .filter(({ badge }) => badge.isEarned)

@@ -127,7 +127,7 @@
 .pf-dossier-facts dd, .pf-interview dd, .pf-submitted-details dd { margin: 0; color: #c5d3e3; font-size:14px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
 .pf-dossier-facts dd a { color: #90d7e8; }
 .pf-dossier-facts dd a > svg { margin-left: 5px; vertical-align: middle; }
-.pf-project-list { display: flex; flex-direction: column; gap: 10px; min-width: 0; max-height: min(55dvh, 300px); overflow-x: hidden; overflow-y: auto; scroll-behavior: smooth; scroll-snap-type: y proximity; overscroll-behavior-y: contain; scrollbar-width: thin; scrollbar-color: #4d6b85 #101d30; }
+.pf-project-list { display: flex; flex-direction: column; gap: 10px; min-width: 0; max-height: min(55dvh, 300px); overflow-x: hidden; overflow-y: auto; scroll-behavior: smooth; scroll-snap-type: y proximity; overscroll-behavior-y: auto; scrollbar-width: thin; scrollbar-color: #4d6b85 #101d30; }
 .pf-project-list::-webkit-scrollbar { width: 7px; }
 .pf-project-list::-webkit-scrollbar-track { border-radius: 8px; background: #101d30; }
 .pf-project-list::-webkit-scrollbar-thumb { border: 1px solid #101d30; border-radius: 8px; background: #4d6b85; }
@@ -286,7 +286,7 @@ a.pf-badge:hover { border-color: #c6aa67; background-color: #253146; }
 .pf-passport-tile:not(.pf-passport-history) { padding: 18px; }
 .pf-passport-tile:not(.pf-passport-history) > .pf-panel-heading { margin-bottom: 14px; }
 .pf-passport-tile > .pf-panel-heading { flex: 0 0 auto; }
-.pf-passport-tile__content { flex: 0 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+.pf-passport-tile__content { flex: 0 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: auto; scrollbar-width: none; }
 .pf-passport-tile__content::-webkit-scrollbar { display: none; }
 .pf-passport-tile__content:focus-visible { outline: 2px solid #6fc9dd; outline-offset: 3px; border-radius: 4px; }
 .pf-application-status { display: flex; align-items: flex-start; gap: 13px; }
@@ -455,7 +455,8 @@ a.pf-badge:hover { border-color: #c6aa67; background-color: #253146; }
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  overscroll-behavior-y: contain;
+  /* Let wheel and touch gestures continue onto the page at a card's edge. */
+  overscroll-behavior-y: auto;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
 }

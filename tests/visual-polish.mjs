@@ -49,13 +49,11 @@ try {
   await page.getByRole('button',{name:'Clear filters',exact:true}).click();
   await page.waitForFunction(()=>document.querySelectorAll('.project-row').length===10);
   await fit('Mobile projects');
-  const launcherBeforeScroll=await page.locator('.sharp-dock-trigger').boundingBox();
-  assert.ok(Math.abs(launcherBeforeScroll.x+launcherBeforeScroll.width-390+14)<1,'Zenith stays in the mobile right corner');
-  await page.evaluate(()=>scrollTo(0,600));
-  await page.waitForFunction(()=>scrollY>0);
-  const launcherAfterScroll=await page.locator('.sharp-dock-trigger').boundingBox();
-  assert.ok(Math.abs(launcherAfterScroll.x-launcherBeforeScroll.x)<1&&Math.abs(launcherAfterScroll.y-launcherBeforeScroll.y)<1,'Zenith stays fixed while projects scroll');
-  await page.evaluate(()=>scrollTo(0,0));
+  assert.equal(await page.locator('.sharp-dock-trigger').count(),0,'The floating Zenith launcher is removed');
+  await page.locator('.app-shell__page').evaluate(element=>element.scrollTo(0,600));
+  await page.waitForFunction(()=>document.querySelector('.app-shell__page').scrollTop>0);
+  assert.equal(await page.locator('.sharp-dock').count(),0,'No assistant covers the page while projects scroll');
+  await page.locator('.app-shell__page').evaluate(element=>element.scrollTo(0,0));
   await shot('projects-mobile');
   await page.getByRole('button',{name:'Page 2',exact:true}).click();
   await page.waitForFunction(()=>document.querySelectorAll('.project-row').length===3);

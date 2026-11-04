@@ -153,7 +153,7 @@ try {
   assert.equal(await filters.getByLabel('Sort by', { exact: true }).locator('option').count(), 2)
   assert.equal(await filters.getByRole('button', { name: /More filters/ }).count(), 0)
   assert.equal(await filters.getByLabel('Area or venue', { exact: true }).count(), 0)
-  for (const name of ['Category', 'Format', 'Starts from', 'Starts by', 'Location', 'Eligibility', 'Fee', 'Prizes & benefits', 'Sponsorship']) assert.ok(await filters.getByLabel(name, { exact: true }).isVisible(), `${name} is available without expanding another section`)
+  for (const name of ['Category', 'Format', 'Start date', 'End date', 'Location', 'Eligibility', 'Fee', 'Prizes & benefits', 'Sponsorship']) assert.ok(await filters.getByLabel(name, { exact: true }).isVisible(), `${name} is available without expanding another section`)
   await filters.getByLabel('Category', { exact: true }).selectOption('Workshop')
   const locationOptions = await filters.getByLabel('Location', { exact: true }).locator('option').allTextContents()
   assert.deepEqual(locationOptions.slice(1).sort(), ['Bengaluru', 'Chennai'], 'Location options contain only distinct cities')
