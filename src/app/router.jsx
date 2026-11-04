@@ -163,11 +163,12 @@ export default function AppRouter() {
           <Route path="/companion" element={<LegacyCompanionRoute />} />
           <Route path="/achievements" element={<AchievementsPage />} />
           <Route path="/events" element={<EventsPage />} />
+          <Route path="/profile/:userId" element={<ProfilePage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/notifications" element={<FeaturePlaceholder />} />
           <Route path="/leaderboard" element={<FounderOnly><LeaderboardPage /></FounderOnly>} />
           <Route path="/guild" element={<FounderFeature />} />
-          <Route path="/social" element={<FounderFeature />} />
+          <Route path="/social" element={<FounderOnly><FeaturePlaceholder /></FounderOnly>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

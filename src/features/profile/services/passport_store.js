@@ -11,8 +11,8 @@ const editable = new Set(['not_applied', 'draft', 'more_info', 'rejected'])
 const isRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
 const clone = (value) => JSON.parse(JSON.stringify(value))
 const validDate = (value) => typeof value === 'string' && Number.isFinite(Date.parse(value))
-const limits = { legal_name: 120, city: 100, country: 100, project_id: 512, venture_name: 120, founder_role: 120, founder_story: 3000 }
-const required = new Set(['legal_name', 'country', 'venture_name', 'founder_role', 'founder_story'])
+const limits = { legal_name: 120, city: 100, country: 100, project_id: 512, founder_story: 3000 }
+const required = new Set(['legal_name', 'country', 'founder_story'])
 const actionLabels = {
   start_review: 'review started', request_info: 'More information requested', mark_eligible: 'eligibility confirmed',
   schedule_interview: 'interview scheduled', record_interview: 'interview recorded', approve: 'passport approved',

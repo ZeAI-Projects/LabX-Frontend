@@ -1,0 +1,318 @@
+units:
+  - name: entry-route
+    trigger: page
+    trigger_detail: "GET /; selects /login for a signed-out visitor or the authenticated destination."
+    source_anchors:
+      - path: src/main.jsx
+        line: 12
+    exported_signature: []
+    dynamic_entrypoints: []
+    depends_on: []
+    shared_refs:
+      - module: application-auth-context
+        used_fields: [user, isAuthenticated]
+      - module: route-shell
+        used_fields: [BrowserRouter, AppRouter]
+
+  - name: intro-video
+    trigger: page
+    trigger_detail: "GET /intro; introduction video page."
+    source_anchors:
+      - path: src/features/authentication/pages/IntroVideo.jsx
+    exported_signature: []
+    dynamic_entrypoints: []
+    depends_on: []
+    shared_refs:
+      - module: route-shell
+        used_fields: [AppRouter]
+
+  - name: registration
+    trigger: page
+    trigger_detail: "GET /register and /verify-email; registration and email-code verification flow."
+    source_anchors:
+      - path: src/features/authentication/pages/Register.jsx
+      - path: src/features/authentication/pages/VerifyEmail.jsx
+    exported_signature: []
+    dynamic_entrypoints: []
+    depends_on: []
+    shared_refs:
+      - module: application-auth-context
+        used_fields: [register, requestRegistration, resendRegistration, verifyRegistration]
+      - module: browser-storage
+        used_fields: [sessionStore, readJSON, writeJSON, removeItem]
+      - module: route-shell
+        used_fields: [AppRouter]
+
+  - name: login
+    trigger: page
+    trigger_detail: "GET /login; authenticate and continue to the role-appropriate destination."
+    source_anchors:
+      - path: src/features/authentication/pages/Login.jsx
+    exported_signature: []
+    dynamic_entrypoints: []
+    depends_on: []
+    shared_refs:
+      - module: application-auth-context
+        used_fields: [user, isAuthenticated, login]
+      - module: route-shell
+        used_fields: [AppRouter]
+
+  - name: password-recovery
+    trigger: page
+    trigger_detail: "GET /forgot-password and /reset-password; request, verify, and apply a demo password reset."
+    source_anchors:
+      - path: src/features/authentication/pages/ForgotPassword.jsx
+      - path: src/features/authentication/pages/ResetPassword.jsx
+    exported_signature: []
+    dynamic_entrypoints: []
+    depends_on: []
+    shared_refs:
+      - module: application-auth-context
+        used_fields: [requestPasswordReset, resetPassword]
+      - module: browser-storage
+        used_fields: [sessionStore, readJSON, writeJSON, removeItem]
+      - module: route-shell
+        used_fields: [AppRouter]
+
+  - name: role-onboarding
+    trigger: page
+    trigger_detail: "GET /onboarding/:role; role-specific onboarding for the signed-in user."
+    source_anchors:
+      - path: src/features/authentication/pages/RoleOnboarding.jsx
+    exported_signature: []
+    dynamic_entrypoints: []
+    depends_on: []
+    shared_refs:
+      - module: application-auth-context
+        used_fields: [user, completeRoleOnboarding]
+      - module: browser-storage
+        used_fields: [localStore, readJSON, writeJSON, removeItem]
+      - module: route-shell
+        used_fields: [AppRouter]
+
+  - name: project-management
+    trigger: page
+    trigger_detail: "GET /roadmap and /roadmap/new; list, create, rename, and remove founder-owned projects."
+    source_anchors:
+      - path: src/features/projects/pages/ProjectsPage.jsx
+      - path: src/features/projects/pages/NewProjectPage.jsx
+    exported_signature: []
+    dynamic_entrypoints: []
+    depends_on: []
+    shared_refs:
+      - module: application-auth-context
+        used_fields: [user, isAuthenticated]
+      - module: project-store
+        used_fields: [listProjects, createProject, renameProject, deleteProject]
+      - module: assessment-contract
+        used_fields: [createEmptyAnswers]
+      - module: browser-storage
+        used_fields: [localStore, readJSON, writeJSON, removeItem]
+      - module: route-shell
+        used_fields: [AppRouter, AppShell]
+
+  - name: project-assessment
+    trigger: page
+    trigger_detail: "GET /roadmap/:projectId/assessment and /roadmap/:projectId/result; complete or review one project's assessment."
+    source_anchors:
+      - path: src/features/assessment/pages/AssessmentWizard.jsx
+      - path: src/features/assessment/pages/AssessmentResult.jsx
+      - path: src/features/assessment/hooks/use_assessment_draft.js
+    exported_signature: []
+    dynamic_entrypoints: []
+    depends_on:
+      - unit: project-management
+        via: "Project creation and project-scoped assessment draft"
+      - unit: project-roadmap
+        via: "Completed assessment unlocks the project roadmap"
+    shared_refs:
+      - module: application-auth-context
+        used_fields: [user, completeAssessment, skipAssessment]
+      - module: project-store
+        used_fields: [listProjects, saveDraft, completeProject]
+      - module: assessment-contract
+        used_fields: [ASSESSMENT_QUESTIONS, validateAssessmentStep, evaluateAssessment, normalizeDraftAnswers]
+      - module: browser-storage
+        used_fields: [localStore, readJSON, writeJSON]
+      - module: route-shell
+        used_fields: [AppRouter]
+
+  - name: project-roadmap
+    trigger: page
+    trigger_detail: "GET /roadmap/:projectId; view and progress the selected founder-owned project roadmap."
+    source_anchors:
+      - path: src/features/roadmap/pages/RoadmapPage.jsx
+      - path: src/features/roadmap/services/roadmap_workflow.js
+    exported_signature: []
+    dynamic_entrypoints: []
+    depends_on:
+      - unit: project-assessment
+        via: "Assessment completion unlocks roadmap access"
+      - unit: roadmap-collaboration
+        via: "Team, invitation, and joined-roadmap workflows"
+      - unit: achievements
+        via: "Approved roadmap submissions produce recognition activity"
+    shared_refs:
+      - module: application-auth-context
+        used_fields: [user]
+      - module: project-store
+        used_fields: [listProjects]
+      - module: roadmap-collaboration-store
+        used_fields: [getAccess]
+      - module: browser-storage
+        used_fields: [localStore, readJSON, writeJSON, writeJSONStrict, dispatchEvent]
+      - module: route-shell
+        used_fields: [AppRouter, AppShell]
+
+  - name: roadmap-collaboration
+    trigger: page
+    trigger_detail: "GET /roadmap/joined/:ownerId/:projectId; view a joined roadmap; join/invitation actions are also surfaced from the project workflow."
+    source_anchors:
+      - path: src/features/roadmap/pages/JoinedRoadmaps.jsx
+      - path: src/features/roadmap/services/roadmap_collaboration.js
+    exported_signature: []
+    dynamic_entrypoints: []
+    depends_on:
+      - unit: project-roadmap
+        via: "Shared project roadmap context and collaboration workflow"
+    shared_refs:
+      - module: application-auth-context
+        used_fields: [user]
+      - module: project-store
+        used_fields: [listProjects]
+      - module: roadmap-collaboration-store
+        used_fields: [getAccess, saveInvitation, getInvitations]
+      - module: browser-storage
+        used_fields: [localStore, readJSON, writeJSON, writeJSONStrict, dispatchEvent]
+      - module: route-shell
+        used_fields: [AppRouter, AppShell]
+
+  - name: dashboard
+    trigger: page
+    trigger_detail: "GET /dashboard; authenticated summary, onboarding completion, and daily side quests."
+    source_anchors:
+      - path: src/features/dashboard/pages/OnboardingComplete.jsx
+      - path: src/features/dashboard/services/dashboard_snapshot.js
+      - path: src/features/dashboard/services/daily_side_quests.js
+    exported_signature: []
+    dynamic_entrypoints: []
+    depends_on:
+      - unit: project-management
+        via: "Reads current user's project summary"
+    shared_refs:
+      - module: application-auth-context
+        used_fields: [user, logout]
+      - module: project-store
+        used_fields: [listProjects]
+      - module: browser-storage
+        used_fields: [localStore, readJSON, writeJSON, writeJSONStrict, dispatchEvent]
+      - module: route-shell
+        used_fields: [AppRouter, AppShell]
+
+  - name: companion
+    trigger: page
+    trigger_detail: "GET /chats; companion conversation list and chat surface. /companion is a legacy deep-link redirect."
+    source_anchors:
+      - path: src/features/companion/pages/ChatsPage.jsx
+      - path: src/features/companion/pages/CompanionPage.jsx
+      - path: src/features/companion/services/companion_history.js
+      - path: src/features/companion/services/sharp_preview.js
+    exported_signature: []
+    dynamic_entrypoints: []
+    depends_on:
+      - unit: project-roadmap
+        via: "Can use project/roadmap context and navigation links"
+    shared_refs:
+      - module: application-auth-context
+        used_fields: [user, isAuthenticated]
+      - module: browser-storage
+        used_fields: [localStore, readJSON, writeJSON]
+      - module: route-shell
+        used_fields: [AppRouter, AppShell]
+
+  - name: achievements
+    trigger: page
+    trigger_detail: "GET /achievements; view achievement and recognition activity."
+    source_anchors:
+      - path: src/features/achievements/pages/AchievementsPage.jsx
+      - path: src/features/achievements/services/mock_achievements.js
+    exported_signature: []
+    dynamic_entrypoints: []
+    depends_on: []
+    shared_refs:
+      - module: application-auth-context
+        used_fields: [user]
+      - module: browser-storage
+        used_fields: [localStore, readJSON, writeJSON, dispatchEvent]
+      - module: route-shell
+        used_fields: [AppRouter, AppShell]
+
+  - name: events
+    trigger: page
+    trigger_detail: "GET /events; browse listings and manage event registration and participation."
+    source_anchors:
+      - path: src/features/events/pages/EventsPage.jsx
+      - path: src/features/events/services/mock_events.js
+    exported_signature: []
+    dynamic_entrypoints: []
+    depends_on: []
+    shared_refs:
+      - module: application-auth-context
+        used_fields: [user]
+      - module: browser-storage
+        used_fields: [localStore, readJSON, writeJSON, writeJSONStrict, dispatchEvent]
+      - module: route-shell
+        used_fields: [AppRouter, AppShell]
+
+  - name: profile
+    trigger: page
+    trigger_detail: "GET /profile; edit profile, privacy, and founder passport records."
+    source_anchors:
+      - path: src/features/profile/pages/ProfilePage.jsx
+      - path: src/features/profile/services/profile_store.js
+      - path: src/features/profile/services/passport_store.js
+    exported_signature: []
+    dynamic_entrypoints: []
+    depends_on:
+      - unit: project-management
+        via: "Passport application may select one of the user's projects"
+    shared_refs:
+      - module: application-auth-context
+        used_fields: [user]
+      - module: project-store
+        used_fields: [listProjects]
+      - module: browser-storage
+        used_fields: [localStore, readJSON, writeJSON, dispatchEvent]
+      - module: route-shell
+        used_fields: [AppRouter, AppShell]
+
+  - name: leaderboard
+    trigger: page
+    trigger_detail: "GET /leaderboard; founder-only leaderboard and progress view."
+    source_anchors:
+      - path: src/features/leaderboard/pages/LeaderboardPage.jsx
+      - path: src/features/leaderboard/services/mock_leaderboard.js
+    exported_signature: []
+    dynamic_entrypoints: []
+    depends_on:
+      - unit: achievements
+        via: "Displays demo recognition/progress data"
+    shared_refs:
+      - module: application-auth-context
+        used_fields: [user]
+      - module: route-shell
+        used_fields: [AppRouter, AppShell]
+
+  - name: placeholder-routes
+    trigger: page
+    trigger_detail: "GET /notifications, /guild, or /social; placeholder screens, with guild/social founder-gated."
+    source_anchors:
+      - path: src/components/common/FeaturePlaceholder.jsx
+    exported_signature: []
+    dynamic_entrypoints: []
+    depends_on: []
+    shared_refs:
+      - module: application-auth-context
+        used_fields: [user]
+      - module: route-shell
+        used_fields: [AppRouter, AppShell]

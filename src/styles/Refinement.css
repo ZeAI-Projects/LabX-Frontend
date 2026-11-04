@@ -186,9 +186,6 @@ a:hover > .labx-medal,button:hover .labx-medal.is-earned { transform: translateY
 .app-shell .pf-dossier-banner { background: radial-gradient(ellipse at 80% 10%,#a18bf72b,transparent 50%),radial-gradient(ellipse at 15% 100%,#2a849748,transparent 65%),linear-gradient(120deg,#12283c,#182038); }
 .app-shell .pf-banner-grid { opacity: .35; }
 .app-shell .pf-banner-mark { color: #84d7ec; opacity: .14; text-shadow: 0 0 60px #7cd8ed55; }
-.pf-featured-badges { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 25px 18px; }
-.pf-featured-badges > span { color: #9fb5cd; font-size: 12px; margin-right: auto; }
-.pf-featured-badges > a { display: flex; align-items: center; gap: 7px; color: #e2d3ae; font-size: 12px; }
 .app-shell .pf-medallion { background: none; border: none; box-shadow: none; }
 .app-shell .pf-medallion > .labx-medal { width: 50px; height: 56px; }
 .app-shell .pf-passport-card { transform: none; border-radius: 15px; border-color: #807153; background: radial-gradient(ellipse at 90% 0,#a88c4c22,transparent 55%),repeating-linear-gradient(115deg,#c4ae7f05 0 1px,transparent 1px 9px),#151f2c; }
@@ -304,8 +301,6 @@ a:hover > .labx-medal,button:hover .labx-medal.is-earned { transform: translateY
   .app-shell .events-filters { grid-template-columns: minmax(0,1fr); }
   .app-shell .events-filter-panel:not(.is-expanded) .events-filters > .events-field:not(.events-search) { display: none; }
   .app-shell .events-results-heading { margin-block: 18px 12px; }
-  .app-shell .pf-featured-badges { padding: 12px 17px; gap: 10px; }
-  .pf-featured-badges > span { flex-basis: 100%; }
   .app-shell .sharp-page .sharp-profile-panel { display: flex; flex-wrap: wrap; gap: 12px; }
   .app-shell .sharp-page .sharp-portrait { display: none; }
   .app-shell .sharp-page .sharp-journey { flex: 1; min-width: 0; }

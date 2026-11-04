@@ -37,6 +37,8 @@ const DEMO_ACCOUNT = {
     full_name: 'Founder',
     username: 'founder',
     role: 'founder',
+    verification_status: 'approved',
+    verification_status_source: 'mock',
     avatar_url: '',
     total_points: 0,
     assessment_completed: false,
