@@ -30,7 +30,6 @@
 .app-shell .labx-page-title.labx-workspace-label { color: #c0cde0; font-size: 15px; font-weight: 600; letter-spacing: 0; }
 .app-shell .labx-subtitle { font-size: 10px; letter-spacing: .12em; opacity: .7; }
 .app-shell .labx-title-line { height: 28px; box-shadow: none; }
-.app-shell :is(.projects-header h1,.lb-header h1,.db-header h1,.sharp-page-header h1) { font-size: clamp(25px,2.3vw,32px); line-height: 1.2; letter-spacing: -.035em; }
 .app-shell :is(.projects-header,.lb-header,.db-header) { margin-block: 0 18px; }
 .app-shell :is(.projects-header p,.lb-header p,.db-header p) { font-size: 14px; line-height: 1.65; }
 .app-shell :is(.db-panel,.pf-panel,.events-filter-panel,.lb-controls,.achievements-hero,.projects-header) { border-radius: 14px; }
@@ -53,7 +52,6 @@
 
 /* The project collection stays dense, with optional filters on narrow screens. */
 .app-shell .projects-header { padding: 22px 24px; min-height: 0; }
-.app-shell .projects-header h1 { margin-block: 7px; }
 .app-shell .projects-view-tabs { margin-block: 14px 20px; }
 .app-shell .projects-controls { padding: 14px 16px; gap: 12px; }
 .projects-mobile-filters { display: none; }
@@ -85,7 +83,6 @@
 .app-shell .sharp-briefing__note { font-size: 12px; opacity: .8; }
 .app-shell .db-section-title h2 { font-size: 16px; }
 .app-shell .db-event-list h3,.app-shell .db-project-list strong { font-size: 14px; }
-.app-shell .db-badge-shelf a > span { background: transparent; border: 0; box-shadow: none; height: 72px; width: 68px; }
 .app-shell .db-badge-shelf .labx-medal { flex-shrink: 0; }
 
 /* Persistent stage context; the road itself remains part of the page. */
@@ -189,9 +186,6 @@ a:hover > .labx-medal,button:hover .labx-medal.is-earned { transform: translateY
 .app-shell .pf-dossier-banner { background: radial-gradient(ellipse at 80% 10%,#a18bf72b,transparent 50%),radial-gradient(ellipse at 15% 100%,#2a849748,transparent 65%),linear-gradient(120deg,#12283c,#182038); }
 .app-shell .pf-banner-grid { opacity: .35; }
 .app-shell .pf-banner-mark { color: #84d7ec; opacity: .14; text-shadow: 0 0 60px #7cd8ed55; }
-.pf-featured-badges { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 25px 18px; }
-.pf-featured-badges > span { color: #9fb5cd; font-size: 12px; margin-right: auto; }
-.pf-featured-badges > a { display: flex; align-items: center; gap: 7px; color: #e2d3ae; font-size: 12px; }
 .app-shell .pf-medallion { background: none; border: none; box-shadow: none; }
 .app-shell .pf-medallion > .labx-medal { width: 50px; height: 56px; }
 .app-shell .pf-passport-card { transform: none; border-radius: 15px; border-color: #807153; background: radial-gradient(ellipse at 90% 0,#a88c4c22,transparent 55%),repeating-linear-gradient(115deg,#c4ae7f05 0 1px,transparent 1px 9px),#151f2c; }
@@ -307,8 +301,6 @@ a:hover > .labx-medal,button:hover .labx-medal.is-earned { transform: translateY
   .app-shell .events-filters { grid-template-columns: minmax(0,1fr); }
   .app-shell .events-filter-panel:not(.is-expanded) .events-filters > .events-field:not(.events-search) { display: none; }
   .app-shell .events-results-heading { margin-block: 18px 12px; }
-  .app-shell .pf-featured-badges { padding: 12px 17px; gap: 10px; }
-  .pf-featured-badges > span { flex-basis: 100%; }
   .app-shell .sharp-page .sharp-profile-panel { display: flex; flex-wrap: wrap; gap: 12px; }
   .app-shell .sharp-page .sharp-portrait { display: none; }
   .app-shell .sharp-page .sharp-journey { flex: 1; min-width: 0; }

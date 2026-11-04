@@ -87,7 +87,7 @@ function RoadmapSession({ project, ownerId }) {
     <div className="rm-project-bar">
       <div className="rm-project-context">
         <Link className="rm-back" to={isOwner ? '/roadmap' : '/roadmap?view=joined'}><ArrowLeft size={14} />All roadmaps</Link>
-        <span aria-hidden="true">/</span><h1>{project.name}</h1>
+        <span aria-hidden="true">/</span><span className="rm-project-name">{project.name}</span>
       </div>
       <div className="roadmap-team-toolbar">{!isOwner && <span className="rm-member-badge"><Users size={15} />Joined roadmap</span>}{isOwner && <JoinRoadmapTrigger projectId={project.id} view="founder" className="roadmap-team-button">Find collaborators<ArrowRight size={15} /></JoinRoadmapTrigger>}<RoadmapTeam project={project} roadmap={roadmap} onChange={refresh} /></div>
     </div>

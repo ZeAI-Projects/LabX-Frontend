@@ -1,0 +1,197 @@
+modules:
+  - name: browser-storage
+    kind: utility
+    source_loc: "src/services/storage/local_storage.js:3"
+    used_by_units:
+      - registration
+      - password-recovery
+      - role-onboarding
+      - project-management
+      - project-assessment
+      - project-roadmap
+      - roadmap-collaboration
+      - dashboard
+      - companion
+      - achievements
+      - events
+      - profile
+    fields:
+      - name: createSafeStorage
+        type: "function(storage) -> storage adapter"
+      - name: localStore
+        type: "storage adapter for localStorage"
+      - name: sessionStore
+        type: "storage adapter for sessionStorage"
+      - name: readJSON
+        type: "method(key, fallback) -> parsed value"
+      - name: writeJSON
+        type: "method(key, value) -> void"
+      - name: writeJSONStrict
+        type: "method(key, value) -> void or Error"
+      - name: removeItem
+        type: "method(key) -> void"
+      - name: dispatchEvent
+        type: "browser custom/storage event notification"
+    god_class: false
+    split_candidate: false
+    migration_strategy: wrap
+    notes: "Shared browser persistence boundary; ordinary writes can fall back to memory while strict writes require durable browser storage."
+
+  - name: application-auth-context
+    kind: store
+    source_loc: "src/features/authentication/components/AuthProvider.jsx:5"
+    used_by_units:
+      - entry-route
+      - registration
+      - login
+      - password-recovery
+      - role-onboarding
+      - project-management
+      - project-assessment
+      - project-roadmap
+      - roadmap-collaboration
+      - dashboard
+      - companion
+      - achievements
+      - events
+      - profile
+      - leaderboard
+      - placeholder-routes
+    fields:
+      - name: user
+        type: "current authenticated user or null"
+      - name: isAuthenticated
+        type: "boolean"
+      - name: login
+        type: "async function(email, password, options)"
+      - name: register
+        type: "async function(email, password, fullName, options)"
+      - name: requestRegistration
+        type: "function(email, password, fullName, options)"
+      - name: resendRegistration
+        type: "function(email)"
+      - name: verifyRegistration
+        type: "async function(email, code)"
+      - name: completeRoleOnboarding
+        type: "function(details)"
+      - name: logout
+        type: "function()"
+      - name: completeAssessment
+        type: "function(result, answers)"
+      - name: skipAssessment
+        type: "function()"
+      - name: requestPasswordReset
+        type: "function(email)"
+      - name: resetPassword
+        type: "async function(email, code, password)"
+    god_class: false
+    split_candidate: false
+    migration_strategy: wrap
+    notes: "React provider wraps the route tree and exposes the mock authentication/session API."
+
+  - name: route-shell
+    kind: config
+    source_loc: "src/app/App.jsx:10"
+    used_by_units:
+      - entry-route
+      - intro-video
+      - registration
+      - login
+      - password-recovery
+      - role-onboarding
+      - project-management
+      - project-assessment
+      - project-roadmap
+      - roadmap-collaboration
+      - dashboard
+      - companion
+      - achievements
+      - events
+      - profile
+      - leaderboard
+      - placeholder-routes
+    fields:
+      - name: BrowserRouter
+        type: "React Router browser history provider"
+      - name: AppRouter
+        type: "application route table"
+      - name: AppShell
+        type: "protected application layout"
+      - name: AppProviders
+        type: "authentication and projects providers"
+    god_class: false
+    split_candidate: false
+    migration_strategy: wrap
+    notes: "Common router, protection, layout, and provider composition; route details are in src/app/router.jsx."
+
+  - name: project-store
+    kind: store
+    source_loc: "src/features/projects/services/project_store.js:1"
+    used_by_units:
+      - project-management
+      - project-assessment
+      - project-roadmap
+      - roadmap-collaboration
+      - dashboard
+      - profile
+    fields:
+      - name: listProjects
+        type: "function(expectedUserId) -> Project[]"
+      - name: createProject
+        type: "function(name, expectedUserId) -> Project"
+      - name: renameProject
+        type: "function(projectId, name, expectedUserId) -> Project"
+      - name: deleteProject
+        type: "function(projectId, expectedUserId) -> boolean"
+      - name: saveDraft
+        type: "function(projectId, draft, expectedUserId) -> Project"
+      - name: completeProject
+        type: "function(projectId, answers, expectedUserId) -> Project"
+    god_class: false
+    split_candidate: false
+    migration_strategy: wrap
+    notes: "User-scoped local project store; it also migrates legacy account-level assessment data when first read."
+
+  - name: assessment-contract
+    kind: utility
+    source_loc: "src/features/assessment/services/mock_assessment.js:1"
+    used_by_units:
+      - project-management
+      - project-assessment
+    fields:
+      - name: ASSESSMENT_QUESTIONS
+        type: "immutable assessment question catalog"
+      - name: createEmptyAnswers
+        type: "function() -> answer record"
+      - name: validateAssessmentStep
+        type: "function(answers, step) -> validation result"
+      - name: normalizeDraftAnswers
+        type: "function(answers) -> normalized answer record"
+      - name: evaluateAssessment
+        type: "function(answers) -> illustrative result"
+    god_class: false
+    split_candidate: false
+    migration_strategy: copy
+    notes: "Shared source-of-truth for assessment questions, answer validation, and demo result evaluation."
+
+  - name: roadmap-collaboration-store
+    kind: store
+    source_loc: "src/features/roadmap/services/roadmap_collaboration.js:46"
+    used_by_units:
+      - project-roadmap
+      - roadmap-collaboration
+    fields:
+      - name: getAccess
+        type: "function(user, ownerId, projectId) -> access result"
+      - name: saveInvitation
+        type: "function(projectId, recipient, details, expectedUserId)"
+      - name: getInvitations
+        type: "function(userId) -> invitation records"
+      - name: ROADMAP_CHANGE_EVENT
+        type: "custom event name"
+      - name: COLLABORATION_KEY
+        type: "localStorage key"
+    god_class: false
+    split_candidate: false
+    migration_strategy: wrap
+    notes: "Shared join, member access, invitation, and team collaboration state."

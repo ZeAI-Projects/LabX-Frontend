@@ -88,7 +88,7 @@ const sampleProfiles = [
   ['samira-noor', 'Samira Noor', 'samirabuilds', '12', 0, 0, 'Discover', 1, 'Beginning a founder journey in advanced technology.'],
 ]
 
-const SAMPLE_FOUNDERS = freeze(sampleProfiles.map(([id, full_name, username, domainId, total_points, badges_count, stage, level, bio]) => {
+const SAMPLE_FOUNDERS = freeze(sampleProfiles.map(([id, full_name, username, domainId, total_points, badges_count, stage, level, bio], index) => {
   const domain = domainById(domainId)
   return {
     id: `sample-founder-${id}`,
@@ -100,6 +100,13 @@ const SAMPLE_FOUNDERS = freeze(sampleProfiles.map(([id, full_name, username, dom
     level,
     badges_count,
     total_points,
+    momentum: {
+      currentStreakDays: Math.max(1, 24 - index),
+      activeDays: Math.max(4, 42 - index),
+      completedMissions: Math.max(1, 30 - index),
+      completedMilestones: Math.max(0, 9 - Math.floor(index / 3)),
+      source: 'demo',
+    },
     is_current_user: false,
     avatarColor: domain.color,
     bio,
@@ -142,6 +149,19 @@ function currentFounder(user, projects, selectedDomain) {
   const memberships = currentMemberships(user, projects)
   const placement = memberships.find((entry) => entry.domain.id === selectedDomain?.id) ?? memberships[0]
   const achievements = getAchievementsSnapshot(user)
+  const activityDates = [...new Set([
+    ...achievements.transactions.filter((entry) => entry.status === 'Approved'),
+    ...achievements.recognitionActivity,
+  ].map((entry) => new Date(entry.date).toISOString().slice(0, 10)))]
+  let currentStreakDays = 0
+  const activeDateSet = new Set(activityDates)
+  const today = new Date()
+  const todayKey = today.toISOString().slice(0, 10)
+  if (!activeDateSet.has(todayKey)) today.setUTCDate(today.getUTCDate() - 1)
+  while (activeDateSet.has(today.toISOString().slice(0, 10))) {
+    currentStreakDays += 1
+    today.setUTCDate(today.getUTCDate() - 1)
+  }
   const fullName = typeof user.full_name === 'string' && user.full_name.trim() ? user.full_name.trim() : 'You'
   return {
     id: user.id,
@@ -153,6 +173,13 @@ function currentFounder(user, projects, selectedDomain) {
     level: Number.isInteger(placement?.result.level) && placement.result.level > 0 ? placement.result.level : null,
     badges_count: achievements.earnedBadgeCount,
     total_points: achievements.pointsBalance,
+    momentum: {
+      currentStreakDays,
+      activeDays: activityDates.length,
+      completedMissions: achievements.completedQuests,
+      completedMilestones: achievements.completedMilestones,
+      source: achievements.isDemo ? 'demo' : 'live',
+    },
     is_current_user: true,
     avatarColor: placement?.domain.color ?? '#94a3b8',
     bio: 'Your founder progress, based on approved LabX activity.',
@@ -171,7 +198,39 @@ function rankFounders(founders) {
   })
 }
 
-export function getLeaderboardSnapshot({ user = null, projects = [], scope = 'global', domainId = '', search = '' } = {}) {
+function rankPulseFounders(founders) {
+  const maximums = {
+    points: Math.max(0, ...founders.map((founder) => founder.total_points)),
+    streak: Math.max(0, ...founders.map((founder) => founder.momentum?.currentStreakDays ?? 0)),
+    missions: Math.max(0, ...founders.map((founder) => founder.momentum?.completedMissions ?? 0)),
+  }
+  const score = (founder) => [
+    maximums.points ? founder.total_points / maximums.points : 0,
+    maximums.streak ? (founder.momentum?.currentStreakDays ?? 0) / maximums.streak : 0,
+    maximums.missions ? (founder.momentum?.completedMissions ?? 0) / maximums.missions : 0,
+  ].reduce((total, metric) => total + metric, 0) / 3
+  const sorted = founders.map((founder) => ({ founder, score: score(founder) }))
+    .sort((left, right) => right.score - left.score
+      || compareText(normalizeText(left.founder.full_name), normalizeText(right.founder.full_name))
+      || compareText(left.founder.id, right.founder.id))
+  let rank = 0
+  return sorted.map((founder, index) => {
+    if (index === 0 || Math.abs(founder.score - sorted[index - 1].score) > 1e-12) rank = index + 1
+    return { ...founder.founder, rank }
+  })
+}
+
+export function getLeaderboardSnapshot({
+  user = null,
+  projects = [],
+  scope = 'global',
+  domainId = '',
+  search = '',
+  mode = 'labx',
+  filterDomainId = '',
+  stage = '',
+  level = '',
+} = {}) {
   const selectedScope = scope === 'domain' ? 'domain' : 'global'
   const domain = selectedScope === 'domain' ? domainById(domainId) : null
   const requiresDomain = selectedScope === 'domain' && !domain
@@ -195,11 +254,15 @@ export function getLeaderboardSnapshot({ user = null, projects = [], scope = 'gl
       primary_domain: domainRanks[0] ?? null,
     }
   })
-  const allRankings = requiresDomain ? [] : selectedScope === 'domain'
+  const scopedRankings = requiresDomain ? [] : selectedScope === 'domain'
     ? rankFounders(globalRankings.filter((founder) => founder.domains.some((membership) => membership.id === domain.id)))
     : globalRankings
+  const allRankings = mode === 'momentum' ? rankPulseFounders(scopedRankings) : scopedRankings
   const query = normalizeText(search)
-  const rankings = query ? allRankings.filter((founder) => normalizeText(`${founder.full_name} @${founder.username}`).includes(query)) : allRankings
+  const rankings = allRankings.filter((founder) => (!query || normalizeText(`${founder.full_name} @${founder.username}`).includes(query))
+    && (!filterDomainId || founder.domains.some((membership) => membership.id === String(filterDomainId)))
+    && (!stage || founder.stage === stage)
+    && (!level || String(founder.level) === String(level)))
   const userStanding = allRankings.find((founder) => founder.is_current_user) ?? null
   const globalUserStanding = globalRankings.find((founder) => founder.is_current_user) ?? null
   const standingDomain = domain ?? globalUserStanding?.primary_domain
@@ -228,7 +291,13 @@ export function getLeaderboardSnapshot({ user = null, projects = [], scope = 'gl
       totalFounders: allRankings.length,
       totalPoints: allRankings.reduce((sum, founder) => sum + founder.total_points, 0),
       totalBadges: allRankings.reduce((sum, founder) => sum + founder.badges_count, 0),
-      leadingPoints: allRankings[0]?.total_points ?? 0,
+      leadingPoints: allRankings.reduce((highest, founder) => Math.max(highest, founder.total_points), 0),
+    },
+    momentumMetrics: {
+      rankedFounders: allRankings.length,
+      totalActiveDays: allRankings.reduce((sum, founder) => sum + (founder.momentum?.activeDays ?? 0), 0),
+      completedMissions: allRankings.reduce((sum, founder) => sum + (founder.momentum?.completedMissions ?? 0), 0),
+      leadingStreak: allRankings[0]?.momentum?.currentStreakDays ?? 0,
     },
   })
 }

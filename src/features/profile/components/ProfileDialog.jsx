@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react'
-import { X } from 'lucide-react'
+import { useEffect, useId, useRef, useState } from 'react'
+import { Info, X } from 'lucide-react'
 
-export function ProfileDialog({ title, onClose, children, wide = false, eyebrow = 'Your LabX dossier' }) {
+export function ProfileDialog({ title, onClose, children, wide = false, eyebrow = 'Your LabX profile' }) {
   const dialogRef = useRef(null)
   const headingRef = useRef(null)
   useEffect(() => {
@@ -37,8 +37,43 @@ export function ProfileDialog({ title, onClose, children, wide = false, eyebrow 
   </dialog>
 }
 
-export function ProfileField({ label, required = false, children, hint }) {
-  return <label className="pf-field"><span>{label}{required && <span className="pf-required" aria-hidden="true">*</span>}</span>{children}{hint && <small>{hint}</small>}</label>
+export function ProfileInfoButton({ label, children }) {
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef(null)
+  const tooltipId = useId()
+  useEffect(() => {
+    if (!open) return undefined
+    function handlePointerDown(event) {
+      if (!rootRef.current?.contains(event.target)) setOpen(false)
+    }
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open])
+  return <span className="pf-info-control" ref={rootRef}>
+    <button className="pf-info-button" type="button" aria-label={`More information about ${label}`} aria-expanded={open} aria-describedby={open ? tooltipId : undefined} onKeyDown={(event) => {
+      if (event.key === 'Escape' && open) {
+        event.preventDefault()
+        event.stopPropagation()
+        setOpen(false)
+      }
+    }} onClick={() => setOpen((value) => !value)}><Info size={14} aria-hidden="true" /></button>
+    {open && <span className="pf-info-tooltip" id={tooltipId} role="tooltip">{children}</span>}
+  </span>
+}
+
+export function ProfileField({ label, required = false, children, hint, info }) {
+  return <div className="pf-field">
+    <span className="pf-field__heading"><span>{label}{required && <span className="pf-required" aria-hidden="true">*</span>}</span>{info && <ProfileInfoButton label={label}>{info}</ProfileInfoButton>}</span>
+    {children}
+    {hint && <small>{hint}</small>}
+  </div>
 }
 
 export function ProfileAvatar({ profile, small = false }) {

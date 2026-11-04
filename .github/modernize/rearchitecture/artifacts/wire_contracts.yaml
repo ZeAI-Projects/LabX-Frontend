@@ -1,0 +1,5 @@
+contracts: []
+notes:
+  - "No HTTP API, GraphQL, RPC, message queue, SQL service, or external SDK contract was found in the inspected application source."
+  - "The UI's route and query-string contracts are internal browser navigation and are recorded in unit bindings rather than as external service contracts."
+  - "Local storage records are described in data-model.md; they are browser persistence formats, not database or cross-service wire contracts."

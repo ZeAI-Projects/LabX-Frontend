@@ -6,11 +6,11 @@ export const PROFILE_CHANGE_EVENT = 'labx:profile-change'
 export const profileKey = (userId) => `labx:profile:v1:${encodeURIComponent(userId)}`
 const isRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
 const clone = (value) => JSON.parse(JSON.stringify(value))
-const textLimits = { bio: 1000, city: 100, country: 100, goals: 1000, professional_background: 2000, education: 1000 }
+const textLimits = { bio: 1000, city: 100, state: 100, country: 100, goals: 1000, professional_background: 2000, education: 1000 }
 const startupLimits = { name: 120, description: 2000, problem: 2000, solution: 2000, product: 2000, team: 1000, milestones: 2000 }
 const urls = ['website', 'portfolio', 'linkedin']
 export const PROFILE_PRIVACY_DEFAULTS = Object.freeze({
-  bio: true, city: true, country: true, skills: true, interests: true, goals: true, availability: true,
+  bio: true, city: true, state: true, country: true, skills: true, interests: true, goals: true, availability: true,
   website: true, portfolio: true, linkedin: true, public_email: false, professional_background: false,
   education: false, fundraising_status: false, startup: false, projects: false, achievements: true, activity: false,
 })
@@ -109,7 +109,14 @@ export function createProfileStore({ storage = localStore, auth = mockAuth, now 
     return detailsFor(saved?.version === 1 && saved.userId === user.id ? saved.details : {}, false)
   }
   function present(user, details) {
-    return clone({ ...details, full_name: user.full_name || '', username: user.username || '', role: user.role })
+    return clone({
+      ...details,
+      full_name: user.full_name || '',
+      username: user.username || '',
+      role: user.role,
+      verification_status: user.verification_status ?? 'pending',
+      verification_status_source: user.verification_status_source ?? null,
+    })
   }
   function read(userId) {
     const user = actor(userId)
@@ -139,15 +146,7 @@ export function createProfileStore({ storage = localStore, auth = mockAuth, now 
     globalThis.window?.dispatchEvent(new Event(PROFILE_CHANGE_EVENT))
     return present(updatedUser, details)
   }
-  function publicPreview(userId) {
-    const profile = read(userId)
-    const preview = Object.fromEntries(['full_name', 'username', 'role', 'avatar', 'banner'].map((key) => [key, profile[key]]))
-    for (const key of Object.keys(PROFILE_PRIVACY_DEFAULTS)) {
-      if (profile.privacy[key] && Object.hasOwn(profile, key)) preview[key] = clone(profile[key])
-    }
-    return preview
-  }
-  return { read, save, publicPreview }
+  return { read, save }
 }
 
 export const profileStore = createProfileStore()

@@ -1,9 +1,21 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createPassportStore, passportKey } from '../src/features/profile/services/passport_store.js'
+import { PASSPORT_PREVIEW_BENEFITS } from '../src/features/profile/services/passport_benefits.js'
 
 const founder = { id: 'passport-founder', role: 'founder', full_name: 'Passport Founder', email: 'founder@example.org' }
 const originalNow = Date.parse('2026-10-20T10:00:00Z')
+
+test('proposed passport benefits are complete, distinct, and labeled as preview content', () => {
+  assert.equal(PASSPORT_PREVIEW_BENEFITS.length, 7)
+  assert.equal(new Set(PASSPORT_PREVIEW_BENEFITS.map(({ id }) => id)).size, 7)
+  for (const benefit of PASSPORT_PREVIEW_BENEFITS) {
+    assert.ok(benefit.title)
+    assert.ok(benefit.description)
+    assert.ok(benefit.icon)
+  }
+})
+
 function memoryStorage() {
   const values = new Map()
   return { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, String(value)), removeItem: (key) => values.delete(key) }
@@ -22,7 +34,7 @@ function form(overrides = {}) {
   const bytes = Buffer.from('%PDF-1.4\nFounder venture evidence\n%%EOF')
   return {
     legal_name: 'Founder Name', contact_email: 'founder@example.org', city: 'Chennai', country: 'India',
-    project_id: 'owned-project', venture_name: 'Local Venture', founder_role: 'Co-founder',
+    project_id: 'owned-project',
     founder_story: 'I am building a focused product with customer research.',
     portfolio_url: 'https://example.org/portfolio',
     evidence: [{ name: 'venture.pdf', type: 'application/pdf', size: bytes.length, dataUrl: `data:application/pdf;base64,${bytes.toString('base64')}` }],
@@ -44,20 +56,40 @@ test('partial drafts persist without submitting and valid applications require e
   assert.equal(draft.form.consent, false)
   assert.deepEqual(draft.form.evidence, [])
   assert.deepEqual(createPassportStore({ storage: app.storage, auth: app.auth, projects: app.projects }).read(founder.id), draft)
-  for (const key of ['legal_name', 'contact_email', 'country', 'venture_name', 'founder_role', 'founder_story']) {
+  for (const key of ['legal_name', 'contact_email', 'country', 'founder_story']) {
     assert.throws(() => app.store.submit(founder.id, form({ [key]: '' })))
   }
+  const legacyApp = fixture()
+  const legacyForm = legacyApp.store.saveDraft(founder.id, form({ founder_role: 'Legacy role' }))
+  assert.equal(Object.hasOwn(legacyForm.form, 'founder_role'), false)
   assert.throws(() => app.store.submit(founder.id, form({ consent: false })), /consent/)
   assert.throws(() => app.store.submit(founder.id, form({ evidence: [] })), /at least one/)
   assert.throws(() => app.store.saveDraft(founder.id, form({ contact_email: 'bad' })), /valid contact/)
   assert.throws(() => app.store.saveDraft(founder.id, form({ portfolio_url: 'javascript:alert(1)' })), /HTTPS/)
   assert.deepEqual(app.store.read(founder.id), draft)
-  const submitted = app.store.submit(founder.id, form())
+  const submitted = app.store.submit(founder.id, form({ project_id: '' }))
   assert.equal(submitted.status, 'submitted')
+  assert.equal(submitted.form.project_id, '')
+  assert.equal(Object.hasOwn(submitted.form, 'venture_name'), false)
   assert.equal(submitted.history.at(-1).label, 'Application submitted')
   assert.equal(submitted.passport, null)
+  assert.equal(app.store.read(founder.id).status, 'submitted', 'Submitted applications without a venture name remain readable')
   assert.throws(() => app.store.saveDraft(founder.id, form()), /in review/)
   assert.throws(() => app.store.submit(founder.id, form()), /in review/)
+})
+
+test('legacy applications with a venture name and applications without one remain manageable', () => {
+  const app = fixture()
+  const draft = app.store.saveDraft(founder.id, form())
+  const stored = JSON.parse(app.storage.getItem(passportKey(founder.id)))
+  stored.form.venture_name = 'Legacy Venture'
+  app.storage.setItem(passportKey(founder.id), JSON.stringify(stored))
+
+  const normalized = app.store.read(founder.id)
+  assert.equal(normalized.status, 'draft')
+  assert.equal(normalized.form.founder_story, draft.form.founder_story)
+  assert.equal(Object.hasOwn(normalized.form, 'venture_name'), false)
+  assert.equal(app.store.submit(founder.id, normalized.form).status, 'submitted')
 })
 
 test('review transitions, reasons, more-information edits and explicit resubmission are enforced', () => {

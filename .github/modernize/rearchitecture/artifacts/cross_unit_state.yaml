@@ -1,0 +1,75 @@
+flows:
+  - name: Login session to dashboard
+    medium: session
+    key: "labx.demo.session.v1"
+    writer:
+      unit: login
+      source_loc: "src/features/authentication/services/mock_auth.js:84"
+    reader:
+      unit: dashboard
+      source_loc: "src/features/authentication/components/AuthProvider.jsx:5"
+    pairing: matched
+    must_preserve: true
+    must_confirm: null
+    verification_hint: "Sign in, navigate to the dashboard, refresh, and confirm the same user remains available until the stored session expires."
+    notes: "AuthProvider reads the mock session at initialization and refreshes on focus/storage events; the dashboard is protected by authenticated layout."
+
+  - name: Registration session to project setup
+    medium: session
+    key: "labx.demo.session.v1"
+    writer:
+      unit: registration
+      source_loc: "src/features/authentication/components/AuthProvider.jsx:25"
+    reader:
+      unit: project-management
+      source_loc: "src/features/projects/services/project_store.js:24"
+    pairing: matched
+    must_preserve: true
+    must_confirm: null
+    verification_hint: "Complete email verification and confirm the created account can enter the founder project-creation flow."
+    notes: "Successful verification establishes the authenticated user; project creation requires a signed-in founder."
+
+  - name: Legacy assessment draft transferred to first project
+    medium: local-storage
+    key: "labx:assessment-draft:v1:<encoded-user-id>"
+    writer:
+      unit: project-assessment
+      source_loc: "src/features/assessment/services/assessment_draft.js:1"
+    reader:
+      unit: project-management
+      source_loc: "src/features/projects/services/project_store.js:105"
+    pairing: matched
+    must_preserve: true
+    must_confirm: null
+    verification_hint: "With a legacy draft present, create the first named project and confirm its draft is retained while the legacy key is removed."
+    notes: "Project creation reads and transfers the legacy account-level assessment draft once, guarded by migration markers."
+
+  - name: Approved roadmap work to achievement activity
+    medium: local-storage
+    key: "labx:achievement-activity:v1:<encoded-user-id>"
+    writer:
+      unit: project-roadmap
+      source_loc: "src/features/roadmap/services/roadmap_store.js:6"
+    reader:
+      unit: achievements
+      source_loc: "src/features/achievements/services/mock_achievements.js:80"
+    pairing: matched
+    must_preserve: true
+    must_confirm: null
+    verification_hint: "Approve a founder-submitted mission, revisit achievements, and confirm recognition reflects approved submissions only."
+    notes: "The roadmap store calls the achievement hook only after an authorized and persisted approval; placement credits do not create recognition."
+
+  - name: Project catalogue to dashboard summary
+    medium: local-storage
+    key: "labx:projects:v1:<encoded-user-id>"
+    writer:
+      unit: project-management
+      source_loc: "src/features/projects/services/project_store.js:1"
+    reader:
+      unit: dashboard
+      source_loc: "src/features/dashboard/services/dashboard_snapshot.js:145"
+    pairing: matched
+    must_preserve: true
+    must_confirm: null
+    verification_hint: "Create, complete, and delete projects and check the dashboard's corresponding counts."
+    notes: "The project store persists owner-scoped project records; dashboard snapshot derives counts from the supplied project collection."

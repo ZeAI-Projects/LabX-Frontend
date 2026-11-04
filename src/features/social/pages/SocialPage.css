@@ -1,0 +1,28 @@
+.social-page { width: min(100%, 900px); margin: 0 auto; padding: 8px 0 32px; color: #dce8f5; }
+.social-page__heading { margin-bottom: 24px; }
+.social-page__eyebrow { display: inline-flex; align-items: center; gap: 7px; color: #79d8ec; font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.social-page__heading h1 { margin: 8px 0 5px; color: #f1f7ff; font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 850; }
+.social-page__heading p { color: #9aafc7; font-size: 14px; line-height: 1.65; }
+.social-page__view-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin: 0 0 15px; padding: 14px 17px; border: 1px solid #2b4058; border-radius: 11px; background: linear-gradient(120deg, #16283b, #121e2f); }
+.social-page__view-heading h2 { margin: 0; color: #eaf3ff; font-size: 15px; font-weight: 750; }
+.social-page__view-heading p { margin: 0; color: #9aafc7; font-size: 12px; line-height: 1.6; }
+.social-page__feed { display: flex; flex-direction: column; gap: 14px; }
+.social-post { min-width: 0; padding: 20px; border: 1px solid #2b4058; border-radius: 14px; background: linear-gradient(135deg, #142237, #101d30); box-shadow: 0 7px 22px #00000010; }
+.social-post__author { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.social-post__author .pf-avatar { position: relative; display: inline-grid; flex: 0 0 52px; width: 52px; height: 52px; place-items: center; overflow: hidden; border: 2px solid #15273b; border-radius: 50%; background: radial-gradient(circle at 20% 0, #43739a, #30365b 75%); color: #c9ddff; font-size: 1rem; font-weight: 850; }
+.social-post__author .pf-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.social-post__author > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.social-post__author strong { color: #f1f7ff; font-size: 14px; }
+.social-post__author span { color: #8fa9c4; font-size: 12px; overflow-wrap: anywhere; }
+.social-post__author time { margin-left: auto; color: #8fa9c4; font-size: 12px; white-space: nowrap; }
+.social-post__content { margin: 18px 0; color: #d2deed; font-size: 14px; line-height: 1.75; overflow-wrap: anywhere; }
+.social-post__actions { display: flex; align-items: center; gap: 20px; padding-top: 12px; border-top: 1px solid #2b4058; color: #98afc8; font-size: 13px; }
+.social-post__actions button, .social-post__actions > span { display: inline-flex; align-items: center; gap: 7px; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; }
+.social-post__actions button { cursor: pointer; }
+.social-post__actions button:hover, .social-post__actions button.is-liked { color: #ff8296; }
+@media (max-width: 600px) {
+  .social-page { padding-top: 0; }
+  .social-post { padding: 16px; }
+  .social-post__author { gap: 9px; }
+  .social-post__author time { font-size: 11px; }
+}
