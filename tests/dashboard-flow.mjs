@@ -60,10 +60,6 @@ try {
   const submit = () => page.locator('button[type="submit"]').click()
   const dashboard = async () => { await go('/dashboard'); await heading('Dashboard').waitFor() }
   const signOut = async () => { await button('Sign out').click(); await at('/login') }
-  const closeDialog = async () => {
-    await page.keyboard.press('Escape')
-    await page.locator('dialog[open]').waitFor({ state: 'hidden' })
-  }
 
   const checkLayout = async (name, widths = [320, 390, 768, 1440]) => {
     for (const width of widths) {
@@ -330,8 +326,9 @@ try {
   await submission.getByLabel('Completed work', { exact: true }).fill('We documented customer interviews, compared the existing alternatives, and identified the most important problem through direct observation.')
   await submission.getByLabel('Proof link', { exact: true }).fill('https://example.test/dashboard-level-one')
   await submission.getByRole('button', { name: 'Submit for evaluation', exact: true }).click()
-  await submission.getByRole('heading', { name: 'Mission accepted', exact: true }).waitFor()
-  await closeDialog()
+  await submission.getByRole('heading', { name: 'Mission Completed Successfully', exact: true }).waitFor()
+  await submission.getByRole('button', { name: 'Back to roadmap', exact: true }).click()
+  await submission.waitFor({ state: 'hidden' })
   await dashboard()
   await chooseProject(completedPath)
   await assertProgress('Discover missions covered', 3, 15)

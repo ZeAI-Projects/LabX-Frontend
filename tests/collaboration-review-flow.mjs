@@ -417,6 +417,10 @@ try {
     await status('Revision In Progress');
     await mission().getByLabel('Your work', { exact: true }).fill(`${evidence} ${note}`);
     await mission().getByRole('button', { name: 'Resubmit to Founder', exact: true }).click();
+    await mission().getByRole('heading', { name: 'Mission Submitted', exact: true }).waitFor();
+    await mission().getByRole('button', { name: 'Back to roadmap', exact: true }).click();
+    await mission().waitFor({ state: 'hidden' });
+    await openMemberWork();
     await status('Resubmitted to Founder');
     assert.equal((await work()).latestVersion, version);
     await switchAccount('owner');
@@ -443,6 +447,10 @@ try {
   await mission().getByRole('alert').filter({ hasText: 'Simulated submission upload failure' }).waitFor();
   assert.equal(await mission().getByLabel('Your work', { exact: true }).inputValue(), evidence);
   await mission().getByRole('button', { name: 'Submit to Founder', exact: true }).click();
+  await mission().getByRole('heading', { name: 'Mission Submitted', exact: true }).waitFor();
+  await mission().getByRole('button', { name: 'Back to roadmap', exact: true }).click();
+  await mission().waitFor({ state: 'hidden' });
+  await openMemberWork();
   await status('Submitted to Founder');
   assert.equal((await work()).versions[0].review.status, 'pending');
   assert.equal((await work()).evaluationJobs.length, 0);

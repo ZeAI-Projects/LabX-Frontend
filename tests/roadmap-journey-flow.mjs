@@ -78,10 +78,9 @@ try {
       buffer: Buffer.from(`Evidence for mission ${missionNumber}.`),
     })
     await dialog.getByRole('button', { name: 'Complete mission' }).click()
-    await page.waitForTimeout(250)
+    await dialog.getByRole('heading', { name: 'Mission Completed Successfully', exact: true }).waitFor()
     if (await dialog.locator('.rmj-mock-error').count()) throw new Error(await dialog.locator('.rmj-mock-error').innerText())
-    const close = dialog.getByRole('button', { name: 'Close mission', exact: true })
-    if (await close.isVisible()) await close.click()
+    await dialog.getByRole('button', { name: 'Back to roadmap', exact: true }).click()
     await dialog.waitFor({ state: 'hidden' })
   }
 

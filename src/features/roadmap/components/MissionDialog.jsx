@@ -7,6 +7,7 @@ import { openRoadmapDialog } from '../services/roadmap_dialog.js';
 import { MAX_EVIDENCE_BYTES, MISSION_NOTES_MIN_LENGTH } from '../services/roadmap_workflow.js';
 import { getCompanionUrl } from '../../companion/services/companion_navigation.js';
 import { MemberMissionDialog } from './MemberMissionDialog.jsx';
+import { MissionSuccess } from './MissionSuccess.jsx';
 
 const Required = () => <span className="required-mark" aria-hidden="true" />;
 const formatBytes = (size) => size >= 1024 * 1024 ? `${(size / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(size / 1024))} KB`;
@@ -26,6 +27,7 @@ function OwnerMissionDialog({ project, ownerId, userId, mission, roadmap, onClos
   const [file, setFile] = useState(previous?.file || null);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState(null);
   const candidate = previous?.payload?.placement;
   const savedPlacement = Number.isInteger(candidate?.stageIndex) && candidate.stageIndex >= 0 && candidate.stageIndex < 5
     && Number.isInteger(candidate.level) && candidate.level >= 1 && candidate.level <= 5 ? candidate : null;
@@ -80,7 +82,15 @@ function OwnerMissionDialog({ project, ownerId, userId, mission, roadmap, onClos
         } } : {}),
       }, userId);
       onChange(next);
-      requestAnimationFrame(() => feedbackRef.current?.focus());
+      const approvedSubmission = next.submissionsByMilestone[mission.id]?.status === 'approved';
+      setSuccess({
+        title: approvedSubmission ? 'Mission Completed Successfully' : 'Mission Submitted',
+        message: next.isComplete
+          ? 'Your roadmap is complete. Every checkpoint is covered.'
+          : approvedSubmission
+            ? 'Your work is saved and your next mission is ready on the roadmap.'
+            : 'Your submission is saved. You can continue from the roadmap.',
+      });
     } catch (err) { setError(err.message || 'Unable to save this submission. Please try again.'); }
     finally { setSaving(false); }
   }
@@ -147,5 +157,6 @@ function OwnerMissionDialog({ project, ownerId, userId, mission, roadmap, onClos
         <div className="rm-demo-note"><FlaskConical size={17} /><p>This was a simulated evaluation. No AI review or LabX points were awarded.</p></div>
       </>}
     </div>
+    {success && <MissionSuccess {...success} onReturn={onClose} />}
   </dialog>, document.body);
 }

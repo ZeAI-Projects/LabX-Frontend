@@ -5,6 +5,7 @@ import { roadmapStore } from '../services/roadmap_store.js';
 import { openRoadmapDialog } from '../services/roadmap_dialog.js';
 import { MAX_EVIDENCE_BYTES, MISSION_NOTES_MIN_LENGTH } from '../services/roadmap_workflow.js';
 import { MISSION_WORKFLOW_LABELS } from '../services/mission_review.js';
+import { MissionSuccess } from './MissionSuccess.jsx';
 import './MemberMissionDialog.css';
 
 const formatDate = (value) => new Date(value).toLocaleString();
@@ -28,6 +29,7 @@ export function MemberMissionDialog({ project, ownerId, userId, mission, roadmap
   const [error, setError] = useState('');
   const [fields, setFields] = useState({});
   const [notice, setNotice] = useState('');
+  const [success, setSuccess] = useState(null);
   const [saving, setSaving] = useState('');
   const [uploadConfirm, setUploadConfirm] = useState(false);
   const [failSubmission, setFailSubmission] = useState(false);
@@ -66,7 +68,7 @@ export function MemberMissionDialog({ project, ownerId, userId, mission, roadmap
     return () => window.clearTimeout(timer);
   }, [isOwner, mission.id, onChange, ownerId, project.id, userId, work.status]);
 
-  async function perform(label, action, success = '') {
+  async function perform(label, action, successMessage = '', acknowledgement = null) {
     if (inFlight.current) return;
     inFlight.current = true;
     setSaving(label); setError(''); setFields({}); setNotice('');
@@ -75,7 +77,8 @@ export function MemberMissionDialog({ project, ownerId, userId, mission, roadmap
       if (!mounted.current) return;
       const result = action();
       onChange(result);
-      setNotice(success);
+      setNotice(successMessage);
+      if (acknowledgement) setSuccess(acknowledgement);
     } catch (err) { if (mounted.current) { setError(err.message || 'Unable to save. Your work is preserved; please retry.'); setFields(err.fields || {}); } }
     finally { inFlight.current = false; if (mounted.current) setSaving(''); }
   }
@@ -86,7 +89,10 @@ export function MemberMissionDialog({ project, ownerId, userId, mission, roadmap
     perform('Sending to founder…', () => {
       if (failSubmission) { setFailSubmission(false); throw new Error('Simulated submission upload failure. Your entered work is preserved. Retry Submit to Founder.'); }
       return roadmapStore.submitToFounder(...args, submittedPayload(), userId);
-    }, 'Submission saved. The founder can now review this version.');
+    }, 'Submission saved. The founder can now review this version.', {
+      title: 'Mission Submitted',
+      message: 'Your work is with the founder for review. You can follow its status from the roadmap.',
+    });
   }
   function chooseFile(event) {
     const selected = event.target.files?.[0];
@@ -146,5 +152,6 @@ export function MemberMissionDialog({ project, ownerId, userId, mission, roadmap
       <p className="mr-announcement" aria-live="polite" role="status">{saving || notice}</p>
       <div className="rm-demo-note"><FlaskConical size={17} /><p>Local preview. Submissions, founder decisions, and evaluation states are stored in this browser. No real invitations, uploads, or AI evaluations occur. File contents are never read. Existing roadmap progression applies only after a simulated meets-requirements result; no LabX points are awarded.</p></div>
     </div>
+    {success && <MissionSuccess {...success} onReturn={onClose} />}
   </dialog>, document.body);
 }

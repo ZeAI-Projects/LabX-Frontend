@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { CheckCircle2, Clock3, Coins, FlaskConical, LockKeyhole, Paperclip, X } from 'lucide-react';
 import { MAX_MISSION_UPLOADS, MAX_MISSION_UPLOAD_BYTES, MISSION_UPLOAD_ACCEPT, roadmapUploadStore, validateMissionFiles } from '../services/roadmap_upload_store.js';
 import { openRoadmapDialog } from '../services/roadmap_dialog.js';
+import { MissionSuccess } from './MissionSuccess.jsx';
 
 const NOTES_MIN_LENGTH = 80;
 const formatBytes = (size) => size >= 1024 * 1024 ? `${(size / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(size / 1024))} KB`;
@@ -36,6 +37,7 @@ export function MockMissionDialog({ project, userId, roadmap, mission, onClose, 
   const [savedFilesError, setSavedFilesError] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState(null);
   const completed = mission.state === 'completed';
   const submitted = !completed && (mission.state === 'submitted' || previous?.status === 'submitted');
 
@@ -122,7 +124,15 @@ export function MockMissionDialog({ project, userId, roadmap, mission, onClose, 
         }
         throw saveError;
       }
-      onClose();
+      setSuccess(project.memberView
+        ? {
+          title: 'Mission Submitted',
+          message: 'Your work has been sent to the founder for review.',
+        }
+        : {
+          title: 'Mission Completed Successfully',
+          message: 'Your mission is complete. Your updated progress is waiting on the roadmap.',
+        });
     } catch (submitError) {
       setError(submitError.message || 'Unable to save this prototype mission.');
       setSaving(false);
@@ -169,5 +179,6 @@ export function MockMissionDialog({ project, userId, roadmap, mission, onClose, 
         <div className="rmj-mock-actions"><span><LockKeyhole size={13} />Stored in this browser</span><button type="submit" className="rmj-launch-button" disabled={saving}>{saving ? 'Submitting…' : project.memberView ? 'Submit to founder' : 'Complete mission'}</button></div>
       </form>}
     </div>
+    {success && <MissionSuccess {...success} onReturn={onClose} />}
   </dialog>, document.body);
 }
