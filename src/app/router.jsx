@@ -9,7 +9,7 @@ import { ASSESSMENT_QUESTIONS, validateAssessmentStep } from '../features/assess
 import { legacyJoinRoadmapUrl } from '../features/roadmap/services/join_roadmap_navigation.js'
 import { getLoginDestination } from '../utils/onboarding.js'
 import { getCompanionRoadmapRoute, getCompanionUrl } from '../features/companion/services/companion_navigation.js'
-import { ROADMAP_VISUAL_MY_DATA } from '../features/projects/services/roadmap_visual_mock_data.js'
+import { ROADMAP_VISUAL_JOINED_DATA, ROADMAP_VISUAL_MY_DATA } from '../features/projects/services/roadmap_visual_mock_data.js'
 
 const lazyPage = (load, name) => lazy(() => load().then((module) => ({ default: module[name] })))
 const IntroVideo = lazyPage(() => import('../features/authentication/pages/IntroVideo.jsx'), 'IntroVideo')
@@ -118,9 +118,10 @@ function ProjectRoute({ view }) {
 function MockRoadmapRoute() {
   const { user } = useAuth()
   const { projectId } = useParams()
-  const project = ROADMAP_VISUAL_MY_DATA.find((entry) => entry.id === projectId)
+  const project = [...ROADMAP_VISUAL_MY_DATA, ...ROADMAP_VISUAL_JOINED_DATA].find((entry) => entry.id === projectId)
   if (!project) return <Navigate to="/roadmap" replace />
-  return <RoadmapPage key={`${user.id}:${project.id}`} project={{ ...project, owner_id: user.id, created_by: user.full_name, visualDemo: true }} />
+  const createdBy = project.visualCollection === 'joined' ? project.created_by : user.full_name
+  return <RoadmapPage key={`${user.id}:${project.id}`} project={{ ...project, owner_id: user.id, created_by: createdBy, visualDemo: true }} />
 }
 
 function MentorRoute() {

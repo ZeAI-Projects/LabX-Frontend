@@ -1,6 +1,6 @@
 import { ASSESSMENT_QUESTION_COUNT, DOMAIN_OPTIONS, validateAssessmentStep } from '../../assessment/services/mock_assessment.js';
 
-export const PROJECTS_PER_PAGE = 4;
+export const PROJECTS_PER_PAGE = 10;
 export const PROJECT_STATUSES = [
   ['pending', 'Assessment pending'],
   ['in-progress', 'Assessment in progress'],
@@ -24,6 +24,15 @@ export const PROJECT_SORTS = [
 ];
 export const UNSET_DOMAIN = '__unset__';
 const collator = new Intl.Collator('en', { numeric: true, sensitivity: 'base' });
+
+export function formatRoadmapDate(value) {
+  const date = new Date(value);
+  if (!value || Number.isNaN(date.getTime())) return '—';
+  const day = date.getDate();
+  const ordinal = day % 100 >= 11 && day % 100 <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[day % 10] || 'th');
+  const monthAndYear = date.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+  return `${day}${ordinal} ${monthAndYear}`;
+}
 
 export function projectDetails(project) {
   if (project.visualDemo) {

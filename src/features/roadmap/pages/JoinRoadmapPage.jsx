@@ -10,19 +10,46 @@ import { DirectInvitationForm, JoinRequests, OutgoingInvitations, PublicOpportun
 import { useCollaborationRefresh } from '../components/collaboration_ui.js';
 import { closeJoinRoadmapSearch } from '../services/join_roadmap_navigation.js';
 import { ROADMAP_COLLABORATION_VISUAL_MOCK_DATA } from '../services/roadmap_collaboration_visual_mock_data.js';
+import { ROADMAP_VISUAL_MY_DATA } from '../../projects/services/roadmap_visual_mock_data.js';
+import { roadmapCollaborationPrototypeStore } from '../services/roadmap_collaboration_prototype.js';
 import '../components/RoadmapTeam.css';
 import './JoinRoadmapPopup.css';
 
-function DemoOpportunities({ requests, onRequest }) {
+function loadPrototypeOpportunities(ownerId) {
+  try {
+    const projects = ROADMAP_VISUAL_MY_DATA.map((project) => ({ ...project, owner_id: ownerId }));
+    return { items: roadmapCollaborationPrototypeStore.listOpportunities(ownerId, projects), error: '' };
+  } catch (error) {
+    return { items: [], error: error.message };
+  }
+}
+
+function DemoOpportunities({ ownerId, requests, onRequest }) {
+  const [snapshot, setSnapshot] = useState(() => loadPrototypeOpportunities(ownerId));
+  useEffect(() => {
+    const refresh = (event) => {
+      if (event.detail?.ownerId === ownerId) setSnapshot(loadPrototypeOpportunities(ownerId));
+    };
+    window.addEventListener('labx:prototype-collaboration-change', refresh);
+    return () => window.removeEventListener('labx:prototype-collaboration-change', refresh);
+  }, [ownerId]);
+  const opportunities = [
+    ...ROADMAP_COLLABORATION_VISUAL_MOCK_DATA.opportunities.map((item) => ({ ...item, requestId: item.id })),
+    ...snapshot.items.map((item) => ({
+      ...item,
+      requestId: `prototype:${item.project.id}:${item.id}`,
+    })),
+  ];
   return <section className="collab-section join-roadmap-demo-section" aria-labelledby="demo-opportunities-title">
-    <div className="collab-section-heading"><div><h2 id="demo-opportunities-title">Discover collaboration opportunities</h2><p>Find a startup and share how you can contribute.</p></div><span className="roadmap-count">{ROADMAP_COLLABORATION_VISUAL_MOCK_DATA.opportunities.length} open</span></div>
-    <div className="join-roadmap-demo-opportunities">{ROADMAP_COLLABORATION_VISUAL_MOCK_DATA.opportunities.map((item) => {
-      const requested = requests.includes(item.id);
-      return <article key={item.id} className="join-roadmap-demo-card" aria-label={`Opportunity: ${item.title}`}>
+    <div className="collab-section-heading"><div><h2 id="demo-opportunities-title">Discover collaboration opportunities</h2><p>Find a startup and share how you can contribute.</p></div><span className="roadmap-count">{opportunities.length} open</span></div>
+    {snapshot.error && <p className="roadmap-team-error" role="alert">{snapshot.error}</p>}
+    <div className="join-roadmap-demo-opportunities">{opportunities.map((item) => {
+      const requested = requests.includes(item.requestId);
+      return <article key={item.requestId} className="join-roadmap-demo-card" aria-label={`Opportunity: ${item.title}`}>
         <div className="join-roadmap-demo-card__topline"><span>{item.project.name}</span><span className="collab-open">Open</span></div>
         <h3>{item.title}</h3><p>{item.description}</p>
         <div className="join-roadmap-demo-card__meta"><span>{item.contribution}</span><span>{item.skills}</span></div>
-        {requested ? <span className="collab-status collab-status--pending"><Clock3 size={14} />Request pending</span> : <button type="button" className="roadmap-team-button roadmap-team-button--primary" onClick={() => onRequest(item.id)}><UserRoundPlus size={15} />Request to Join</button>}
+        {requested ? <span className="collab-status collab-status--pending"><Clock3 size={14} />Request pending</span> : <button type="button" className="roadmap-team-button roadmap-team-button--primary" onClick={() => onRequest(item.requestId)}><UserRoundPlus size={15} />Request to Join</button>}
       </article>;
     })}</div>
   </section>;
@@ -84,7 +111,7 @@ function JoinRoadmapSession({ user }) {
     <div className="join-roadmap-account"><Fingerprint size={20} aria-hidden="true" /><p>Signed in as <strong>{user.full_name || user.username || 'Founder'}</strong><span>Founders can identify your account by name. Collaboration is saved locally in this browser.</span></p></div>
     <nav className="collab-navigation" aria-label="Collaboration views"><div role="tablist">{[['browse', 'Browse opportunities'], ['founder', 'Founder workspace'], ['activity', 'My activity']].map(([id, title], index) => <button ref={(element) => { tabRefs.current[index] = element; }} key={id} id={`join-roadmap-tab-${id}`} role="tab" aria-selected={view === id} aria-controls={`join-roadmap-panel-${id}`} tabIndex={view === id ? 0 : -1} type="button" className={view === id ? 'is-active' : ''} onKeyDown={(event) => navigateTabs(event, index)} onClick={() => changeView(id)}>{title}</button>)}</div></nav>
     <div key={view} id={`join-roadmap-panel-${view}`} role="tabpanel" aria-labelledby={`join-roadmap-tab-${view}`} className="join-roadmap-view-panel">
-    {view === 'browse' && (import.meta.env.DEV ? <DemoOpportunities requests={demoRequests} onRequest={(id) => setDemoRequests((items) => items.includes(id) ? items : [...items, id])} /> : <PublicOpportunities key={user.id} user={user} />)}
+    {view === 'browse' && <><DemoOpportunities ownerId={user.id} requests={demoRequests} onRequest={(id) => setDemoRequests((items) => items.includes(id) ? items : [...items, id])} />{!import.meta.env.DEV && <PublicOpportunities key={user.id} user={user} />}</>}
     {view === 'founder' && (import.meta.env.DEV ? <DemoFounderWorkspace requestStatus={demoFounderRequestStatus} invitationSent={demoFounderInvitationSent} onRequestStatus={setDemoFounderRequestStatus} onSendInvitation={() => setDemoFounderInvitationSent(true)} /> : <section className="collab-founder" aria-label="Founder workspace">
       <div className="collab-section-heading"><div><h2>Your startup workspace</h2><p>Publish opportunities, send invitations, and review requests for the selected project.</p></div>{selected && <Link className="roadmap-team-button" to={`/roadmap/${encodeURIComponent(selected.id)}`}>Open team & missions<ArrowRight size={15} /></Link>}</div>
       <DailySideQuestCard user={user} />

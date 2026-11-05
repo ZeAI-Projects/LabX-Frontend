@@ -1,5 +1,22 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { ArrowDown, ArrowDownUp, ArrowUp, ChevronDown } from 'lucide-react';
+import { ArrowDown, ArrowDownUp, ArrowUp, ChevronDown, ChevronFirst, ChevronLast, ChevronLeft, ChevronRight } from 'lucide-react';
+import { paginationItems } from '../services/project_list.js';
+
+export function ProjectsPagination({ total, from, to, page, pages, onPageChange, itemLabel = 'roadmaps' }) {
+  const countLabel = total === 1 ? itemLabel.slice(0, -1) : itemLabel;
+  return <div className="projects-grid-pagination">
+    <p>Showing <strong>{from}–{to}</strong> of <strong>{total}</strong> {countLabel}</p>
+    <nav aria-label="Projects pagination">
+      <button type="button" className="projects-page-button" aria-label="First page" disabled={page === 1} onClick={() => onPageChange(1)}><ChevronFirst size={16} aria-hidden="true" /></button>
+      <button type="button" className="projects-page-button" aria-label="Previous page" disabled={page === 1} onClick={() => onPageChange(page - 1)}><ChevronLeft size={16} aria-hidden="true" /></button>
+      {paginationItems(page, pages).map((value) => typeof value === 'number'
+        ? <button type="button" className="projects-page-button projects-page-button--number" key={value} aria-label={`Page ${value}`} aria-current={page === value ? 'page' : undefined} onClick={() => onPageChange(value)}>{value}</button>
+        : <span className="projects-page-gap" key={value} aria-hidden="true">…</span>)}
+      <button type="button" className="projects-page-button" aria-label="Next page" disabled={page === pages} onClick={() => onPageChange(page + 1)}><ChevronRight size={16} aria-hidden="true" /></button>
+      <button type="button" className="projects-page-button" aria-label="Last page" disabled={page === pages} onClick={() => onPageChange(pages)}><ChevronLast size={16} aria-hidden="true" /></button>
+    </nav>
+  </div>;
+}
 
 export function SortHeading({ label, ascending, descending, sort, onSort }) {
   const direction = sort === ascending ? 'ascending' : sort === descending ? 'descending' : 'none';

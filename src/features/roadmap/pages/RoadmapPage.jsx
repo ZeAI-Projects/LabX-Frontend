@@ -132,20 +132,40 @@ function RoadmapSession({ project, ownerId }) {
 }
 
 function MockRoadmapSession({ project, userId }) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [snapshot, setSnapshot] = useState(() => {
     try { return { roadmap: roadmapProgressionMockStore.read(project, userId), error: '' }; }
     catch (error) { return { roadmap: null, error: error.message }; }
   });
   const [levelSelection, setLevelSelection] = useState({ activeLevelId: null, selectedLevelId: null });
-  const [missionId, setMissionId] = useState(null);
+  const [missionId, setMissionId] = useState(() => searchParams.get('milestone'));
+  const [showOperations, setShowOperations] = useState(false);
   const roadmap = snapshot.roadmap;
   const error = snapshot.error;
   const missions = roadmap?.stages.flatMap((stage) => stage.levels.flatMap((level) => level.milestones)) || [];
   const currentMission = missions.find((mission) => mission.id === roadmap?.currentMilestoneId);
   const activeLevelId = currentMission ? `${currentMission.stageName.toLowerCase()}-level-${currentMission.level}` : null;
+  const selectedMission = missions.find((mission) => mission.id === missionId && mission.state !== 'locked');
 
   const selectedLevelId = levelSelection.activeLevelId === activeLevelId ? levelSelection.selectedLevelId : activeLevelId;
   const selectLevel = (id) => setLevelSelection({ activeLevelId, selectedLevelId: id });
+  const openMission = (mission) => {
+    if (!mission || mission.state === 'locked') return;
+    setMissionId(mission.id);
+    setSearchParams((params) => {
+      const next = new URLSearchParams(params);
+      next.set('milestone', mission.id);
+      return next;
+    }, { replace: true });
+  };
+  const closeMission = () => {
+    setMissionId(null);
+    setSearchParams((params) => {
+      const next = new URLSearchParams(params);
+      next.delete('milestone');
+      return next;
+    }, { replace: true });
+  };
 
   const completeMission = (id, submission) => {
     const updated = roadmapProgressionMockStore.completeMission(project, userId, id, submission);
@@ -153,10 +173,16 @@ function MockRoadmapSession({ project, userId }) {
   };
   const headerBar = <>
     <div className="rmj-breadcrumb-context">
-      <Link to="/roadmap"><ArrowLeft size={14} />All roadmaps</Link>
+      <Link to={project.visualCollection === 'joined' ? '/roadmap?view=joined' : '/roadmap'}><ArrowLeft size={14} />All roadmaps</Link>
       <span aria-hidden="true">/</span><span className="rmj-breadcrumb-project">{project.name}</span>
     </div>
-    <div className="rmj-breadcrumb-actions"><span className="rmj-member-label">Interactive prototype · progress saved locally</span></div>
+    <div className="rmj-breadcrumb-actions">
+      {project.visualCollection === 'joined' && <span className="rmj-member-label"><Users size={14} />Joined roadmap</span>}
+      <RoadmapTeam project={project} roadmap={roadmap} showForPrototype />
+      <button type="button" className="rmj-review-button" aria-expanded={showOperations} onClick={() => setShowOperations((value) => !value)}>
+        Mission review and approval <span>0</span>
+      </button>
+    </div>
   </>;
 
   if (error || !roadmap) return <PageError message={error || 'The sample roadmap is unavailable.'} />;
@@ -164,9 +190,13 @@ function MockRoadmapSession({ project, userId }) {
   return <div className="rm-page rm-reference rm-page-journey">
     <RoadmapJourney project={project} roadmap={roadmap} currentMission={currentMission} selectedLevelId={selectedLevelId}
       onSelectLevel={selectLevel} canOpen={(mission) => mission.state !== 'locked'}
-      onOpenMission={(mission) => setMissionId(mission.id)} headerBar={headerBar} />
-    {missionId && <MockMissionDialog key={`${project.id}:${missionId}`} project={project} roadmap={roadmap}
-      mission={missions.find((mission) => mission.id === missionId)}
-      onClose={() => setMissionId(null)} onComplete={completeMission} />}
+      onOpenMission={openMission} headerBar={headerBar}
+      showOperations={showOperations} operations={<section className="rmj-operations" aria-label="Mission review and approval">
+        <div className="rmj-operations-heading"><h2>Mission Review and Approval</h2><span>0 awaiting review</span></div>
+        <div><p className="rmj-operation-empty">No team missions are awaiting review in this interactive prototype.</p></div>
+      </section>} />
+    {selectedMission && <MockMissionDialog key={`${project.id}:${selectedMission.id}`} project={project} roadmap={roadmap}
+      mission={selectedMission}
+      onClose={closeMission} onComplete={completeMission} />}
   </div>;
 }

@@ -139,6 +139,44 @@ test('owners assign canonical future missions to accepted members and assignment
   assert.deepEqual(app.store.getAccess(app.project.id, alice.id, carol.id).assignedMissionIds, ['discover-l1-m2']);
 });
 
+test('assigned missions list membership dates and exit requests require founder approval', () => {
+  const app = fixture();
+  const invitation = app.invite(bob);
+  app.signIn(bob);
+  app.store.respondInvitation(invitation.id, 'accepted', bob.id);
+  app.signIn(alice);
+  app.store.assignMission(app.project.id, bob.id, 'grow-l5-m3', alice.id);
+
+  app.signIn(bob);
+  const [assignment] = app.reload().listMyAssignments(bob.id);
+  assert.equal(assignment.project.name, 'Shared venture');
+  assert.equal(assignment.mission.name, 'Growth review');
+  assert.ok(Number.isFinite(Date.parse(assignment.joinedAt)));
+  assert.equal(assignment.expiresAt, null);
+  assert.equal(assignment.leaveRequest, null);
+
+  const request = app.store.requestAssignmentExit(app.project.id, alice.id, assignment.missionId, bob.id);
+  assert.equal(request.status, 'pending');
+  assert.equal(app.store.requestAssignmentExit(app.project.id, alice.id, assignment.missionId, bob.id).id, request.id, 'duplicate pending requests reuse the existing request');
+  assert.equal(app.store.listMyAssignments(bob.id)[0].leaveRequest.id, request.id);
+  assert.throws(() => app.store.respondAssignmentExit(request.id, 'approved', bob.id), /no longer available/);
+
+  app.signIn(alice);
+  assert.equal(app.store.getTeam(app.project.id, alice.id).leaveRequests[0].mission.name, 'Growth review');
+  app.store.respondAssignmentExit(request.id, 'declined', alice.id);
+  assert.equal(app.store.getTeam(app.project.id, alice.id).leaveRequests[0].status, 'declined');
+  app.signIn(bob);
+  assert.equal(app.store.listMyAssignments(bob.id).length, 1, 'declining does not remove the assignment');
+
+  const secondRequest = app.store.requestAssignmentExit(app.project.id, alice.id, assignment.missionId, bob.id);
+  app.signIn(alice);
+  app.store.respondAssignmentExit(secondRequest.id, 'approved', alice.id);
+  assert.equal(app.store.getTeam(app.project.id, alice.id).leaveRequests.find((item) => item.id === secondRequest.id).status, 'approved');
+  app.signIn(bob);
+  assert.deepEqual(app.store.listMyAssignments(bob.id), []);
+  assert.equal(app.store.listJoinedProjects(bob.id).length, 1, 'leaving one mission does not remove the roadmap membership');
+});
+
 test('accepted members see owner, teammates, roles and assignments without gaining team management', () => {
   const app = fixture();
   const invitationBob = app.invite(bob, 'co-founder');

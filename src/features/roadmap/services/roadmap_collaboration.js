@@ -108,6 +108,16 @@ export function createCollaborationStore({
       }
     }
     const uniqueMemberships = [...new Map(memberships.map((item) => [identityKey(item), item])).values()];
+    const leaveRequests = validRows(entries.leaveRequests,
+      (item) => text(item.ownerId) && text(item.projectId) && text(item.memberId) && item.memberId !== item.ownerId
+        && missionIds.has(item.missionId) && text(item.assignmentId)
+        && ['pending', 'approved', 'declined', 'resolved'].includes(item.status) && validDate(item.createdAt)
+        && uniqueMemberships.some((member) => member.status === 'active' && sameProject(member, item.ownerId, item.projectId) && member.memberId === item.memberId),
+      (item) => ({
+        id: item.id, ownerId: item.ownerId, projectId: item.projectId, memberId: item.memberId,
+        missionId: item.missionId, assignmentId: item.assignmentId, status: item.status,
+        createdAt: item.createdAt, respondedAt: validDate(item.respondedAt) ? item.respondedAt : null,
+      }));
     const assignments = (Array.isArray(entries.assignments) ? entries.assignments : [])
       .filter((item) => isObject(item) && text(item.ownerId) && text(item.projectId) && text(item.memberId)
         && missionIds.has(item.missionId) && item.missionId !== firstMissionId && validDate(item.assignedAt)
@@ -119,7 +129,7 @@ export function createCollaborationStore({
       }));
     // Preserve the existing single-assignee model: the last valid assignment wins.
     const uniqueAssignments = [...new Map(assignments.map((item) => [JSON.stringify([item.ownerId, item.projectId, item.missionId]), item])).values()];
-    return { version: 2, invitations, opportunities, requests, memberships: uniqueMemberships, assignments: uniqueAssignments };
+    return { version: 2, invitations, opportunities, requests, memberships: uniqueMemberships, assignments: uniqueAssignments, leaveRequests };
   }
 
   function write(data) {
@@ -237,6 +247,27 @@ export function createCollaborationStore({
       });
     },
 
+    listMyAssignments(expectedUserId) {
+      const user = actor(expectedUserId);
+      const data = read();
+      return data.assignments.filter((item) => item.memberId === user.id).flatMap((assignment) => {
+        const membership = memberFor(data, assignment.ownerId, assignment.projectId, user.id);
+        const project = membership ? foreignProject(assignment.ownerId, assignment.projectId) : null;
+        const mission = catalog.find((item) => item.id === assignment.missionId);
+        if (!membership || !project || !mission) return [];
+        const leaveRequest = data.leaveRequests.find((item) => item.assignmentId === assignment.id && item.status === 'pending');
+        return [{
+          ...assignment,
+          project,
+          mission,
+          memberRole: membership.memberRole,
+          joinedAt: membership.joinedAt,
+          expiresAt: null,
+          leaveRequest: leaveRequest ? { ...leaveRequest } : null,
+        }];
+      }).sort((a, b) => Date.parse(b.assignedAt) - Date.parse(a.assignedAt));
+    },
+
     listInvitations(expectedUserId) {
       const user = actor(expectedUserId);
       return read().invitations.filter((item) => item.recipientId === user.id).map(decorateInvitation).filter(Boolean)
@@ -254,6 +285,11 @@ export function createCollaborationStore({
         })),
         invitations: data.invitations.filter((item) => sameProject(item, user.id, projectId)).map(decorateInvitation).filter(Boolean),
         joinRequests: data.requests.filter((item) => sameProject(item, user.id, projectId)).map((item) => decorateRequest(data, item)).filter(Boolean),
+        leaveRequests: data.leaveRequests.filter((item) => sameProject(item, user.id, projectId)).map((item) => ({
+          ...item,
+          memberName: memberFor(data, item.ownerId, item.projectId, item.memberId)?.memberName || 'Team member',
+          mission: catalog.find((mission) => mission.id === item.missionId) || null,
+        })),
         opportunities: data.opportunities.filter((item) => sameProject(item, user.id, projectId)),
       };
     },
@@ -430,6 +466,14 @@ export function createCollaborationStore({
       const instructions = text(details.instructions);
       if (existing?.memberId === memberId && existing.instructions === instructions) return clone(existing);
       const assignment = { id: createId(), ownerId: user.id, projectId, memberId, missionId, instructions, status: 'assigned', assignedAt: timestamp() };
+      if (existing) {
+        for (const request of data.leaveRequests) {
+          if (request.assignmentId === existing.id && request.status === 'pending') {
+            request.status = 'resolved';
+            request.respondedAt = timestamp();
+          }
+        }
+      }
       data.assignments = data.assignments.filter((item) => !(sameProject(item, user.id, projectId) && item.missionId === missionId));
       data.assignments.push(assignment);
       actor(expectedUserId); ownProject(user, projectId);
@@ -437,10 +481,62 @@ export function createCollaborationStore({
       return clone(assignment);
     },
 
+    requestAssignmentExit(projectId, ownerId, missionId, expectedUserId) {
+      const user = actor(expectedUserId);
+      const data = read();
+      if (!memberFor(data, ownerId, projectId, user.id) || !foreignProject(ownerId, projectId)) {
+        throw new Error('You no longer have access to this roadmap.');
+      }
+      const assignment = data.assignments.find((item) => sameProject(item, ownerId, projectId)
+        && item.memberId === user.id && item.missionId === missionId);
+      if (!assignment) throw new Error('This mission is no longer assigned to you.');
+      const existing = data.leaveRequests.find((item) => item.assignmentId === assignment.id && item.status === 'pending');
+      if (existing) return clone(existing);
+      const request = {
+        id: createId(), ownerId, projectId, memberId: user.id, missionId,
+        assignmentId: assignment.id, status: 'pending', createdAt: timestamp(), respondedAt: null,
+      };
+      data.leaveRequests.push(request);
+      actor(expectedUserId);
+      write(data);
+      return clone(request);
+    },
+
+    respondAssignmentExit(requestId, response, expectedUserId) {
+      const user = actor(expectedUserId);
+      if (!['approved', 'declined'].includes(response)) throw new Error('Choose Approve or Decline.');
+      const data = read();
+      const request = data.leaveRequests.find((item) => item.id === requestId && item.ownerId === user.id);
+      if (!request) throw new Error('This exit request is no longer available.');
+      ownProject(user, request.projectId);
+      if (request.status !== 'pending') throw new Error('This exit request already has a final decision.');
+      if (response === 'approved') {
+        const assignment = data.assignments.find((item) => item.id === request.assignmentId
+          && sameProject(item, request.ownerId, request.projectId) && item.memberId === request.memberId);
+        if (!assignment) throw new Error('The assigned mission changed before this request was reviewed.');
+        data.assignments = data.assignments.filter((item) => item.id !== assignment.id);
+      }
+      request.status = response;
+      request.respondedAt = timestamp();
+      actor(expectedUserId);
+      ownProject(user, request.projectId);
+      write(data);
+      return clone(request);
+    },
+
     removeAssignment(projectId, memberId, missionId, expectedUserId) {
       const user = actor(expectedUserId);
       ownProject(user, projectId);
       const data = read();
+      const assignment = data.assignments.find((item) => sameProject(item, user.id, projectId) && item.memberId === memberId && item.missionId === missionId);
+      if (assignment) {
+        for (const request of data.leaveRequests) {
+          if (request.assignmentId === assignment.id && request.status === 'pending') {
+            request.status = 'resolved';
+            request.respondedAt = timestamp();
+          }
+        }
+      }
       data.assignments = data.assignments.filter((item) => !(sameProject(item, user.id, projectId) && item.memberId === memberId && item.missionId === missionId));
       write(data);
     },

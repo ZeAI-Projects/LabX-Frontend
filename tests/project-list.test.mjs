@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { paginationItems, projectDetails, projectDomains, selectProjects, UNSET_DOMAIN } from '../src/features/projects/services/project_list.js';
+import { formatRoadmapDate, paginationItems, projectDetails, projectDomains, PROJECTS_PER_PAGE, selectProjects, UNSET_DOMAIN } from '../src/features/projects/services/project_list.js';
 import { ROADMAP_VISUAL_INVITATION_DATA, ROADMAP_VISUAL_JOINED_DATA, ROADMAP_VISUAL_MOCK_DATA, ROADMAP_VISUAL_MY_DATA } from '../src/features/projects/services/roadmap_visual_mock_data.js';
 
 const project = (id, overrides = {}) => ({ id: String(id), name: `Project ${id}`, created_by: 'Sam', created_at: `2026-10-${String(id).padStart(2, '0')}T12:00:00Z`, updated_at: `2026-10-${String(id).padStart(2, '0')}T12:00:00Z`, ...overrides });
@@ -16,6 +16,16 @@ test('status and domains reflect assessment drafts and actual roadmap completion
   assert.equal(projectDetails(draft).domain, 'Education');
   assert.equal(projectDetails(project(5, { draft: { answers: { q1: 999, q2: -1 } } })).status, 'pending');
   assert.deepEqual(projectDomains(projects), ['Education', 'Healthcare & MedTech', UNSET_DOMAIN]);
+});
+
+test('roadmap table dates use ordinal day, abbreviated month and year', () => {
+  assert.equal(formatRoadmapDate('2026-10-23T12:00:00Z'), '23rd Oct 2026');
+  assert.equal(formatRoadmapDate('2026-10-01T12:00:00Z'), '1st Oct 2026');
+  assert.equal(formatRoadmapDate('2026-10-02T12:00:00Z'), '2nd Oct 2026');
+  assert.equal(formatRoadmapDate('2026-10-03T12:00:00Z'), '3rd Oct 2026');
+  assert.equal(formatRoadmapDate('2026-10-11T12:00:00Z'), '11th Oct 2026');
+  assert.equal(formatRoadmapDate('not-a-date'), '—');
+  assert.equal(formatRoadmapDate(null), '—');
 });
 
 test('search combines case-insensitive words across name, domain and creator with filters', () => {
@@ -35,15 +45,16 @@ test('all sort orders are deterministic and leave the original collection intact
   assert.deepEqual(projects, before);
 });
 
-test('inline batches use four projects, count filtered results, and never repeat a record', () => {
+test('pagination shows ten projects per page, counts filtered results, and never repeats a record', () => {
   const many = Array.from({ length: 23 }, (_, i) => project(i + 1));
-  const pages = Array.from({ length: 6 }, (_, index) => selectProjects(many, { page: index + 1 }));
-  assert.deepEqual(pages.map((value) => value.items.length), [4, 4, 4, 4, 4, 3]);
-  assert.deepEqual(pages.map(({ from, to }) => [from, to]), [[1, 4], [5, 8], [9, 12], [13, 16], [17, 20], [21, 23]]);
+  const pages = Array.from({ length: 3 }, (_, index) => selectProjects(many, { page: index + 1 }));
+  assert.equal(PROJECTS_PER_PAGE, 10);
+  assert.deepEqual(pages.map((value) => value.items.length), [10, 10, 3]);
+  assert.deepEqual(pages.map(({ from, to }) => [from, to]), [[1, 10], [11, 20], [21, 23]]);
   assert.equal(new Set(pages.flatMap((value) => value.items.map((p) => p.id))).size, 23);
   const filtered = selectProjects(many, { query: 'Project 2', page: 4 });
   assert.equal(filtered.total, 6);
-  assert.equal(filtered.page, 2);
+  assert.equal(filtered.page, 1);
 });
 
 test('out-of-range pages clamp after deletion, malformed pages and empty results are safe', () => {
@@ -104,8 +115,8 @@ test('mock roadmaps support combined search, status and domain filtering with so
     sort: 'name-asc',
   });
   assert.deepEqual(matching.items.map(({ name }) => name), ['PulsePath']);
-  const pages = Array.from({ length: Math.ceil(ROADMAP_VISUAL_MOCK_DATA.length / 4) }, (_, index) => selectProjects(ROADMAP_VISUAL_MOCK_DATA, { page: index + 1 }));
-  assert.equal(pages[0].items.length, 4);
+  const pages = Array.from({ length: Math.ceil(ROADMAP_VISUAL_MOCK_DATA.length / PROJECTS_PER_PAGE) }, (_, index) => selectProjects(ROADMAP_VISUAL_MOCK_DATA, { page: index + 1 }));
+  assert.equal(pages[0].items.length, PROJECTS_PER_PAGE);
   assert.equal(pages.flatMap(({ items }) => items).length, ROADMAP_VISUAL_MOCK_DATA.length);
   assert.equal(new Set(pages.flatMap(({ items }) => items.map(({ id }) => id))).size, ROADMAP_VISUAL_MOCK_DATA.length);
 });

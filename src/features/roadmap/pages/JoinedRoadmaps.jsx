@@ -1,42 +1,146 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowRight, Check, CheckCircle2, Filter, Route, Search, X } from 'lucide-react';
+import { ArrowRight, Check, Filter, LogOut, Search, X } from 'lucide-react';
 import { useAuth } from '../../../hooks/use_auth.js';
-import { ProjectFilterSelect, SortHeading } from '../../projects/components/ProjectsCollectionControls.jsx';
-import { projectDetails, projectDomains, PROJECT_SORTS, PROJECT_STATUSES, selectAllProjects, UNSET_DOMAIN } from '../../projects/services/project_list.js';
-import { ROADMAP_VISUAL_MOCK_DATA } from '../../projects/services/roadmap_visual_mock_data.js';
+import { ProjectFilterSelect, ProjectsPagination, SortHeading } from '../../projects/components/ProjectsCollectionControls.jsx';
+import { formatRoadmapDate, PROJECTS_PER_PAGE, UNSET_DOMAIN } from '../../projects/services/project_list.js';
 import { collaborationStore } from '../services/roadmap_collaboration.js';
 import { CollaborationBadge, CollaborationFeedback } from '../components/CollaborationPortal.jsx';
 import { collaborationDate, useCollaborationAction, useCollaborationRefresh, useCollaborationVersion } from '../components/collaboration_ui.js';
+import { createMockRoadmap } from '../services/mock_roadmap.js';
 import { RoadmapPage } from './RoadmapPage.jsx';
 import '../components/RoadmapTeam.css';
 
 const roleLabel = (role) => role === 'co-founder' ? 'Co-founder' : 'Member';
+const assignmentStatuses = [['assigned', 'Assigned'], ['exit-requested', 'Exit requested']];
+const assignmentSorts = ['project-asc', 'project-desc', 'founder-asc', 'founder-desc', 'domain-asc', 'domain-desc', 'mission-asc', 'mission-desc', 'joined-asc', 'joined-desc', 'expires-asc', 'expires-desc', 'status-asc', 'status-desc'];
+const assignmentStatus = (assignment) => assignment.leaveRequest ? 'exit-requested' : 'assigned';
 
-export function JoinedRoadmaps({ demoProjects = [], onPreview = () => {}, compact = false }) {
+function demoAssignmentsFrom(projects, leaveRequests) {
+  return projects.map((project) => {
+    const level = Number.isInteger(project.level) ? project.level : 1;
+    const roadmap = createMockRoadmap({ domain: project.domain, stage: project.stage, level });
+    const stage = roadmap.stages.find((item) => item.name === project.stage) || roadmap.stages[0];
+    const selectedLevel = stage.levels.find((item) => item.number === level) || stage.levels[0];
+    const mission = selectedLevel.milestones.find((item) => item.name === project.currentMission) || selectedLevel.milestones[0];
+    return {
+      id: `demo-assignment:${project.id}`,
+      ownerId: '',
+      projectId: project.id,
+      missionId: mission.id,
+      assignedAt: project.updated_at || '',
+      joinedAt: project.joinedAt || null,
+      expiresAt: project.expiresAt || null,
+      status: 'assigned',
+      leaveRequest: leaveRequests.has(project.id) ? { status: 'pending', visualDemo: true } : null,
+      project: { ...project, owner_id: '' },
+      mission,
+      visualDemo: true,
+    };
+  });
+}
+
+function selectAssignmentRows(rows, { query, status, domain, sort }) {
+  const needle = query.trim().toLocaleLowerCase();
+  const filtered = rows.filter((assignment) => {
+    const projectDomain = assignment.project.assessment_result?.domain || assignment.project.domain || '';
+    const description = `${assignment.project.name} ${assignment.project.created_by || ''} ${projectDomain} ${assignment.mission.name} ${assignment.mission.stageName} level ${assignment.mission.level}`.toLocaleLowerCase();
+    return (!needle || description.includes(needle))
+      && (!status || assignmentStatus(assignment) === status)
+      && (!domain || (domain === UNSET_DOMAIN ? !projectDomain : projectDomain === domain));
+  });
+  const separator = sort.lastIndexOf('-');
+  const field = sort.slice(0, separator);
+  const direction = sort.slice(separator + 1) === 'desc' ? -1 : 1;
+  const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+  filtered.sort((a, b) => {
+    const values = {
+      project: [a.project.name, b.project.name],
+      founder: [a.project.created_by || '', b.project.created_by || ''],
+      domain: [a.project.assessment_result?.domain || a.project.domain || '', b.project.assessment_result?.domain || b.project.domain || ''],
+      mission: [`${a.mission.stageName} ${a.mission.level} ${a.mission.name}`, `${b.mission.stageName} ${b.mission.level} ${b.mission.name}`],
+      joined: [a.joinedAt || '', b.joinedAt || ''],
+      expires: [a.expiresAt || '', b.expiresAt || ''],
+      status: [assignmentStatus(a), assignmentStatus(b)],
+    }[field] || [a.project.name, b.project.name];
+    const left = ['joined', 'expires'].includes(field) ? Date.parse(values[0]) || 0 : values[0];
+    const right = ['joined', 'expires'].includes(field) ? Date.parse(values[1]) || 0 : values[1];
+    const comparison = typeof left === 'number' ? left - right : collator.compare(left, right);
+    return comparison * direction || collator.compare(a.id, b.id);
+  });
+  return filtered;
+}
+
+function AssignmentExitAction({ assignment, userId, onChange, onDemoRequest }) {
+  const action = useCollaborationAction();
+  const dialogRef = useRef(null);
+  const disabled = action.busy || Boolean(assignment.leaveRequest);
+  const label = assignment.leaveRequest
+      ? `Exit request pending for ${assignment.mission.name}`
+      : `Request to leave ${assignment.mission.name}`;
+  const requestExit = () => action.run(
+      () => assignment.visualDemo
+        ? onDemoRequest(assignment.projectId)
+        : collaborationStore.requestAssignmentExit(assignment.projectId, assignment.ownerId, assignment.missionId, userId),
+      assignment.visualDemo
+        ? 'Exit request saved for this sample mission. It remains assigned until founder approval.'
+        : 'Exit request sent to the roadmap founder. Your assignment stays active until it is approved.',
+      () => { dialogRef.current?.close(); onChange(); },
+    );
+  return <div className="projects-assignment-exit">
+    <button type="button" className="project-row__action project-row__action--danger" aria-label={label} title={label} disabled={disabled || action.busy} onClick={() => dialogRef.current?.showModal()}>
+      <LogOut size={16} aria-hidden="true" />
+    </button>
+    {!assignment.leaveRequest && <dialog ref={dialogRef} className="roadmap-team-dialog roadmap-exit-dialog" aria-labelledby={`exit-request-title-${assignment.id}`}>
+      <div className="roadmap-team-heading">
+        <div><span className="roadmap-team-kicker">Mission exit request</span><h2 id={`exit-request-title-${assignment.id}`}>Request to leave this mission?</h2></div>
+        <button type="button" className="roadmap-team-close" aria-label="Close exit request confirmation" onClick={() => dialogRef.current?.close()}><X size={18} aria-hidden="true" /></button>
+      </div>
+      <p className="roadmap-team-note">This sends a request to the founder for <strong>{assignment.mission.name}</strong> in <strong>{assignment.project.name}</strong>. You remain assigned until the founder approves it.</p>
+      <CollaborationFeedback action={action} />
+      <div className="roadmap-team-toolbar">
+        <button type="button" className="roadmap-team-button" disabled={action.busy} onClick={() => dialogRef.current?.close()}>Cancel</button>
+        <button type="button" className="roadmap-team-button roadmap-team-button--primary" disabled={action.busy} onClick={requestExit}>{action.busy ? 'Sending…' : 'Send exit request'}</button>
+      </div>
+    </dialog>}
+    <CollaborationFeedback action={action} />
+  </div>;
+}
+
+export function JoinedRoadmaps({ demoProjects = [], compact = false }) {
   const titleId = useId();
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [domainFilterOpen, setDomainFilterOpen] = useState(false);
   const [searchDraftState, setSearchDraftState] = useState({ query: '', value: '' });
+  const [demoLeaveRequests, setDemoLeaveRequests] = useState(() => new Set());
   const domainFilterRef = useRef(null);
   const collaborationRevision = useCollaborationVersion();
   const joinedSnapshot = useMemo(() => {
-    try { return { joined: user?.role === 'founder' ? collaborationStore.listJoinedProjects(user.id) : [], error: '', revision: collaborationRevision }; }
-    catch (err) { return { joined: [], error: err.message, revision: collaborationRevision }; }
+    try {
+      return user?.role === 'founder'
+        ? { joined: collaborationStore.listJoinedProjects(user.id), assignments: collaborationStore.listMyAssignments(user.id), error: '', revision: collaborationRevision }
+        : { joined: [], assignments: [], error: '', revision: collaborationRevision };
+    } catch (err) { return { joined: [], assignments: [], error: err.message, revision: collaborationRevision }; }
   }, [user, collaborationRevision]);
-  const { joined, error } = joinedSnapshot;
+  const { joined, assignments = [], error } = joinedSnapshot;
   const allJoined = useMemo(() => [...joined, ...demoProjects], [joined, demoProjects]);
+  const assignmentRows = useMemo(() => [...assignments, ...demoAssignmentsFrom(demoProjects, demoLeaveRequests)], [assignments, demoProjects, demoLeaveRequests]);
   const query = searchParams.get('q') || '';
-  const status = PROJECT_STATUSES.some(([value]) => value === searchParams.get('status')) ? searchParams.get('status') : '';
+  const status = assignmentStatuses.some(([value]) => value === searchParams.get('status')) ? searchParams.get('status') : '';
   const domain = searchParams.get('domain') || '';
-  const sort = PROJECT_SORTS.some(([value]) => value === searchParams.get('sort')) ? searchParams.get('sort') : 'updated';
+  const sort = assignmentSorts.includes(searchParams.get('sort')) ? searchParams.get('sort') : 'joined-desc';
   const searchDraft = searchDraftState.query === query ? searchDraftState.value : query;
   const setSearchDraft = (value) => setSearchDraftState({ query, value });
-  const domains = useMemo(() => projectDomains([...allJoined, ...ROADMAP_VISUAL_MOCK_DATA]), [allJoined]);
-  const selection = useMemo(() => ({ query, status, domain, sort }), [query, status, domain, sort]);
-  const results = useMemo(() => selectAllProjects(allJoined, selection), [allJoined, selection]);
-  const visibleProjects = results.items;
+  const domains = useMemo(() => [...new Set(assignmentRows.map((row) => row.project.assessment_result?.domain || row.project.domain || UNSET_DOMAIN))]
+    .sort((a, b) => a === UNSET_DOMAIN ? 1 : b === UNSET_DOMAIN ? -1 : a.localeCompare(b)), [assignmentRows]);
+  const filteredAssignments = useMemo(() => selectAssignmentRows(assignmentRows, { query, status, domain, sort }), [assignmentRows, query, status, domain, sort]);
+  const pageParam = searchParams.get('page') || '1';
+  const pages = Math.max(1, Math.ceil(filteredAssignments.length / PROJECTS_PER_PAGE));
+  const page = Math.min(pages, Math.max(1, Number.isSafeInteger(Number(pageParam)) ? Number(pageParam) : 1));
+  const from = filteredAssignments.length ? (page - 1) * PROJECTS_PER_PAGE + 1 : 0;
+  const to = Math.min(page * PROJECTS_PER_PAGE, filteredAssignments.length);
+  const visibleAssignments = filteredAssignments.slice(from - 1, to);
   const hasFilters = Boolean(query || status || domain);
   const activeFilterCount = Number(Boolean(status)) + Number(Boolean(domain));
 
@@ -76,67 +180,77 @@ export function JoinedRoadmaps({ demoProjects = [], onPreview = () => {}, compac
     event.preventDefault();
     updateControl('q', searchDraft.trim());
   };
+  const updatePage = (nextPage) => {
+    setSearchParams(() => {
+      const next = new URLSearchParams(window.location.search);
+      if (nextPage > 1) next.set('page', String(nextPage));
+      else next.delete('page');
+      return next;
+    }, { replace: true });
+  };
+  const refresh = useCollaborationRefresh();
+  const requestDemoExit = (projectId) => setDemoLeaveRequests((previous) => new Set(previous).add(projectId));
 
   if (!user || user.role !== 'founder') return null;
-  if (compact) return <section className="projects-listing projects-listing--joined" aria-label="Joined roadmaps">
+  if (compact) return <section className="projects-listing projects-listing--joined" aria-label="Joined as Member assignments">
     {error && <p className="roadmap-team-error" role="alert">{error}</p>}
-    <div className="projects-controls" aria-label="Search and filter joined roadmaps">
+    <div className="projects-controls" aria-label="Search and filter assigned missions">
       <form className="projects-compact-search" role="search" onSubmit={submitSearch}>
         <Search size={16} aria-hidden="true" />
-        <input id="joined-roadmap-search" type="search" aria-label="Search projects" placeholder="Search projects..." value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} maxLength={100} enterKeyHint="search" />
-        <button type="submit" aria-label="Apply project search"><ArrowRight size={15} aria-hidden="true" /></button>
+        <input id="joined-roadmap-search" type="search" aria-label="Search assigned missions" placeholder="Search missions or roadmaps..." value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} maxLength={100} enterKeyHint="search" />
+        <button type="submit" aria-label="Apply mission search"><ArrowRight size={15} aria-hidden="true" /></button>
         {(query || searchDraft) && <button type="button" aria-label="Clear search" onClick={() => { setSearchDraft(''); updateControl('q', ''); }}><X size={14} aria-hidden="true" /></button>}
       </form>
       <div className="projects-filter-anchor" ref={domainFilterRef}>
-        <button type="button" className={`projects-filter-button${domainFilterOpen ? ' is-active' : ''}`} aria-label="Toggle project filters" title="Filters" aria-expanded={domainFilterOpen} onClick={() => setDomainFilterOpen((value) => !value)}>
+        <button type="button" className={`projects-filter-button${domainFilterOpen ? ' is-active' : ''}`} aria-label="Toggle mission filters" title="Filters" aria-expanded={domainFilterOpen} onClick={() => setDomainFilterOpen((value) => !value)}>
           <Filter size={16} aria-hidden="true" />{activeFilterCount > 0 && <span className="projects-filter-count">{activeFilterCount}</span>}
         </button>
         {domainFilterOpen && <div className="projects-filter-panel">
-          <ProjectFilterSelect label="Status" value={status} options={[['', 'All statuses'], ...PROJECT_STATUSES]} onChange={(value) => updateControl('status', value)} />
-          <ProjectFilterSelect label="Domain" value={domain} options={[['', 'All domains'], ...[...new Set([...domains, ...(domain ? [domain] : [])])].map((value) => [value, value === UNSET_DOMAIN ? 'Domain not set yet' : value])]} onChange={(value) => updateControl('domain', value)} />
-          {domain && <button type="button" onClick={() => updateControl('domain', '')}>Clear domain</button>}
+          <ProjectFilterSelect label="Status" value={status} options={[['', 'All statuses'], ...assignmentStatuses]} onChange={(value) => updateControl('status', value)} />
+          <ProjectFilterSelect label="Domain" value={domain} options={[['', 'All domains'], ...domains.map((value) => [value, value === UNSET_DOMAIN ? 'Domain not set yet' : value])]} onChange={(value) => updateControl('domain', value)} />
+          {(domain || status) && <button type="button" onClick={clearFilters}>Clear filters</button>}
         </div>}
       </div>
     </div>
-    <div className="projects-results-summary"><p role="status" aria-live="polite">{hasFilters ? `${results.total} of ${allJoined.length} roadmaps match` : `${visibleProjects.length} of ${results.total} roadmaps shown`}</p>{hasFilters && <button type="button" onClick={clearFilters}><X size={14} aria-hidden="true" />Clear filters</button>}</div>
-    {results.total ? <div className="projects-list" role="region" aria-label="Joined roadmap list" tabIndex={0}>
-      <table className="projects-table projects-table--joined">
-        <caption className="projects-sr-only">Joined roadmaps by project, creator, status, domain, and progress</caption>
-        <colgroup><col className="projects-table__project" /><col className="projects-table__status" /><col className="projects-table__domain" /><col className="projects-table__creator" /><col className="projects-table__progress" /><col className="projects-table__actions" /></colgroup>
-        <thead><tr>
-          <th scope="col" aria-sort={sort === 'name-asc' ? 'ascending' : sort === 'name-desc' ? 'descending' : 'none'}><SortHeading label="Project" ascending="name-asc" descending="name-desc" sort={sort} onSort={(value) => updateControl('sort', value)} /></th>
-          <th scope="col" aria-sort={sort === 'status-asc' ? 'ascending' : sort === 'status-desc' ? 'descending' : 'none'}><SortHeading label="Status" ascending="status-asc" descending="status-desc" sort={sort} onSort={(value) => updateControl('sort', value)} /></th>
-          <th scope="col" aria-sort={sort === 'domain-asc' ? 'ascending' : sort === 'domain-desc' ? 'descending' : 'none'}><SortHeading label="Domain" ascending="domain-asc" descending="domain-desc" sort={sort} onSort={(value) => updateControl('sort', value)} /></th>
-          <th scope="col" aria-sort={sort === 'creator-asc' ? 'ascending' : sort === 'creator-desc' ? 'descending' : 'none'}><SortHeading label="Created by" ascending="creator-asc" descending="creator-desc" sort={sort} onSort={(value) => updateControl('sort', value)} /></th>
-          <th scope="col" aria-sort={sort === 'progress-asc' ? 'ascending' : sort === 'progress-desc' ? 'descending' : 'none'}><SortHeading label="Progress" ascending="progress-asc" descending="progress-desc" sort={sort} onSort={(value) => updateControl('sort', value)} /></th>
-          <th scope="col" aria-hidden="true" />
-        </tr></thead>
-        <tbody>{visibleProjects.map((project) => {
-          const details = projectDetails(project);
-          const progress = details.progressPercent;
-          const status = details.status;
-          const statusLabel = { pending: 'Assessment pending', 'in-progress': 'In progress', ready: 'Roadmap ready', completed: 'Roadmap completed' }[status] || 'Roadmap ready';
-          const projectDomain = details.domain || 'Domain not set yet';
-          const stage = details.stage;
-          const level = details.level;
-          const owner = project.visualDemo ? project.created_by : project.created_by || 'Founder';
-          const mission = project.visualDemo ? project.currentMission : '';
-          const stageNumber = project.visualDemo ? project.stageNumber : null;
-          return <tr className={`project-row${status === 'completed' ? ' project-row--ready' : ''}`} key={`${project.visualDemo ? 'demo' : project.owner_id}:${project.id}`}>
-            <th scope="row"><div className="project-row__identity"><span className="project-row__icon" aria-hidden="true"><Route size={18} /></span><div><h2 title={project.name}>{project.name}</h2><p className="project-row__description" title={project.description || ''}>{project.description || `Roadmap shared by ${owner}.`}</p></div></div></th>
-            <td data-label="Status"><span className={`project-status project-status--${status}`}>{status === 'completed' ? <CheckCircle2 size={13} aria-hidden="true" /> : <span className="project-status__dot" aria-hidden="true" />}{statusLabel}</span></td>
-            <td data-label="Domain"><span className="project-row__domain" title={projectDomain}>{projectDomain}</span></td>
-            <td data-label="Created by"><span className="project-row__creator" title={owner}>{owner}</span></td>
-            <td data-label="Progress"><div className="project-progress"><div className="project-progress__summary"><strong>{progress === null || progress === undefined ? '—' : `${progress}%`}</strong></div><div className="project-progress__track" role="progressbar" aria-label={`Roadmap progress for ${project.name}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress ?? 0}><span style={{ width: `${progress ?? 0}%` }} /></div>{stage && <span className="project-progress__placement">{stageNumber ? `Stage ${stageNumber} · ` : ''}{stage}{level ? ` · Level ${level}` : ''}</span>}{mission && <span className="project-row__mission">Next mission · {mission}</span>}</div></td>
-            <td className="project-row__actions-cell"><div className="project-row__actions">{project.visualDemo ? <button type="button" className="projects-button project-row__open" onClick={() => onPreview(project)} aria-label={`Preview roadmap: ${project.name}`}><span>Continue</span></button> : <Link className="projects-button project-row__open" to={`/roadmap/joined/${encodeURIComponent(project.owner_id)}/${encodeURIComponent(project.id)}`} aria-label={`Continue roadmap: ${project.name}`}><span>Continue</span></Link>}</div></td>
-          </tr>;
-        })}</tbody>
-      </table>
-      {visibleProjects.length > 4 && <p className="projects-list__more" role="status">Scroll to view the remaining joined roadmaps</p>}
-    </div> : hasFilters ? <section className="projects-no-results" aria-labelledby="joined-roadmaps-no-results-title"><Search size={28} aria-hidden="true" /><h3 id="joined-roadmaps-no-results-title">No projects match your search</h3><p>Try another name, status, or domain.</p><button type="button" className="projects-button" onClick={clearFilters}>Clear search and filters</button></section> : !error && <div className="roadmap-collaboration-empty">No joined roadmaps yet. Accept an invitation or have a join request accepted to find your team here.</div>}
+    <div className="projects-results-summary"><p role="status" aria-live="polite">{hasFilters ? `${filteredAssignments.length} of ${assignmentRows.length} missions match` : `${assignmentRows.length} assigned missions`}</p>{hasFilters && <button type="button" onClick={clearFilters}><X size={14} aria-hidden="true" />Clear filters</button>}</div>
+    {filteredAssignments.length ? <>
+      <div className="projects-list" role="region" aria-label="Assigned missions table" tabIndex={0}>
+        <table className="projects-table projects-table--assignments">
+          <caption className="projects-sr-only">Missions assigned to you, their roadmaps and founders, dates, status, and exit request action</caption>
+          <colgroup><col className="projects-table__mission" /><col className="projects-table__project" /><col className="projects-table__creator" /><col className="projects-table__date" /><col className="projects-table__date" /><col className="projects-table__status" /><col className="projects-table__actions" /></colgroup>
+          <thead><tr>
+            <th scope="col" aria-sort={sort.startsWith('mission-') ? sort.endsWith('asc') ? 'ascending' : 'descending' : 'none'}><SortHeading label="Mission" ascending="mission-asc" descending="mission-desc" sort={sort} onSort={(value) => updateControl('sort', value)} /></th>
+            <th scope="col" aria-sort={sort.startsWith('project-') ? sort.endsWith('asc') ? 'ascending' : 'descending' : 'none'}><SortHeading label="Project" ascending="project-asc" descending="project-desc" sort={sort} onSort={(value) => updateControl('sort', value)} /></th>
+            <th scope="col" aria-sort={sort.startsWith('founder-') ? sort.endsWith('asc') ? 'ascending' : 'descending' : 'none'}><SortHeading label="Founder" ascending="founder-asc" descending="founder-desc" sort={sort} onSort={(value) => updateControl('sort', value)} /></th>
+            <th scope="col" aria-sort={sort.startsWith('joined-') ? sort.endsWith('asc') ? 'ascending' : 'descending' : 'none'}><SortHeading label="Joined at" ascending="joined-asc" descending="joined-desc" sort={sort} onSort={(value) => updateControl('sort', value)} /></th>
+            <th scope="col" aria-sort={sort.startsWith('expires-') ? sort.endsWith('asc') ? 'ascending' : 'descending' : 'none'}><SortHeading label="Expire Date" ascending="expires-asc" descending="expires-desc" sort={sort} onSort={(value) => updateControl('sort', value)} /></th>
+            <th scope="col" aria-sort={sort.startsWith('status-') ? sort.endsWith('asc') ? 'ascending' : 'descending' : 'none'}><SortHeading label="Status" ascending="status-asc" descending="status-desc" sort={sort} onSort={(value) => updateControl('sort', value)} /></th>
+            <th scope="col">Action</th>
+          </tr></thead>
+          <tbody>{visibleAssignments.map((assignment) => {
+            const projectDomain = assignment.project.assessment_result?.domain || assignment.project.domain || 'Domain not set yet';
+            const statusValue = assignmentStatus(assignment);
+            const route = assignment.visualDemo
+              ? `/roadmap/demo/${encodeURIComponent(assignment.projectId)}`
+              : `/roadmap/joined/${encodeURIComponent(assignment.ownerId)}/${encodeURIComponent(assignment.projectId)}`;
+            const missionUrl = `${route}?milestone=${encodeURIComponent(assignment.missionId)}`;
+            return <tr className="project-row" key={assignment.id}>
+              <th scope="row" data-label="Mission"><Link className="projects-assignment-mission" to={missionUrl}>{assignment.mission.name}<small>{assignment.mission.stageName} · Level {assignment.mission.level}</small></Link></th>
+              <td data-label="Project"><div className="project-row__identity"><div><h2 title={assignment.project.name}><Link className="project-row__title-link" to={route}>{assignment.project.name}</Link></h2><span className="project-row__domain" title={projectDomain}>{projectDomain}</span></div></div></td>
+              <td data-label="Founder"><span className="project-row__creator">{assignment.project.created_by || 'Founder'}</span></td>
+              <td data-label="Joined at" className="project-row__date">{formatRoadmapDate(assignment.joinedAt)}</td>
+              <td data-label="Expire Date" className="project-row__date" title={assignment.expiresAt ? undefined : 'No expiry date is set'}>{formatRoadmapDate(assignment.expiresAt)}</td>
+              <td data-label="Status"><span className={`project-status project-status--${statusValue}`}>{statusValue === 'exit-requested' ? 'Exit requested' : 'Assigned'}</span></td>
+              <td className="project-row__actions-cell" data-label="Action"><div className="project-row__actions"><AssignmentExitAction assignment={assignment} userId={user.id} onChange={refresh} onDemoRequest={requestDemoExit} /></div></td>
+            </tr>;
+          })}</tbody>
+        </table>
+      </div>
+      <ProjectsPagination total={filteredAssignments.length} from={from} to={to} page={page} pages={pages} onPageChange={updatePage} itemLabel="missions" />
+    </> : hasFilters ? <section className="projects-no-results" aria-labelledby="joined-missions-no-results-title"><Search size={28} aria-hidden="true" /><h3 id="joined-missions-no-results-title">No missions match your filters</h3><p>Try another mission, roadmap, founder, status, or domain.</p><button type="button" className="projects-button" onClick={clearFilters}>Clear search and filters</button></section> : !error && <div className="roadmap-collaboration-empty">No missions have been assigned to you yet. Accepted roadmap assignments will appear here.</div>}
   </section>;
   return <section className="roadmap-collaboration-list" aria-labelledby={titleId}>
-    <h2 id={titleId}>Joined roadmaps</h2>
+    <h2 id={titleId}>Joined as Member</h2>
     <p>Teams you joined through an accepted request or invitation. Your assigned missions become actionable when they unlock.</p>
     {error && <p className="roadmap-team-error" role="alert">{error}</p>}
     {allJoined.length ? <ul>
@@ -146,7 +260,7 @@ export function JoinedRoadmaps({ demoProjects = [], onPreview = () => {}, compac
       </li>)}
       {demoProjects.map((project) => <li key={`demo:${project.id}`}>
         <div><h3>{project.name}</h3><CollaborationBadge item={{ status: 'accepted' }} /><p>Owned by {project.created_by} · {roleLabel(project.memberRole || 'member')}</p><p>{project.domain} · {project.stage} · Level {project.level}</p></div>
-        <button type="button" className="roadmap-team-button" onClick={() => onPreview(project)} aria-label={`Preview joined roadmap: ${project.name}`}>Preview roadmap<ArrowRight size={15} /></button>
+        <Link className="roadmap-team-button" to={`/roadmap/demo/${encodeURIComponent(project.id)}`} aria-label={`Open joined roadmap: ${project.name}`}>Open roadmap<ArrowRight size={15} /></Link>
       </li>)}
     </ul> : !error && <div className="roadmap-collaboration-empty">No joined roadmaps yet. Accept an invitation or have a join request accepted to find your team here.</div>}
   </section>;
