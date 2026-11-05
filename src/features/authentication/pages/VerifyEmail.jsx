@@ -6,7 +6,6 @@ import { sessionStore } from '../../../services/storage/local_storage.js';
 import { getRegistrationDestination } from '../../../utils/onboarding.js';
 import { AuthShell } from '../components/AuthShell';
 import { VerificationCodeInput } from '../components/VerificationCodeInput.jsx';
-import { soundManager } from '../components/gamified/soundEffects';
 import { useAuthEffects } from '../components/gamified/useAuthEffects';
 
 const VERIFICATION_KEY = 'labx_signup_verification';
@@ -56,7 +55,6 @@ export function VerifyEmail() {
         sessionStore.removeItem(VERIFICATION_KEY);
       }
       if (!isMounted()) return;
-      soundManager.playXpGain();
       navigate(getRegistrationDestination(user), { replace: true });
     } catch (verificationError) {
       if (isMounted()) setError(verificationError.message || 'This verification code is invalid. Please try again.');
@@ -81,7 +79,6 @@ export function VerifyEmail() {
       setVerification(nextVerification);
       setCode('');
       setStatus('A new verification code is ready. Your previous code no longer works.');
-      soundManager.playXpGain();
     } catch (resendError) {
       if (isMounted()) setError(resendError.message || 'We couldn’t send the verification code. Please try again.');
     } finally {
@@ -111,14 +108,14 @@ export function VerifyEmail() {
               <VerificationCodeInput ref={codeInput} idPrefix="signup-code" labelId="signup-code-label"
                 value={code} disabled={busy} invalid={Boolean(error)}
                 describedBy={`verification-hint${error ? ' verify-email-error' : ''}`}
-                onChange={(value) => { setCode(value); setError(''); }} onFocus={soundManager.playFocus} />
+                onChange={(value) => { setCode(value); setError(''); }} />
               <p className="verification-hint" id="verification-hint">Codes expire after 10 minutes. Use your latest code.</p>
             </div>
             <div className="compact-auth-actions">
               <button type="button" className="login-link verification-resend" disabled={busy} onClick={handleResend}>
                 <RefreshCw size={14} aria-hidden="true" />{resending ? 'Sending code…' : 'Resend code'}
               </button>
-              <button type="submit" className="btn-warp-create" disabled={busy} onMouseEnter={soundManager.playHover}>
+              <button type="submit" className="btn-warp-create" disabled={busy}>
                 <span>{loading ? 'Verifying…' : 'Verify email'}</span><ArrowRight size={17} aria-hidden="true" />
               </button>
             </div>

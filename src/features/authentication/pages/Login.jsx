@@ -1,10 +1,9 @@
 ﻿import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { AlertCircle, ArrowRight, Check, Eye, EyeOff, Sparkles } from 'lucide-react';
+import { AlertCircle, ArrowRight, Bookmark, BookmarkCheck, Check, Eye, EyeOff, Sparkles } from 'lucide-react';
 import { useAuth } from '../../../hooks/use_auth.js';
 import { getLoginDestination } from '../../../utils/onboarding.js';
 import { AuthShell } from '../components/AuthShell';
-import { soundManager } from '../components/gamified/soundEffects';
 import { useAuthEffects } from '../components/gamified/useAuthEffects';
 
 export const Login = () => {
@@ -44,7 +43,6 @@ export const Login = () => {
     setPasswordResetNotice(false);
     setLoading(true);
     try {
-      soundManager.playWarpLaunch();
       const data = await login(email.trim(), password, { rememberMe });
       if (!isMounted()) return;
       schedule(() => navigate(getLoginDestination(data.user), { replace: true }), 400);
@@ -68,12 +66,12 @@ export const Login = () => {
               autoCapitalize="none" spellCheck={false} className="gamified-input" required disabled={loading}
               aria-invalid={error?.field === 'email'} aria-describedby={error?.field === 'email' ? 'login-error' : undefined}
               value={email} onChange={(event) => { setEmail(event.target.value); setError(null); }}
-              onFocus={soundManager.playFocus} placeholder="you@example.com" />
+              placeholder="you@example.com" />
           </div>
           <div className="gamified-field-group">
             <div className="compact-signin-password-label">
               <label className="gamified-field-label" htmlFor="login-password">Password<span className="required-mark" aria-hidden="true" /></label>
-              <Link className="forgot-pass-link" to="/forgot-password" onMouseEnter={soundManager.playHover}
+              <Link className="forgot-pass-link" to="/forgot-password"
                 aria-disabled={loading} onClick={(event) => { if (loading) event.preventDefault(); }}>Forgot Password</Link>
             </div>
             <div className="gamified-input-wrap">
@@ -81,23 +79,25 @@ export const Login = () => {
                 autoComplete="current-password" className="gamified-input" required disabled={loading}
                 aria-invalid={Boolean(error && error.field !== 'email')} aria-describedby={error && error.field !== 'email' ? 'login-error' : undefined}
                 value={password} onChange={(event) => { setPassword(event.target.value); setError(null); }}
-                onFocus={soundManager.playFocus} placeholder="Enter your password" />
+                placeholder="Enter your password" />
               <button type="button" className="input-action-icon" disabled={loading}
                 aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword}
                 onClick={() => setShowPassword(!showPassword)}>
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                {showPassword ? <Eye size={16} /> : <EyeOff size={16} />}
               </button>
             </div>
           </div>
         </div>
         <div className="compact-auth-actions">
-          <label className="remember-terminal" htmlFor="remember-terminal">
-            <input id="remember-terminal" name="rememberMe" type="checkbox" className="remember-terminal-input"
-              checked={rememberMe} disabled={loading} onChange={(event) => { setRememberMe(event.target.checked); soundManager.playHover(); }} />
-            <span className={`custom-checkbox ${rememberMe ? 'checked' : ''}`} aria-hidden="true">{rememberMe && <Check size={12} strokeWidth={3} />}</span>
+          <button type="button" className={`signin-remember-control${rememberMe ? ' is-selected' : ''}`}
+            name="rememberMe" aria-label="Remember Me" aria-pressed={rememberMe} disabled={loading}
+            onClick={() => setRememberMe(value => !value)}>
+            <span className="signin-remember-control__icon" aria-hidden="true">
+              {rememberMe ? <BookmarkCheck size={18} /> : <Bookmark size={18} />}
+            </span>
             <span>Remember Me</span>
-          </label>
-          <button type="submit" className="btn-warp-create" disabled={loading} onMouseEnter={soundManager.playHover}>
+          </button>
+          <button type="submit" className="btn-warp-create" disabled={loading}>
             {loading ? <><Sparkles size={16} aria-hidden="true" /><span>Signing in…</span></> : <><span>Sign in</span><ArrowRight size={17} aria-hidden="true" /></>}
           </button>
         </div>

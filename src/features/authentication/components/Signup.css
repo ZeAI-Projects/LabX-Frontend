@@ -10,15 +10,6 @@
   padding: 0;
 }
 
-.signup-page .hud-sound-toggle {
-  min-height: 36px;
-  padding: 6px 11px;
-  font-size: .7rem;
-  color: #91a7bf;
-  background: #0c1421aa;
-  border-color: #243247;
-}
-
 .signup-page .gamified-card-shell {
   max-width: 960px;
   flex-direction: row;
@@ -90,7 +81,6 @@
 
 @media (max-width: 600px) {
   .signup-page { padding: 12px; }
-  .signup-page .hud-sound-toggle { min-height: 44px; }
   .signup-page .showcase-panel { padding: 13px 18px; }
   .signup-page .form-panel { padding: 20px 18px; }
   .signup-page .auth-mode-switch-tabs { margin-bottom: 17px; }

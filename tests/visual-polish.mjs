@@ -49,11 +49,7 @@ try {
   await page.getByRole('button',{name:'Clear filters',exact:true}).click();
   await page.waitForFunction(()=>document.querySelectorAll('.project-row').length===10);
   await fit('Mobile projects');
-  assert.equal(await page.locator('.sharp-dock-trigger').count(),0,'The floating Zenith launcher is removed');
-  await page.locator('.app-shell__page').evaluate(element=>element.scrollTo(0,600));
-  await page.waitForFunction(()=>document.querySelector('.app-shell__page').scrollTop>0);
-  assert.equal(await page.locator('.sharp-dock').count(),0,'No assistant covers the page while projects scroll');
-  await page.locator('.app-shell__page').evaluate(element=>element.scrollTo(0,0));
+  assert.equal(await page.locator('.sharp-dock').count(),0,'Roadmap has no floating Zenith assistant');
   await shot('projects-mobile');
   await page.getByRole('button',{name:'Page 2',exact:true}).click();
   await page.waitForFunction(()=>document.querySelectorAll('.project-row').length===3);
@@ -65,9 +61,9 @@ try {
   assert.equal(await page.locator('.sharp-page .sharp-welcome__avatar').isVisible(),false,'Companion does not repeat the large welcome robot');
   await go('/events');await page.setViewportSize({width:390,height:844});
   assert.equal(await page.getByLabel('Category',{exact:true}).isVisible(),false);
-  await page.getByRole('button',{name:'Filters',exact:true}).click();
+  await page.getByRole('button',{name:/More filters/}).click();
   assert.equal(await page.getByLabel('Category',{exact:true}).isVisible(),true);
-  await page.getByRole('button',{name:'Show results',exact:true}).click();await shot('events-mobile');
+  await page.getByRole('button',{name:/More filters/}).click();await shot('events-mobile');
   await page.setViewportSize({width:1440,height:960});
   await go('/roadmap/'+project);
   await page.getByRole('region',{name:'Current stage navigation',exact:true}).waitFor();
@@ -89,5 +85,5 @@ try {
   await page.reload();await page.locator('.rm-page').waitFor();
   assert.equal(await page.locator('.progress-celebration').count(),0,'Reload never invents a new completion');
   assert.deepEqual(errors,[]);
-  console.log('PASS: six-box reset layouts, mobile filters and pagination, fixed right launcher, desktop/mobile page fit, persistent roadmap context, and real approval celebration after dialog close.');
+  console.log('PASS: six-box reset layouts, mobile filters and pagination, no floating Zenith assistant, desktop/mobile page fit, persistent roadmap context, and real approval celebration after dialog close.');
 } finally {await context.close();await browser.close();await server.close();}

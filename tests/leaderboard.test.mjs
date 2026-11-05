@@ -174,6 +174,47 @@ test('each explicitly selected domain has its own leader and reranks members wit
   assert.equal(getLeaderboardSnapshot({ scope: 'domain', domainId: '8' }).leader.full_name, 'Sofia Chen')
 })
 
+test('multiple selected domains retain one ranking entry per founder and domain', () => {
+  const projects = [project(demoUser, 0), project(demoUser, 1)]
+  const selectedIds = ['1', '2']
+  const snapshot = getLeaderboardSnapshot({ user: demoUser, projects, scope: 'domain', domainIds: selectedIds })
+
+  assert.deepEqual(snapshot.selectedDomains.map(domain => domain.id), selectedIds)
+  assert.equal(snapshot.totalFounders, 6)
+  assert.equal(snapshot.allRankings.filter(founder => founder.id === demoUser.id).length, 2)
+  assert.equal(new Set(snapshot.allRankings.map(founder => `${founder.id}:${founder.ranking_domain_id}`)).size, snapshot.totalFounders)
+  assert.ok(snapshot.allRankings.every(founder => selectedIds.includes(founder.ranking_domain_id)
+    && founder.domains.some(domain => domain.id === founder.ranking_domain_id)))
+  for (const domainId of selectedIds) {
+    const domainSnapshot = getLeaderboardSnapshot({ user: demoUser, projects, scope: 'domain', domainId })
+    assert.deepEqual(snapshot.allRankings.filter(founder => founder.ranking_domain_id === domainId)
+      .map(({ id, rank, domain_rank }) => [id, rank, domain_rank]),
+    domainSnapshot.allRankings.map(({ id, rank, domain_rank }) => [id, rank, domain_rank]))
+  }
+  assert.equal(snapshot.userStanding.id, demoUser.id)
+  assert.equal(snapshot.userStanding.rank, snapshot.allRankings.find(founder => founder.id === demoUser.id).rank)
+  assert.deepEqual(snapshot.allRankings.filter(founder => founder.id === demoUser.id).map(founder => founder.domain).sort(),
+    ['Artificial Intelligence & Machine Learning', 'Healthcare & MedTech'].sort())
+
+  const singleMatch = getLeaderboardSnapshot({ user: demoUser, projects: [project(demoUser, 0)], scope: 'domain', domainIds: selectedIds })
+  assert.equal(singleMatch.userStanding.id, demoUser.id)
+  assert.equal(singleMatch.allRankings.filter(founder => founder.id === demoUser.id).length, 1)
+  assert.ok(singleMatch.allRankings.every(founder => selectedIds.includes(founder.ranking_domain_id)))
+})
+
+test('global domain filter accepts multiple IDs without changing global ranks', () => {
+  const projects = [project(demoUser, 0), project(demoUser, 1)]
+  const global = getLeaderboardSnapshot({ user: demoUser, projects })
+  const filtered = getLeaderboardSnapshot({ user: demoUser, projects, filterDomainIds: ['1', '2'] })
+
+  assert.equal(filtered.totalFounders, global.totalFounders)
+  assert.equal(filtered.rankings.length, 5)
+  assert.deepEqual(filtered.rankings.map(founder => founder.id).sort(), filtered.allRankings
+    .filter(founder => founder.domains.some(domain => ['1', '2'].includes(domain.id)))
+    .map(founder => founder.id).sort())
+  assert.equal(filtered.userStanding.rank, global.userStanding.rank)
+})
+
 test('blank or unknown domain selections remain empty and global ignores stale domain selections', () => {
   for (const domainId of ['', 'unknown', '0', '999']) {
     const snapshot = getLeaderboardSnapshot({ user: demoUser, projects: [project(demoUser, 0)], scope: 'domain', domainId })

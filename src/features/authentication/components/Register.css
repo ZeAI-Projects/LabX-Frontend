@@ -60,27 +60,6 @@
   padding: 0 8px;
 }
 
-.hud-sound-toggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(19, 27, 46, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 7px 14px;
-  border-radius: 9999px;
-  color: #9ca3af;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.hud-sound-toggle:hover {
-  background: rgba(30, 41, 68, 0.9);
-  color: #fff;
-  border-color: rgba(6, 182, 212, 0.4);
-}
-
 .hud-xp-meter {
   display: flex;
   align-items: center;
@@ -862,7 +841,7 @@
     padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
   }
   .auth-top-hud { flex-wrap: wrap; gap: 8px; margin-bottom: 12px; padding: 0; }
-  .hud-sound-toggle, .mode-tab-btn { min-height: 44px; }
+  .mode-tab-btn { min-height: 44px; }
   .gamified-card-shell .showcase-panel { padding: 20px 18px; flex: none; }
   /* The decorative reactor has an inline display style. */
   .showcase-panel .hologram-reactor-wrapper { display: none !important; }
@@ -919,6 +898,7 @@
   cursor: pointer;
   position: relative;
   min-height: 28px;
+  user-select: none;
 }
 
 .remember-terminal-input {
@@ -926,7 +906,18 @@
   width: 18px;
   height: 18px;
   opacity: 0;
+  cursor: pointer;
+  pointer-events: none;
 }
+
+.remember-terminal .custom-checkbox,
+.remember-terminal > span:last-child { cursor: pointer; }
+.remember-terminal:has(.remember-terminal-input:disabled),
+.remember-terminal-input:disabled,
+.remember-terminal:has(.remember-terminal-input:disabled) .custom-checkbox,
+.remember-terminal:has(.remember-terminal-input:disabled) > span:last-child { cursor: wait; }
+.remember-terminal .custom-checkbox { transition: background .2s ease, border-color .2s ease, box-shadow .2s ease; }
+.remember-terminal:hover .custom-checkbox:not(.checked) { border-color: #67e8f9; }
 
 .remember-terminal-input:focus-visible + .custom-checkbox,
 .gamified-auth-container button:focus-visible,
@@ -945,6 +936,7 @@
 
 .remember-hint { margin: -12px 0 18px; }
 .auth-role-select { cursor: pointer; color-scheme: dark; }
+.auth-role-select:invalid { color: #475569; }
 .auth-role-select option { color: #f8fafc; background: #0f172a; }
 
 .auth-success-banner {

@@ -5,10 +5,8 @@ import { useAuth } from '../../../hooks/use_auth.js';
 import { sessionStore } from '../../../services/storage/local_storage.js';
 import { HologramX } from '../components/gamified/HologramX';
 import { ParticleNetwork } from '../components/gamified/ParticleNetwork';
-import { soundManager } from '../components/gamified/soundEffects';
 import { useAuthEffects } from '../components/gamified/useAuthEffects';
 import '../components/Register.css';
-import { SoundToggle } from '../components/AuthShell.jsx';
 import '../components/Recovery.css';
 
 export function PasswordRecoveryShell({ title, subtitle, step = 1, children }) {
@@ -17,10 +15,9 @@ export function PasswordRecoveryShell({ title, subtitle, step = 1, children }) {
     <div className={`gamified-auth-container compact-auth-page password-recovery-container${step === 2 ? " is-reset" : ""}`}>
       <ParticleNetwork />
       <div className="auth-top-hud">
-        <Link className="recovery-exit-link" to="/register" onMouseEnter={soundManager.playHover}>
+        <Link className="recovery-exit-link" to="/register">
           <ArrowLeft size={14} aria-hidden="true" />Back to sign up
         </Link>
-        <SoundToggle />
       </div>
       <div className="gamified-card-shell">
         <div className="card-laser-scanner" />
@@ -88,7 +85,6 @@ export function ForgotPassword() {
       const recovery = await requestPasswordReset(normalizedEmail);
       if (!isMounted()) return;
       sessionStore.writeJSON('labx_password_recovery', recovery);
-      soundManager.playXpGain();
       navigate('/reset-password', { state: recovery });
     } catch (requestError) {
       if (isMounted()) {
@@ -125,12 +121,11 @@ export function ForgotPassword() {
               setEmail(event.target.value);
               setError('');
             }}
-            onFocus={soundManager.playFocus}
             placeholder="you@example.com"
           />
           <p className="auth-field-hint" id="recovery-email-instruction">Enter your registered email address to receive a six-digit verification code.</p>
         </div>
-        <button type="submit" className="btn-warp-create" disabled={loading} onMouseEnter={soundManager.playHover}>
+        <button type="submit" className="btn-warp-create" disabled={loading}>
           <span>{loading ? 'Sending code…' : 'Send six-digit code'}</span><ArrowRight size={18} aria-hidden="true" />
         </button>
       </form>

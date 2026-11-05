@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AlertCircle, ArrowLeft, ArrowRight, Eye, EyeOff, Mail, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../../hooks/use_auth.js';
 import { sessionStore } from '../../../services/storage/local_storage.js';
-import { soundManager } from '../components/gamified/soundEffects';
 import { useAuthEffects } from '../components/gamified/useAuthEffects';
 import { validatePassword } from '../validation/auth_validation.js';
 import { PasswordRecoveryShell } from './ForgotPassword';
@@ -83,7 +82,6 @@ export function ResetPassword() {
         sessionStore.removeItem(RECOVERY_KEY);
       }
       if (!isMounted()) return;
-      soundManager.playXpGain();
       navigate('/login', { replace: true, state: { passwordReset: true, email: recovery.email } });
     } catch (resetError) {
       if (isMounted()) {
@@ -110,7 +108,6 @@ export function ResetPassword() {
       setRecovery(nextRecovery);
       setCode('');
       setResendMessage('A new verification code is ready. Your previous code no longer works.');
-      soundManager.playXpGain();
     } catch (resendError) {
       if (isMounted()) setError({ message: resendError.message || 'We couldn’t send the verification code. Please try again.' });
     } finally {
@@ -144,7 +141,7 @@ export function ResetPassword() {
           <form onSubmit={handleSubmit} aria-busy={busy} noValidate>
             <div className="gamified-field-group">
               <label className="gamified-field-label" id="reset-code-label" htmlFor="reset-code-0">Enter your 6-digit verification code<span className="required-mark" aria-hidden="true" /></label>
-              <VerificationCodeInput ref={codeInput} labelId="reset-code-label" value={code} disabled={busy} invalid={error?.field === 'code'} describedBy={`recovery-code-hint${error?.field === 'code' ? ' reset-error' : ''}`} onChange={value => { setCode(value); if (error?.field === 'code') setError(null); }} onFocus={soundManager.playFocus}/>
+              <VerificationCodeInput ref={codeInput} labelId="reset-code-label" value={code} disabled={busy} invalid={error?.field === 'code'} describedBy={`recovery-code-hint${error?.field === 'code' ? ' reset-error' : ''}`} onChange={value => { setCode(value); if (error?.field === 'code') setError(null); }}/>
               <div className="recovery-code-help">
                 <p className="auth-field-hint" id="recovery-code-hint">Codes expire after 10 minutes. Use your latest code.</p>
                 <button type="button" className="login-link recovery-resend" disabled={busy} onClick={handleResend}>
@@ -173,7 +170,6 @@ export function ResetPassword() {
                     setPassword(event.target.value);
                     if (error?.field === 'password') setError(null);
                   }}
-                  onFocus={soundManager.playFocus}
                   placeholder="Enter your new password"
                 />
                 <button type="button" className="input-action-icon" disabled={busy} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>
@@ -203,7 +199,6 @@ export function ResetPassword() {
                     setConfirmPassword(event.target.value);
                     if (error?.field === 'confirmPassword') setError(null);
                   }}
-                  onFocus={soundManager.playFocus}
                   placeholder="Re-enter your new password"
                 />
                 <button type="button" className="input-action-icon" disabled={busy} aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'} aria-pressed={showConfirmPassword} onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
@@ -211,7 +206,7 @@ export function ResetPassword() {
                 </button>
               </div>
             </div>
-            <button type="submit" className="btn-warp-create" disabled={busy} onMouseEnter={soundManager.playHover}>
+            <button type="submit" className="btn-warp-create" disabled={busy}>
               <span>{loading ? 'Resetting password…' : 'Reset New Password'}</span><ArrowRight size={18} aria-hidden="true" />
             </button>
           </form>

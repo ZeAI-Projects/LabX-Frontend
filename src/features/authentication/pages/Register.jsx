@@ -4,7 +4,6 @@ import { AlertCircle, ArrowRight, Check, Eye, EyeOff, Sparkles } from 'lucide-re
 import { useAuth } from '../../../hooks/use_auth.js';
 import { sessionStore } from '../../../services/storage/local_storage.js';
 import { AuthShell } from '../components/AuthShell';
-import { soundManager } from '../components/gamified/soundEffects';
 import { useAuthEffects } from '../components/gamified/useAuthEffects';
 import { validatePassword } from '../validation/auth_validation.js';
 
@@ -61,7 +60,6 @@ export const Register = () => {
     setLoading(true);
     setError(null);
     try {
-      soundManager.playWarpLaunch();
       const verification = await requestRegistration(email.trim(), password, fullName.trim(), { role, rememberMe });
       if (!isMounted()) return;
       sessionStore.writeJSON('labx_signup_verification', verification);
@@ -92,15 +90,15 @@ export const Register = () => {
             <label className="gamified-field-label" htmlFor="register-name">Full Name<span className="required-mark" aria-hidden="true" /></label>
             <input type="text" id="register-name" name="fullName" autoComplete="name"
               className="gamified-input" required value={fullName} {...fieldError('fullName')}
-              onChange={(event) => { setFullName(event.target.value); clearError(); }} onFocus={soundManager.playFocus}
+              onChange={(event) => { setFullName(event.target.value); clearError(); }}
               placeholder="Your name" disabled={loading} />
           </div>
           <div className="gamified-field-group">
             <label className="gamified-field-label" htmlFor="register-role">Role<span className="required-mark" aria-hidden="true" /></label>
             <select id="register-role" name="role" className="gamified-input auth-role-select"
               required value={role} {...fieldError('role')} onChange={(event) => { setRole(event.target.value); clearError(); }}
-              onFocus={soundManager.playFocus} disabled={loading}>
-              <option value="" disabled>Select your role</option>
+              disabled={loading}>
+              <option value="" disabled hidden>Select your role</option>
               <option value="founder">Founder/Builder</option>
               <option value="investor">Investor</option>
               <option value="mentor">Mentor</option>
@@ -110,7 +108,7 @@ export const Register = () => {
             <label className="gamified-field-label" htmlFor="register-email">Email Address<span className="required-mark" aria-hidden="true" /></label>
             <input type="email" id="register-email" name="email" autoComplete="email" autoCapitalize="none" spellCheck={false}
               className="gamified-input" required value={email} {...fieldError('email')}
-              onChange={(event) => { setEmail(event.target.value); clearError(); }} onFocus={soundManager.playFocus}
+              onChange={(event) => { setEmail(event.target.value); clearError(); }}
               placeholder="you@example.com" disabled={loading} />
           </div>
           <div className="gamified-field-group">
@@ -120,12 +118,12 @@ export const Register = () => {
                 autoComplete="new-password" aria-invalid={error?.field === 'password'}
                 aria-describedby={`password-requirements${error?.field === 'password' ? ' register-error' : ''}`}
                 className="gamified-input" required minLength={9} maxLength={20} value={password}
-                onChange={(event) => { setPassword(event.target.value); clearError(); }} onFocus={soundManager.playFocus}
+                onChange={(event) => { setPassword(event.target.value); clearError(); }}
                 placeholder="Create a password" disabled={loading} />
               <button type="button" className="input-action-icon" disabled={loading}
                 aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword}
                 onClick={() => setShowPassword(!showPassword)}>
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                {showPassword ? <Eye size={16} /> : <EyeOff size={16} />}
               </button>
             </div>
           </div>
@@ -135,12 +133,12 @@ export const Register = () => {
               <input type={showConfirmPassword ? 'text' : 'password'} id="register-confirm-password"
                 name="confirmPassword" autoComplete="new-password" className="gamified-input"
                 required minLength={9} maxLength={20} value={confirmPassword} {...fieldError('confirmPassword')}
-                onChange={(event) => { setConfirmPassword(event.target.value); clearError(); }} onFocus={soundManager.playFocus}
+                onChange={(event) => { setConfirmPassword(event.target.value); clearError(); }}
                 placeholder="Re-enter your password" disabled={loading} />
               <button type="button" className="input-action-icon" disabled={loading}
                 aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
                 aria-pressed={showConfirmPassword} onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
-                {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                {showConfirmPassword ? <Eye size={16} /> : <EyeOff size={16} />}
               </button>
             </div>
           </div>
@@ -152,13 +150,13 @@ export const Register = () => {
           <label className="remember-terminal" htmlFor="register-remember-me">
             <input id="register-remember-me" name="rememberMe" type="checkbox"
               className="remember-terminal-input" checked={rememberMe} disabled={loading}
-              onChange={(event) => { setRememberMe(event.target.checked); soundManager.playHover(); }} />
+              onChange={(event) => setRememberMe(event.target.checked)} />
             <span className={`custom-checkbox ${rememberMe ? 'checked' : ''}`} aria-hidden="true">
               {rememberMe && <Check size={12} strokeWidth={3} />}
             </span>
             <span>Remember Me</span>
           </label>
-          <button type="submit" className="btn-warp-create" disabled={loading} onMouseEnter={soundManager.playHover}>
+          <button type="submit" className="btn-warp-create" disabled={loading}>
             {loading ? <><Sparkles size={16} aria-hidden="true" /><span>Creating account…</span></>
               : <><span>Sign up</span><ArrowRight size={17} aria-hidden="true" /></>}
           </button>
