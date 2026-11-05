@@ -118,9 +118,10 @@ export function SharpProvider({ children }) {
       pending.current = false; setBusy(false)
     }, 550)
   }
-  function showSession(id, { replace = false, chatTab = false } = {}) {
+  function showSession(id, { replace = false, chatTab = false, preserveView = false } = {}) {
     const params = new URLSearchParams(inChats ? search : '')
     for (const key of ['project', 'owner', 'prompt', 'companion']) params.delete(key)
+    if (!preserveView) params.delete('view')
     params.set('chat', id)
     if (chatTab) params.delete('tab')
     navigate({ pathname: '/chats', search: params.toString() }, { replace })
@@ -133,7 +134,7 @@ export function SharpProvider({ children }) {
     if (inChats) showSession(next.activeId, { chatTab: true })
   }
   function selectProject(id) {
-    if (projectLocked || pending.current || project?.id === id || !summaries.some(p => p.id === id)) return
+    if (projectLocked || pending.current || (project?.id || '') === id || (id && !summaries.some(p => p.id === id))) return
     const next = createDraftState(state, id)
     setState(next)
     setNotice('')
@@ -159,7 +160,7 @@ export function SharpProvider({ children }) {
     const next = deleteConversation(state, id)
     setState(next)
     setNotice('')
-    if (inChats && next.activeId !== state.activeId) showSession(next.activeId, { replace: true })
+    if (inChats && next.activeId !== state.activeId) showSession(next.activeId, { replace: true, preserveView: true })
   }
   function saveMemory(memory) {
     if (!memory.title.trim() || !memory.content.trim()) return false

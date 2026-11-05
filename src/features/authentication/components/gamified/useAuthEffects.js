@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { soundManager } from './soundEffects';
 
-// Keep page transition timers and procedural sound scoped to the mounted page.
+// Keep page transition timers scoped to the mounted page.
 export function useAuthEffects() {
   const mounted = useRef(false);
   const timers = useRef(new Set());
@@ -13,7 +12,6 @@ export function useAuthEffects() {
       mounted.current = false;
       pendingTimers.forEach(clearTimeout);
       pendingTimers.clear();
-      soundManager.stopAll();
     };
   }, []);
 

@@ -59,9 +59,9 @@ try {
 
   const routes = [
     { path: '/dashboard', title: 'Dashboard', header: '.db-header' },
-    { path: '/chats', title: 'Chats', header: '.chats-page-header' },
+    { path: '/chats', title: 'Chats' },
     { path: '/roadmap', title: 'Roadmap', header: '.projects-header' },
-    { path: '/roadmap/new', title: /Name your\s*project\./, header: '.projects-new__intro' },
+    { path: '/roadmap/new', title: 'New Project', header: '.labx-navbar-title' },
     { path: projectPath, title: 'Header layout project', header: '.rm-project-bar' },
     { path: '/leaderboard', title: 'LabX Leaderboard', header: '.lb-header' },
     { path: '/events', title: 'Events & Opportunities' },
@@ -76,6 +76,8 @@ try {
     for (const route of routes) {
       await go(route.path)
       await page.getByRole('heading', { name: route.title, exact: true, level: 1 }).waitFor()
+      assert.equal(await page.locator('.labx-navbar h1').innerText(), route.title, `${route.path}: shared header shows the current page title`)
+      assert.equal(await page.locator('.labx-navbar').getByRole('link', { name: 'Notifications', exact: true }).count(), 1, `${route.path}: notifications remain in the shared header`)
       await page.evaluate(() => document.fonts.ready)
       // The roadmap opens at its current mission; inspect the header at the top.
       await page.evaluate(() => window.scrollTo(0, 0))

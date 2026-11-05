@@ -169,6 +169,11 @@ function currentFounder(user, projects, selectedDomain) {
     username: typeof user.username === 'string' ? user.username.trim() : '',
     domain: placement?.domain.name ?? 'Domain not set',
     domains: memberships.map(({ domain }) => ({ id: domain.id, name: domain.name })),
+    domain_progress: memberships.map(({ domain, result }) => ({
+      id: domain.id,
+      stage: typeof result.stage === 'string' && result.stage.trim() ? result.stage.trim() : null,
+      level: Number.isInteger(result.level) && result.level > 0 ? result.level : null,
+    })),
     stage: typeof placement?.result.stage === 'string' && placement.result.stage.trim() ? placement.result.stage.trim() : null,
     level: Number.isInteger(placement?.result.level) && placement.result.level > 0 ? placement.result.level : null,
     badges_count: achievements.earnedBadgeCount,
@@ -198,23 +203,25 @@ function rankFounders(founders) {
   })
 }
 
-function rankMomentumFounders(founders) {
-  const sorted = founders.slice().sort((left, right) =>
-    right.momentum.currentStreakDays - left.momentum.currentStreakDays
-    || right.momentum.activeDays - left.momentum.activeDays
-    || right.momentum.completedMissions - left.momentum.completedMissions
-    || right.momentum.completedMilestones - left.momentum.completedMilestones
-    || compareText(normalizeText(left.full_name), normalizeText(right.full_name))
-    || compareText(left.id, right.id))
+function rankPulseFounders(founders) {
+  const maximums = {
+    points: Math.max(0, ...founders.map((founder) => founder.total_points)),
+    streak: Math.max(0, ...founders.map((founder) => founder.momentum?.currentStreakDays ?? 0)),
+    missions: Math.max(0, ...founders.map((founder) => founder.momentum?.completedMissions ?? 0)),
+  }
+  const score = (founder) => [
+    maximums.points ? founder.total_points / maximums.points : 0,
+    maximums.streak ? (founder.momentum?.currentStreakDays ?? 0) / maximums.streak : 0,
+    maximums.missions ? (founder.momentum?.completedMissions ?? 0) / maximums.missions : 0,
+  ].reduce((total, metric) => total + metric, 0) / 3
+  const sorted = founders.map((founder) => ({ founder, score: score(founder) }))
+    .sort((left, right) => right.score - left.score
+      || compareText(normalizeText(left.founder.full_name), normalizeText(right.founder.full_name))
+      || compareText(left.founder.id, right.founder.id))
   let rank = 0
   return sorted.map((founder, index) => {
-    const current = founder.momentum
-    const previous = sorted[index - 1]?.momentum
-    if (index === 0 || current.currentStreakDays !== previous.currentStreakDays
-      || current.activeDays !== previous.activeDays
-      || current.completedMissions !== previous.completedMissions
-      || current.completedMilestones !== previous.completedMilestones) rank = index + 1
-    return { ...founder, rank }
+    if (index === 0 || Math.abs(founder.score - sorted[index - 1].score) > 1e-12) rank = index + 1
+    return { ...founder.founder, rank }
   })
 }
 
@@ -223,16 +230,23 @@ export function getLeaderboardSnapshot({
   projects = [],
   scope = 'global',
   domainId = '',
+  domainIds = null,
   search = '',
   mode = 'labx',
   filterDomainId = '',
+  filterDomainIds = [],
   stage = '',
   level = '',
 } = {}) {
   const selectedScope = scope === 'domain' ? 'domain' : 'global'
-  const domain = selectedScope === 'domain' ? domainById(domainId) : null
-  const requiresDomain = selectedScope === 'domain' && !domain
-  const current = currentFounder(user, projects, domain)
+  const requestedDomainIds = Array.isArray(domainIds) ? domainIds : [domainId]
+  const selectedDomainIds = [...new Set(requestedDomainIds
+    .map((id) => domainById(id)?.id)
+    .filter(Boolean))]
+  const selectedDomains = selectedDomainIds.map(domainById)
+  const domain = selectedScope === 'domain' && selectedDomains.length === 1 ? selectedDomains[0] : null
+  const requiresDomain = selectedScope === 'domain' && selectedDomains.length === 0
+  const current = currentFounder(user, projects, selectedDomains[0] ?? null)
   const founders = SAMPLE_FOUNDERS.filter((founder) => founder.id !== current?.id)
   if (current) founders.push(current)
   const domainBoards = new Map(LEADERBOARD_DOMAINS.map((entry) => [entry.id,
@@ -253,17 +267,43 @@ export function getLeaderboardSnapshot({
     }
   })
   const scopedRankings = requiresDomain ? [] : selectedScope === 'domain'
-    ? rankFounders(globalRankings.filter((founder) => founder.domains.some((membership) => membership.id === domain.id)))
+    ? selectedDomainIds.flatMap((domainId) => {
+      const domainRankings = domainBoards.get(domainId) ?? []
+      const rankedDomain = mode === 'momentum' ? rankPulseFounders(domainRankings) : domainRankings
+      return rankedDomain.map((founder) => {
+        const globalFounder = globalRankings.find((entry) => entry.id === founder.id)
+        const membership = founder.domains.find((entry) => entry.id === domainId)
+        const progress = founder.domain_progress?.find((entry) => entry.id === domainId)
+        return {
+          ...globalFounder,
+          ...(progress ? { stage: progress.stage, level: progress.level } : {}),
+          domain: membership.name,
+          rank: founder.rank,
+          domain_rank: founder.rank,
+          ranking_domain_id: domainId,
+        }
+      })
+    })
     : globalRankings
-  const allRankings = mode === 'momentum' ? rankMomentumFounders(scopedRankings) : scopedRankings
+  const allRankings = selectedScope === 'global' && mode === 'momentum'
+    ? rankPulseFounders(scopedRankings)
+    : scopedRankings
   const query = normalizeText(search)
+  const requestedFilterDomainIds = Array.isArray(filterDomainIds) && filterDomainIds.length
+    ? filterDomainIds
+    : filterDomainId ? [filterDomainId] : []
+  const selectedFilterDomainIds = [...new Set(requestedFilterDomainIds
+    .map((id) => domainById(id)?.id)
+    .filter(Boolean))]
   const rankings = allRankings.filter((founder) => (!query || normalizeText(`${founder.full_name} @${founder.username}`).includes(query))
-    && (!filterDomainId || founder.domains.some((membership) => membership.id === String(filterDomainId)))
+    && (!requestedFilterDomainIds.length || founder.domains.some((membership) => selectedFilterDomainIds.includes(membership.id)))
     && (!stage || founder.stage === stage)
     && (!level || String(founder.level) === String(level)))
   const userStanding = allRankings.find((founder) => founder.is_current_user) ?? null
   const globalUserStanding = globalRankings.find((founder) => founder.is_current_user) ?? null
-  const standingDomain = domain ?? globalUserStanding?.primary_domain
+  const standingDomain = selectedDomains.find((entry) => globalUserStanding?.domains.some((membership) => membership.id === entry.id))
+    ?? domain
+    ?? globalUserStanding?.primary_domain
   const domainUserStanding = globalUserStanding && standingDomain
     ? domainBoards.get(standingDomain.id)?.find((founder) => founder.is_current_user) ?? null
     : null
@@ -274,6 +314,7 @@ export function getLeaderboardSnapshot({
     domains: LEADERBOARD_DOMAINS.map((entry) => ({ ...entry })),
     scope: selectedScope,
     domain: domain ? { ...domain } : null,
+    selectedDomains: selectedDomains.map((entry) => ({ ...entry })),
     requiresDomain,
     rankings,
     allRankings,
@@ -289,7 +330,7 @@ export function getLeaderboardSnapshot({
       totalFounders: allRankings.length,
       totalPoints: allRankings.reduce((sum, founder) => sum + founder.total_points, 0),
       totalBadges: allRankings.reduce((sum, founder) => sum + founder.badges_count, 0),
-      leadingPoints: allRankings[0]?.total_points ?? 0,
+      leadingPoints: allRankings.reduce((highest, founder) => Math.max(highest, founder.total_points), 0),
     },
     momentumMetrics: {
       rankedFounders: allRankings.length,

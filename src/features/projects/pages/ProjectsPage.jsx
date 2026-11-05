@@ -208,7 +208,7 @@ export function ProjectsPage() {
   return (
     <div className="projects-page">
       <header className="projects-header">
-        <div><span className="projects-eyebrow"><Route size={15} aria-hidden="true" />Build your next chapter</span><h1>Roadmap</h1><p>One idea, one journey. Create a roadmap, unlock missions, and build with your team.</p></div>
+        <div><span className="projects-eyebrow"><Route size={15} aria-hidden="true" />Build your next chapter</span><p>One idea, one journey. Create a roadmap, unlock missions, and build with your team.</p></div>
         <div className="roadmap-collection-actions"><JoinRoadmapTrigger className="projects-button">Join roadmap<ArrowRight size={16} aria-hidden="true" /></JoinRoadmapTrigger><Link to="/roadmap/new" className="projects-button projects-button--primary"><Plus size={18} aria-hidden="true" />New project</Link></div>
       </header>
 

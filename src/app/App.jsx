@@ -4,7 +4,6 @@ import { ErrorBoundary } from '../components/common/ErrorBoundary.jsx'
 import AppProviders from './providers.jsx'
 import AppRouter from './router.jsx'
 import { SharpProvider } from '../features/companion/components/SharpProvider.jsx'
-import { SharpDock } from '../features/companion/components/SharpDock.jsx'
 import '../styles/Refinement.css'
 
 export default function App() {
@@ -15,7 +14,6 @@ export default function App() {
           <CipherScreen>
             <SharpProvider>
               <AppRouter />
-              <SharpDock />
             </SharpProvider>
           </CipherScreen>
         </ErrorBoundary>

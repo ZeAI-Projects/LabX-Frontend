@@ -11,7 +11,7 @@
 .rm-reference .pubg-tier-crest-container { transition: filter .2s ease !important; }
 .rm-project-bar { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 0 36px; }
 .rm-project-context { display: flex; align-items: center; gap: 12px; min-width: 0; color: #405065; }
-.rm-project-context h1 { min-width: 0; font-size: .73rem; font-weight: 500; color: #9eafc5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.5; }
+.rm-project-name { min-width: 0; font-size: .73rem; font-weight: 500; color: #9eafc5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.5; }
 .rm-project-context .rm-back { margin: 0; white-space: nowrap; font-size: .69rem; }
 .rm-project-bar > .roadmap-team-button { min-height: 34px; padding: 7px 11px; font-size: .66rem; border-color: #2b3547; background: #111a29; flex-shrink: 0; }
 .rm-domain-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; padding: 27px 36px 23px; }
@@ -93,7 +93,7 @@
   .rm-reference { padding-top: 8px; }
   .rm-project-bar { padding-inline: 12px; gap: 8px; flex-wrap: wrap; }
   .rm-project-context { flex: 1; gap: 7px; min-width: 175px; }
-  .rm-project-context h1 { font-size: .64rem; }
+  .rm-project-name { font-size: .64rem; }
   .rm-project-context .rm-back { font-size: .62rem; }
   .rm-project-bar > .roadmap-team-button { font-size: .6rem; padding: 6px 8px; }
   .rm-domain-header { padding: 22px 12px 15px; gap: 15px; }

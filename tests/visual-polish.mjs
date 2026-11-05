@@ -49,13 +49,7 @@ try {
   await page.getByRole('button',{name:'Clear filters',exact:true}).click();
   await page.waitForFunction(()=>document.querySelectorAll('.project-row').length===10);
   await fit('Mobile projects');
-  const launcherBeforeScroll=await page.locator('.sharp-dock-trigger').boundingBox();
-  assert.ok(Math.abs(launcherBeforeScroll.x+launcherBeforeScroll.width-390+14)<1,'Zenith stays in the mobile right corner');
-  await page.evaluate(()=>scrollTo(0,600));
-  await page.waitForFunction(()=>scrollY>0);
-  const launcherAfterScroll=await page.locator('.sharp-dock-trigger').boundingBox();
-  assert.ok(Math.abs(launcherAfterScroll.x-launcherBeforeScroll.x)<1&&Math.abs(launcherAfterScroll.y-launcherBeforeScroll.y)<1,'Zenith stays fixed while projects scroll');
-  await page.evaluate(()=>scrollTo(0,0));
+  assert.equal(await page.locator('.sharp-dock').count(),0,'Roadmap has no floating Zenith assistant');
   await shot('projects-mobile');
   await page.getByRole('button',{name:'Page 2',exact:true}).click();
   await page.waitForFunction(()=>document.querySelectorAll('.project-row').length===3);
@@ -91,5 +85,5 @@ try {
   await page.reload();await page.locator('.rm-page').waitFor();
   assert.equal(await page.locator('.progress-celebration').count(),0,'Reload never invents a new completion');
   assert.deepEqual(errors,[]);
-  console.log('PASS: six-box reset layouts, mobile filters and pagination, fixed right launcher, desktop/mobile page fit, persistent roadmap context, and real approval celebration after dialog close.');
+  console.log('PASS: six-box reset layouts, mobile filters and pagination, no floating Zenith assistant, desktop/mobile page fit, persistent roadmap context, and real approval celebration after dialog close.');
 } finally {await context.close();await browser.close();await server.close();}

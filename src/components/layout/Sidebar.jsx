@@ -1,7 +1,6 @@
 import { Award, Bot, Calendar, Home, LogOut, Map, MessageCircle, Trophy, User, Users } from 'lucide-react'
 import { Link, NavLink } from 'react-router-dom'
 import labxLogo from '../../assets/images/labx-logo.png'
-import { soundManager } from '../../features/authentication/components/gamified/soundEffects.js'
 import { getRoleLabel } from '../../utils/roles.js'
 import { ProfileAvatar } from '../common/ProfileAvatar.jsx'
 
@@ -34,7 +33,7 @@ export function Sidebar({ user, onSignOut }) {
       </nav>
       <div className="labx-sidebar-footer">
         <div className="labx-user-card">
-          <Link className="labx-user-profile" to="/profile" aria-label={`Open profile for ${displayName}`} onClick={soundManager.playHover}>
+          <Link className="labx-user-profile" to="/profile" aria-label={`Open profile for ${displayName}`}>
             <ProfileAvatar user={user} />
             <div className="labx-user-info">
               <div className="labx-user-name" title={displayName}>{displayName}</div>
@@ -55,7 +54,6 @@ function SidebarItem({ to, icon, label }) {
     <NavLink
       to={to}
       data-roadmap-entry={to === '/roadmap' ? '' : undefined}
-      onClick={soundManager.playHover}
       className={({ isActive }) => `labx-nav-item ${isActive ? 'active' : ''}`}
     >
       <span className="labx-nav-icon" aria-hidden="true">{icon}</span>

@@ -92,7 +92,7 @@ try {
       assert.equal(rendered[index].rank, `#${expected[index].rank}`, `${description}: ${expected[index].full_name} retains scope rank`)
       assert.equal(numberFrom(rendered[index].points), expected[index].total_points, `${description}: ${expected[index].full_name} points`)
       const founderRow = row(expected[index].full_name)
-      const domainLabel = LEADERBOARD_DOMAINS.find((domain) => domain.name === expected[index].domain)?.shortName || expected[index].domain
+      const domainLabel = LEADERBOARD_DOMAINS.find((domain) => domain.name === expected[index].domain)?.name || expected[index].domain
       assert.equal((await founderRow.locator('[data-label="Domain"]').innerText()).trim(), domainLabel, `${description}: founder domain`)
       assert.equal(numberFrom(await founderRow.locator('[data-label="Badges"]').innerText()), expected[index].badges_count, `${description}: founder badge count`)
       assert.equal((await founderRow.locator('[data-label="Global Rank"]').innerText()).trim(), `#${expected[index].global_rank}`, `${description}: global rank stays comparable`)
