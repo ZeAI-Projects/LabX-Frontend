@@ -5,7 +5,7 @@ import { useProjects } from '../../projects/hooks/use_projects.js';
 import { ASSESSMENT_QUESTIONS, ASSESSMENT_VERSION, validateAssessmentStep } from '../services/mock_assessment.js';
 import '../components/AssessmentResult.css';
 
-export const AssessmentResult = ({ result, project }) => {
+export const AssessmentResult = ({ result, project, onSaveDraft, onCompleteProject, roadmapPath, assessmentPath }) => {
   const navigate = useNavigate();
   const { saveDraft, completeProject } = useProjects();
   const [busy, setBusy] = useState(false);
@@ -18,15 +18,23 @@ export const AssessmentResult = ({ result, project }) => {
     key: question.key, question: question.title,
     answer: validateAssessmentStep(answers, index + 1) ? 'Not recorded' : question.options[answers[question.key] - 1],
   })) : [{ key:'q1', question:ASSESSMENT_QUESTIONS[0].title, answer:result?.domain || 'Not recorded' }];
-  const base = '/roadmap/' + project.id;
+  const base = roadmapPath || '/roadmap/' + project.id;
   const edit = () => {
-    try { saveDraft(project.id, { ...project.draft, step:1 }); navigate(base + '/assessment?review=1'); }
+    try {
+      const draft = { ...project.draft, step:1 };
+      if (onSaveDraft) onSaveDraft(draft);
+      else saveDraft(project.id, draft);
+      navigate(assessmentPath || base + '/assessment?review=1');
+    }
     catch (err) { setError(err.message); }
   };
   const submit = async () => {
     if (pending.current) return;
     pending.current=true;setBusy(true);setError('');
-    try { await completeProject(project.id, answers); }
+    try {
+      if (onCompleteProject) await onCompleteProject(answers);
+      else await completeProject(project.id, answers);
+    }
     catch (err) { setError(err.message || 'Unable to submit. Please try again.'); }
     finally { pending.current=false;setBusy(false); }
   };

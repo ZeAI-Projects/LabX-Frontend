@@ -42,6 +42,12 @@ export const ROADMAP_MOCK_MISSION_IDS = STAGE_OUTLINES.flatMap((stage, stageInde
 export const ROADMAP_OPTIONAL_MISSION_IDS = STAGE_OUTLINES.flatMap((stage, stageIndex) => stage.levels.map((_, levelIndex) =>
   `${ROADMAP_STAGE_NAMES[stageIndex].toLowerCase()}-l${levelIndex + 1}-m${(stageIndex + levelIndex) % 2 === 0 ? 3 : 2}`));
 
+export function getMockProjectMission(project) {
+  const roadmap = createMockRoadmap({ domain: project.domain, stage: project.stage, level: project.level });
+  const missions = roadmap.stages.flatMap((stage) => stage.levels.flatMap((level) => level.milestones));
+  return missions.find((mission) => mission.name === project.currentMission) || missions.find((mission) => mission.state === 'active') || missions[0];
+}
+
 // Shared roadmap catalog for real project initialization and the isolated browser prototype.
 // Prototype completion never mutates the profile, points, or achievements.
 export function createMockRoadmap(result = {}) {
@@ -105,18 +111,23 @@ export function createMockRoadmap(result = {}) {
             : stageIndex === currentStageIndex && levelIndex + 1 === currentLevel && index === 0
               ? 'active' : 'locked';
         const missionName = isPrototype && stageIndex === 0 && levelIndex === 0 ? prototypeTitles[index] : title;
-        return {
-          id,
-          name: missionName,
-          description: !isPrototype
-            ? `Explore ${title.toLowerCase()} and plan the next steps for your venture.`
-            : stageIndex === 0 && levelIndex === 0
-              ? [
+        const description = !isPrototype
+          ? `Explore ${title.toLowerCase()} and plan the next steps for your venture.`
+          : stageIndex === 0 && levelIndex === 0
+            ? [
               `Describe one specific problem people in ${domain} face and who experiences it most.`,
               `Gather customer evidence about when this ${domain} problem happens and how people handle it today.`,
               `Compare your assumptions with the evidence and explain why this problem is worth addressing now.`,
             ][index]
-            : `Develop ${title.toLowerCase()} for ${domain}. Capture the evidence, explain what it means, and identify the next decision for ${outline.name.toLowerCase()}.`,
+            : `Develop ${title.toLowerCase()} for ${domain}. Capture the evidence, explain what it means, and identify the next decision for ${outline.name.toLowerCase()}.`;
+        return {
+          id,
+          name: missionName,
+          description,
+          objective: description,
+          deploymentInstructions: `Complete ${title.toLowerCase()} for ${domain}. Record the evidence you gathered, the key decision it supports, and the next step for ${outline.name.toLowerCase()}.`,
+          expectedDeliverable: `A ${title.toLowerCase()} document or image with supporting evidence and a clear next step.`,
+          labxPoints: 100,
           stageName: outline.name,
           stageIndex,
           levelName: name,

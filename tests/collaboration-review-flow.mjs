@@ -60,7 +60,12 @@ try {
   const button = (name) => page.getByRole('button', { name, exact: true });
   const read = (key) => page.evaluate((storageKey) => JSON.parse(localStorage.getItem(storageKey)), key);
   const membershipCount = async (user) => (await read(COLLABORATION_KEY))?.memberships?.filter((member) => member.memberId === user.id && member.projectId === project.id).length || 0;
-  const closeDialog = async () => { await page.keyboard.press('Escape'); await page.locator('dialog[open]').waitFor({ state: 'hidden' }); };
+  const closeDialog = async () => {
+    const closeMissionButton = page.getByRole('button', { name: 'Close mission', exact: true });
+    if (await closeMissionButton.count()) await closeMissionButton.click();
+    else await page.keyboard.press('Escape');
+    await page.locator('dialog[open]').waitFor({ state: 'hidden' });
+  };
   const switchAccount = async (key) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     if (await page.locator('dialog[open]').count()) await closeDialog();
@@ -396,13 +401,13 @@ try {
     await go(joinedPath);
     await page.locator('.rmj-level-node[aria-label$=", current"]').click();
     const level = page.locator('.rmj-mission-page');
-    await level.locator('.rmj-mission-tile').filter({ has: page.getByText(name, { exact: true }) }).getByRole('button', { name: 'Open mission', exact: true }).click();
+    await level.locator('.rmj-mission-tile').filter({ has: page.getByText(name, { exact: true }) }).click();
     await page.getByRole('dialog', { name, exact: true }).waitFor();
   };
   const openFounderReview = async () => {
     await go(ownPath);
-    await button(/Mission review and approval/).click();
-    await page.locator('.rmj-operation-list').getByRole('listitem').filter({ hasText: 'User context' }).getByRole('button', { name: 'Review', exact: true }).click();
+    await page.locator('.rmj-level-node[aria-label$=", current"]').click();
+    await page.locator('.rmj-mission-page').locator('.rmj-mission-tile').filter({ has: page.getByText('User context', { exact: true }) }).click();
     await mission().waitFor();
   };
   const revise = async (version, note) => {
@@ -428,8 +433,6 @@ try {
   };
   await switchAccount('public');
   await openMemberWork();
-  await status('Assigned');
-  await mission().getByRole('button', { name: 'Start mission', exact: true }).click();
   await status('In Progress');
   await mission().getByRole('button', { name: 'Submit to Founder', exact: true }).click();
   await mission().locator('#mr-notes-error').waitFor();
@@ -506,9 +509,8 @@ try {
   await layout('approved-version-history', '.mr-dialog', [320, 1440]);
   await closeDialog();
   await page.reload();
-  assert.equal(await page.getByRole('progressbar', { name: 'Roadmap progress', exact: true }).getAttribute('aria-valuenow'), '2');
   await go(`/roadmap/${otherProject.id}`);
-  assert.equal(await page.getByRole('progressbar', { name: 'Roadmap progress', exact: true }).getAttribute('aria-valuenow'), '0', 'Other project progress is unchanged');
+  assert.equal(await page.locator('.rmj-progress-summary').count(), 0, 'Roadmap progress is hidden on other projects too');
   await switchAccount('direct');
   await go(joinedPath);
   await openMemberWork('Opportunity brief');

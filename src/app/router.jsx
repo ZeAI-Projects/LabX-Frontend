@@ -1,5 +1,5 @@
-import { lazy, Suspense, useEffect } from 'react'
-import { Link, Navigate, Outlet, Route, Routes, useLocation, useParams } from 'react-router-dom'
+import { lazy, Suspense, useEffect, useState } from 'react'
+import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../hooks/use_auth.js'
 import { OnboardingLayout } from '../components/layout/OnboardingLayout.jsx'
 import { AppShell } from '../components/layout/AppShell.jsx'
@@ -10,6 +10,8 @@ import { legacyJoinRoadmapUrl } from '../features/roadmap/services/join_roadmap_
 import { getLoginDestination } from '../utils/onboarding.js'
 import { getCompanionRoadmapRoute, getCompanionUrl } from '../features/companion/services/companion_navigation.js'
 import { ROADMAP_VISUAL_JOINED_DATA, ROADMAP_VISUAL_MY_DATA } from '../features/projects/services/roadmap_visual_mock_data.js'
+import { getMockProjectMission } from '../features/roadmap/services/mock_roadmap.js'
+import { completeMockAssessment, readMockAssessment, saveMockAssessmentDraft } from '../features/projects/services/mock_assessment_store.js'
 
 const lazyPage = (load, name) => lazy(() => load().then((module) => ({ default: module[name] })))
 const IntroVideo = lazyPage(() => import('../features/authentication/pages/IntroVideo.jsx'), 'IntroVideo')
@@ -120,8 +122,69 @@ function MockRoadmapRoute() {
   const { projectId } = useParams()
   const project = [...ROADMAP_VISUAL_MY_DATA, ...ROADMAP_VISUAL_JOINED_DATA].find((entry) => entry.id === projectId)
   if (!project) return <Navigate to="/roadmap" replace />
-  const createdBy = project.visualCollection === 'joined' ? project.created_by : user.full_name
-  return <RoadmapPage key={`${user.id}:${project.id}`} project={{ ...project, owner_id: user.id, created_by: createdBy, visualDemo: true }} />
+  const assessment = readMockAssessment(project.id)
+  if (project.visualCollection === 'my' && project.status === 'pending' && !assessment.completed) {
+    return <Navigate to={`/roadmap/demo/${encodeURIComponent(project.id)}/assessment`} replace />
+  }
+  const memberView = project.visualCollection === 'joined'
+  const createdBy = memberView ? project.created_by : user.full_name
+  const assignedMission = memberView ? getMockProjectMission(project) : null
+  return <RoadmapPage key={`${user.id}:${project.id}`} project={{
+    ...project,
+    ...(assessment.completed ? { status: 'ready', assessment_completed: true, assessment_result: assessment.result, domain: assessment.result?.domain || project.domain } : {}),
+    owner_id: user.id,
+    created_by: createdBy,
+    founderName: createdBy,
+    memberView,
+    assignedMissionId: assignedMission?.id,
+    visualDemo: true,
+  }} />
+}
+
+function MockAssessmentRoute({ summary = false }) {
+  const { projectId } = useParams()
+  const project = ROADMAP_VISUAL_MY_DATA.find((entry) => entry.id === projectId)
+  if (!project) return <Navigate to="/roadmap" replace />
+  return <MockAssessmentContent key={project.id} project={project} summary={summary} />
+}
+
+function MockAssessmentContent({ project, summary }) {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [assessment, setAssessment] = useState(() => readMockAssessment(project.id))
+  const roadmapPath = `/roadmap/demo/${encodeURIComponent(project.id)}`
+  const assessmentPath = `${roadmapPath}/assessment`
+  const resultPath = `${roadmapPath}/result`
+  if (assessment.completed) return <Navigate to={roadmapPath} replace />
+  const projectWithDraft = {
+    ...project,
+    owner_id: user.id,
+    created_by: user.full_name,
+    draft: assessment.draft,
+    assessment_completed: false,
+  }
+  const onSaveDraft = (draft) => {
+    const savedDraft = saveMockAssessmentDraft(project.id, draft)
+    setAssessment((current) => ({ ...current, draft: savedDraft }))
+  }
+  const onCompleteProject = (answers) => {
+    const completed = completeMockAssessment(project.id, answers)
+    setAssessment(completed)
+    navigate(roadmapPath, { replace: true })
+  }
+  if (summary) {
+    const canReview = ASSESSMENT_QUESTIONS.every((_, index) => !validateAssessmentStep(projectWithDraft.draft.answers, index + 1))
+    if (!canReview) return <Navigate to={assessmentPath} replace />
+    return <AssessmentResult
+      project={projectWithDraft}
+      result={null}
+      onSaveDraft={onSaveDraft}
+      onCompleteProject={onCompleteProject}
+      roadmapPath={roadmapPath}
+      assessmentPath={assessmentPath}
+    />
+  }
+  return <AssessmentWizard project={projectWithDraft} onSaveDraft={onSaveDraft} resultPath={resultPath} />
 }
 
 function MentorRoute() {
@@ -159,6 +222,8 @@ export default function AppRouter() {
           <Route path="/assessment/result" element={<LegacyAssessmentRoute result />} />
           <Route path="/roadmap/:projectId/assessment" element={<ProjectRoute view="assessment" />} />
           <Route path="/roadmap/:projectId/result" element={<ProjectRoute view="result" />} />
+          <Route path="/roadmap/demo/:projectId/assessment" element={<FounderOnly><MockAssessmentRoute /></FounderOnly>} />
+          <Route path="/roadmap/demo/:projectId/result" element={<FounderOnly><MockAssessmentRoute summary /></FounderOnly>} />
           <Route path="/mentor/assessment" element={<MentorRoute />} />
         </Route>
         <Route element={<ProtectedAppLayout />}>

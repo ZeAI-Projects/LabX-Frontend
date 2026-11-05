@@ -1,11 +1,10 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { ArrowDown, ArrowDownUp, ArrowUp, ChevronDown, ChevronFirst, ChevronLast, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowDown, ArrowDownUp, ArrowUp, ChevronFirst, ChevronLast, ChevronLeft, ChevronRight } from 'lucide-react';
 import { paginationItems } from '../services/project_list.js';
 
-export function ProjectsPagination({ total, from, to, page, pages, onPageChange, itemLabel = 'roadmaps' }) {
-  const countLabel = total === 1 ? itemLabel.slice(0, -1) : itemLabel;
+export function ProjectsPagination({ total, from, to, page, pages, onPageChange }) {
   return <div className="projects-grid-pagination">
-    <p>Showing <strong>{from}–{to}</strong> of <strong>{total}</strong> {countLabel}</p>
+    <p>Showing <strong>{from}–{to}</strong> of <strong>{total}</strong></p>
     <nav aria-label="Projects pagination">
       <button type="button" className="projects-page-button" aria-label="First page" disabled={page === 1} onClick={() => onPageChange(1)}><ChevronFirst size={16} aria-hidden="true" /></button>
       <button type="button" className="projects-page-button" aria-label="Previous page" disabled={page === 1} onClick={() => onPageChange(page - 1)}><ChevronLeft size={16} aria-hidden="true" /></button>
@@ -69,7 +68,7 @@ export function ProjectFilterSelect({ label, value, options, onChange }) {
         setOpen(true);
       }
     }}>
-      <span id={`${id}-value`}>{selectedLabel}</span><ChevronDown size={15} aria-hidden="true" />
+      <span id={`${id}-value`}>{selectedLabel}</span><span className="projects-filter-select__chevron" aria-hidden="true" />
     </button>
     {open && <div id={`${id}-options`} className="projects-filter-select__options" role="listbox" aria-labelledby={`${id}-label`} onKeyDown={(event) => {
       if (event.key === 'Escape') { event.preventDefault(); close(true); }

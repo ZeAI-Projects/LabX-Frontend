@@ -177,7 +177,7 @@ export function RoadmapTeam({ project, roadmap, onChange, showForPrototype = fal
   try { collaborationStore.getAccess(project.id, project.owner_id, user.id); } catch {
     if (!showForPrototype || !project.visualDemo) return null;
   }
-  return <><button type="button" className="roadmap-team-button" onClick={() => setOpen(true)}><Users size={17} />Manage team</button>{open && (project.visualDemo
+  return <><button type="button" className="roadmap-team-button rmj-manage-team-icon" aria-label="Manage team" title="Manage team" onClick={() => setOpen(true)}><Users size={17} /></button>{open && (project.visualDemo
     ? <PrototypeTeamDialog key={`${user.id}:${project.id}`} project={project} user={user} onClose={() => setOpen(false)} />
     : <TeamDialog key={`${user.id}:${project.owner_id}:${project.id}`} project={project} roadmap={roadmap} user={user} onChange={onChange} onClose={() => setOpen(false)} />)}</>;
 }

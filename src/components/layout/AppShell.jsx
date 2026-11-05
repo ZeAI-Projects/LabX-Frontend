@@ -30,7 +30,7 @@ export function AppShell({ children }) {
   const navigate = useNavigate()
   const section = pathname.split('/')[1] || 'dashboard'
   const title = pathname === '/roadmap/new'
-    ? 'New Project'
+    ? 'Roadmap'
     : pathname.startsWith('/roadmap/joined/')
       ? 'Joined Roadmap'
       : pageTitles[section] || 'LabX'

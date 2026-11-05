@@ -94,13 +94,13 @@
 .rm-member-summary ul { display: flex; flex-wrap: wrap; list-style: none; gap: 9px; margin-top: 15px; }
 .rm-member-summary .rm-button { flex-direction: column; align-items: flex-start; font-size: .71rem; }
 .rm-member-summary .rm-button > span { font-size: .57rem; color: #8da7c0; }
-.rm-dialog { width: min(740px,calc(100% - 28px)); max-height: calc(100dvh - 40px); padding: 0; margin: auto; border: 1px solid #3e5b74; border-radius: 17px; background: #101c2d; color: #d8e6f5; box-shadow: 0 30px 90px #000b; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #45617b #101c2d; }
-.rm-dialog::backdrop { background: #020817cc; backdrop-filter: blur(7px); }
-.rm-dialog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; padding: 24px 28px; border-bottom: 1px solid #2b4059; background: linear-gradient(120deg,#163248,#172138); }
+.rm-dialog { position: fixed; z-index: 2001; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; width: min(740px,calc(100% - 28px)); max-height: calc(100dvh - 40px); padding: 0; margin: 0; border: 1px solid #3e5b74; border-radius: 17px; background: #101c2d; color: #d8e6f5; box-shadow: 0 30px 90px #000b; overflow: hidden; }
+.rm-dialog[open] { display: flex; }
+.rm-dialog-head { position: sticky; top: 0; z-index: 1; display: flex; flex: 0 0 auto; align-items: flex-start; justify-content: space-between; gap: 15px; padding: 24px 28px; border-bottom: 1px solid #2b4059; background: linear-gradient(120deg,#163248,#172138); }
 .rm-dialog-head h2 { font-size: 1.35rem; margin-top: 8px; letter-spacing: -.025em; color: #f0f9ff; line-height: 1.4; }
 .rm-icon-button { display: grid; place-items: center; min-width: 34px; height: 34px; border: 1px solid #40536e; border-radius: 8px; background: #1a2a41; color: #b8cbe1; }
 .rm-icon-button:hover { background: #29405a; }
-.rm-dialog-content { padding: 26px 28px; }
+.rm-dialog-content { flex: 1 1 auto; min-height: 0; padding: 26px 28px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #45617b #101c2d; }
 .rm-mission-brief { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 24px; }
 .rm-brief-icon { display: grid; place-items: center; flex-shrink: 0; width: 44px; height: 44px; border: 1px solid #28536d; border-radius: 11px; background: #17364a; color: #91dced; }
 .rm-mission-brief h3, .rm-submitted-work h3 { color: #e2effb; font-size: .83rem; margin-bottom: 6px; }
@@ -111,6 +111,7 @@
 .rm-field input, .rm-field textarea, .rm-field select { width: 100%; min-width: 0; padding: 12px 13px; border: 1px solid #3b506b; border-radius: 8px; background: #0b1626; color: #e1edfb; font: inherit; font-size: .79rem; line-height: 1.65; }
 .rm-field input:focus, .rm-field textarea:focus, .rm-field select:focus { border-color: #6bdbe9; outline: 2px solid #4ac6d826; outline-offset: 1px; }
 .rm-field textarea { display: block; resize: vertical; min-height: 95px; }
+.rm-field #mission-notes,.rm-field #mr-notes { min-height: 44px; resize: none; overflow: hidden; }
 .rm-field input::placeholder, .rm-field textarea::placeholder { color: #7089a6; }
 .rm-field input[type=file] { padding: 9px; font-size: .69rem; }
 .rm-field input[type=file]::file-selector-button { padding: 7px 10px; margin-right: 12px; border: 1px solid #3a5873; border-radius: 6px; background: #1b3349; color: #bce4f1; font: inherit; cursor: pointer; }
@@ -129,6 +130,7 @@
 .rm-demo-note strong { color: #c2ceeb; font-weight: 650; }
 .rm-dialog-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 13px; margin-top: 23px; }
 .rm-dialog-footer > span { display: inline-flex; align-items: center; gap: 6px; color: #89a1ba; font-size: .61rem; }
+html.roadmap-dialog-open::before { position: fixed; z-index: 2000; inset: 0; background: #020817cc; backdrop-filter: blur(7px); content: ""; pointer-events: none; }
 .rm-evaluation { padding: 18px; margin-bottom: 22px; border: 1px solid #66513b; border-radius: 10px; background: #30291e; color: #ebce9a; }
 .rm-evaluation.is-approved { border-color: #2f6952; background: #153a2e; color: #a0e8c2; }
 .rm-evaluation > div { display: flex; align-items: center; gap: 10px; }
@@ -160,3 +162,28 @@
 @media (max-width:850px) { .rm-level { grid-template-columns: 1fr; gap: 13px; padding: 19px 0; } .rm-level-title { gap: 10px; } .rm-level-title > span { width: 28px; height: 28px; font-size: .65rem; border-radius: 8px; } .rm-level-title > div { display: flex; gap: 10px; align-items: center; } .rm-level-title h3 { margin-top: 0; } .rm-hero-progress { padding-left: 18px; min-width: 140px; } .rm-hero-copy p { font-size: .75rem; } }
 @media (max-width:600px) { .rm-header { align-items: flex-start; flex-direction: column; gap: 15px; } .rm-hero { padding: 22px 20px; flex-wrap: wrap; gap: 24px; } .rm-hero-copy { width: 100%; flex-basis: 100%; } .rm-hero-copy h2 { font-size: 1.4rem; } .rm-hero-progress { display: flex; align-items: center; justify-content: flex-start; flex-wrap: wrap; gap: 12px; width: 100%; padding: 18px 0 0; border-left: none; border-top: 1px solid #31455e; } .rm-progress-ring { width: 61px; height: 61px; margin: 0; padding: 3px; } .rm-progress-ring strong { font-size: 1rem; } .rm-progress-ring small { display: none; } .rm-hero-progress > p { font-size: .67rem; } .rm-hero-progress > small { margin-top: 0; } .rm-board-heading { align-items: flex-start; } .rm-board-heading > span { gap: 5px; font-size: .54rem; margin-top: 4px; } .rm-stage-nav { display: flex; overflow-x: auto; padding-bottom: 5px; scrollbar-width: thin; scrollbar-color: #385570 #111c2e; } .rm-stage-tab { flex: 0 0 118px; padding: 12px; } .rm-stage-tab strong { font-size: .72rem; } .rm-stage-heading { padding: 20px; align-items: flex-start; gap: 12px; } .rm-stage-heading h2 { font-size: 1.05rem; } .rm-stage-heading p { font-size: .68rem; } .rm-stage-count { margin-top: 20px; font-size: .8rem; } .rm-stage-count strong { font-size: 1.25rem; } .rm-stage-count small { font-size: .42rem; max-width: 60px; white-space: normal; line-height: 1.5; } .rm-level-list { padding-inline: 16px; } .rm-missions { gap: 7px; } .rm-mission { padding: 11px 8px; min-height: 116px; gap: 10px; } .rm-mission > strong { font-size: .66rem; } .rm-mission-top { font-size: .42rem; gap: 3px; } .rm-mission-top svg { width: 12px; height: 12px; } .rm-mission-status { font-size: .5rem; } .rm-mission-status svg { display: none; } .rm-board-footer { gap: 12px; padding: 14px 12px; } .rm-board-footer > span { gap: 4px; font-size: .51rem; } .rm-locked-note { padding: 15px 18px; flex-wrap: wrap; } .rm-locked-note > p { min-width: 80%; } .rm-locked-note > button { margin-left: 28px; } .rm-dialog-head { padding: 20px; } .rm-dialog-head h2 { font-size: 1.2rem; } .rm-dialog-content { padding: 20px; } .rm-brief-icon { display: none; } .rm-artifact { padding-inline: 13px; } .rm-dialog-footer { flex-direction: column; align-items: stretch; } .rm-dialog-footer > span { justify-content: center; order: 2; } .rm-dialog-footer > .rm-button { width: 100%; } .rm-placement-selectors { grid-template-columns: 1fr; } .rm-placement { padding: 13px; } .rm-level-proof { padding-inline: 10px; } }
 @media (prefers-reduced-motion:reduce) { .rm-hero-emblem { animation: none; } .rm-stage-tab, .rm-mission { transition: none; } }
+
+.roadmap-review-dialog { position: fixed; inset: 0; width: min(620px, calc(100vw - 28px)); max-height: min(78dvh, 720px); margin: auto; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; padding: clamp(18px, 3vw, 26px); border: 1px solid #315368; border-radius: 16px; background: radial-gradient(ellipse at 0 0,#1b718321,transparent 42%),linear-gradient(155deg,#122034,#0c1727); color: #d9e5f4; box-shadow: 0 16px 54px #0009; }
+.roadmap-review-dialog[open] { z-index: 2100; }
+.roadmap-review-dialog::-webkit-scrollbar { display: none; }
+.roadmap-review-dialog::backdrop { background: #020713c7; }
+.roadmap-review-dialog :is(button, a):focus-visible { outline: 2px solid #7fe6f6; outline-offset: 3px; }
+.roadmap-review-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.roadmap-review-heading > div { min-width: 0; }
+.roadmap-review-heading h2 { margin: 7px 0; color: #edf5ff; font-size: 1.28rem; }
+.roadmap-review-heading p { margin: 0; color: #9db1c8; font-size: .76rem; line-height: 1.6; }
+.roadmap-review-list { display: grid; gap: 11px; margin: 20px 0 0; padding: 0; list-style: none; }
+.roadmap-review-list > li { padding: 14px; border: 1px solid #2e435b; border-radius: 10px; background: #101b2cba; }
+.roadmap-review-item-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.roadmap-review-item-heading > div { min-width: 0; }
+.roadmap-review-item-heading strong { display: block; color: #e6f4fb; font-size: .88rem; line-height: 1.45; }
+.roadmap-review-item-heading small { display: block; margin-top: 4px; color: #91a7c0; font-size: .68rem; }
+.roadmap-review-status { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; color: #9bb0c8; font-size: .64rem; }
+.roadmap-review-status.is-pending { color: #f0d99c; }
+.roadmap-review-list > li > p { display: grid; gap: 4px; margin: 11px 0 0; color: #d6e5f2; font-size: .72rem; line-height: 1.55; overflow-wrap: anywhere; }
+.roadmap-review-list > li > p > span { color: #8299b2; font-size: .64rem; }
+.roadmap-review-list > li > p > strong { color: #d8eaf5; font-size: .73rem; font-weight: 650; }
+.roadmap-review-list > li > .roadmap-review-notes { padding-top: 10px; border-top: 1px solid #ffffff0d; }
+.roadmap-review-files small { display: flex; align-items: center; gap: 6px; color: #a9dce6; }
+.roadmap-review-list .roadmap-team-button { margin-top: 12px; }
+.roadmap-review-empty { margin: 20px 0 0; padding: 20px; border: 1px dashed #385371; border-radius: 10px; color: #98adc6; font-size: .78rem; line-height: 1.6; }

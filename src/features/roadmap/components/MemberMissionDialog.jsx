@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowRight, CheckCircle2, Clock3, FileCheck2, FlaskConical, History, Paperclip, RotateCcw, Send, Upload, X } from 'lucide-react';
 import { roadmapStore } from '../services/roadmap_store.js';
+import { openRoadmapDialog } from '../services/roadmap_dialog.js';
 import { MAX_EVIDENCE_BYTES, MISSION_NOTES_MIN_LENGTH } from '../services/roadmap_workflow.js';
 import { MISSION_WORKFLOW_LABELS } from '../services/mission_review.js';
 import './MemberMissionDialog.css';
@@ -32,6 +34,7 @@ export function MemberMissionDialog({ project, ownerId, userId, mission, roadmap
   const inFlight = useRef(false);
   const mounted = useRef(true);
   const dialogRef = useRef(null);
+  const notesRef = useRef(null);
   const editable = !isOwner && ['in_progress', 'revision_in_progress'].includes(work.status);
   const reviewable = isOwner && ['submitted', 'resubmitted', 'under_review'].includes(work.status);
   const approved = latest?.review.status === 'approved';
@@ -40,10 +43,28 @@ export function MemberMissionDialog({ project, ownerId, userId, mission, roadmap
   useEffect(() => {
     const dialog = dialogRef.current;
     mounted.current = true;
-    const trigger = document.activeElement;
-    dialog.showModal();
-    return () => { mounted.current = false; dialog.close(); queueMicrotask(() => { if (trigger?.isConnected) trigger.focus(); }); };
+    const closeDialog = openRoadmapDialog(dialog);
+    return () => { mounted.current = false; closeDialog(); };
   }, []);
+
+  useEffect(() => {
+    const textarea = notesRef.current;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [notes]);
+
+  useEffect(() => {
+    if (isOwner || work.status !== 'assigned') return undefined;
+    const timer = window.setTimeout(() => {
+      try {
+        onChange(roadmapStore.startMission(project.id, ownerId, mission.id, userId));
+      } catch (err) {
+        setError(err.message || 'Unable to start this mission. Please try again.');
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [isOwner, mission.id, onChange, ownerId, project.id, userId, work.status]);
 
   async function perform(label, action, success = '') {
     if (inFlight.current) return;
@@ -81,7 +102,7 @@ export function MemberMissionDialog({ project, ownerId, userId, mission, roadmap
   const advance = (action) => perform('Updating simulated evaluation…', () => roadmapStore.advanceEvaluation(...args, { jobId: job.id, action }, userId));
   const fieldError = (key) => fields[key] ? <small id={`mr-${key}-error`} className="rm-error" role="alert">{fields[key]}</small> : null;
 
-  return <dialog ref={dialogRef} className="rm-dialog mr-dialog" aria-labelledby="member-mission-title" onCancel={(event) => { event.preventDefault(); if (!saving) onClose(); }} onClick={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
+  return createPortal(<dialog ref={dialogRef} className="rm-dialog mr-dialog" aria-labelledby="member-mission-title" onCancel={(event) => event.preventDefault()}>
     <div className="rm-dialog-head"><div><span className="rm-eyebrow">{project.name} · {mission.stageName} / Level {mission.level}</span><h2 id="member-mission-title">{mission.name}</h2></div><button type="button" className="rm-icon-button" disabled={Boolean(saving)} onClick={onClose} aria-label="Close mission"><X size={20} /></button></div>
     <div className="rm-dialog-content" aria-busy={Boolean(saving)}>
       <div className="mr-status-row" role="status" aria-live="polite"><span className={`mr-status is-${work.status}`}><Clock3 size={15} />{MISSION_WORKFLOW_LABELS[work.status] || work.status}</span><span>{work.memberName || 'Assigned member'} · {work.latestVersion ? `Latest: version ${work.latestVersion}` : 'No submission yet'}</span></div>
@@ -89,7 +110,7 @@ export function MemberMissionDialog({ project, ownerId, userId, mission, roadmap
       <div className="mr-journey" aria-label="Mission review sequence"><span>Member work</span><ArrowRight size={14} /><span>Founder review</span><ArrowRight size={14} /><span>Approved version</span><ArrowRight size={14} /><span>Founder upload</span><ArrowRight size={14} /><span>Simulated AI evaluation</span></div>
       <p className="mr-small">Request Changes → Member Revises Mission → Resubmit to Founder → Founder Review. Technical failure → Retry upload or evaluation.</p>
 
-      {!isOwner && work.status === 'assigned' && <div className="mr-action-card"><h3>Your assigned mission</h3><p>Start your work, then send evidence to your founder for review.</p><button className="rm-button rm-button-primary" disabled={Boolean(saving)} onClick={() => perform('Starting mission…', () => roadmapStore.startMission(...args, userId))}>Start mission<ArrowRight size={15} /></button></div>}
+      {!isOwner && work.status === 'assigned' && <div className="mr-action-card"><h3>Your assigned mission</h3><p>This mission will be marked as in progress while you view it.</p>{error && <button className="rm-button rm-button-primary" disabled={Boolean(saving)} onClick={() => perform('Starting mission…', () => roadmapStore.startMission(...args, userId))}>Retry opening mission<ArrowRight size={15} /></button>}</div>}
       {isOwner && ['assigned', 'in_progress', 'revision_in_progress'].includes(work.status) && <div className="mr-action-card"><h3>{work.status === 'revision_in_progress' ? 'Member Revises Mission' : 'Waiting for member submission'}</h3><p>{work.memberName || 'Your team member'} can submit evidence from their assigned missions. A version will appear here for review when submitted.</p></div>}
       {latest?.review.feedback && <section className="mr-feedback"><h3>Founder feedback · version {latest.version}</h3><p>{latest.review.feedback}</p></section>}
       {!isOwner && ['submitted', 'resubmitted', 'under_review'].includes(work.status) && <div className="mr-action-card"><h3>Awaiting founder review</h3><p>Version {latest.version} was submitted on {formatDate(latest.submittedAt)}. Its evidence is frozen while your founder reviews it.</p></div>}
@@ -98,7 +119,7 @@ export function MemberMissionDialog({ project, ownerId, userId, mission, roadmap
       {editable && <form className="mr-form" onSubmit={submit} noValidate>
         <fieldset className="mr-form-fields" disabled={Boolean(saving)}>
         <h3>{work.latestVersion ? `Prepare version ${work.latestVersion + 1}` : 'Complete your mission'}</h3>
-        <div className="rm-field"><label htmlFor="mr-notes">Your work <span className="required-mark" aria-hidden="true" /></label><p id="mr-notes-hint">At least {MISSION_NOTES_MIN_LENGTH} characters. Describe your work and findings.</p><textarea id="mr-notes" rows={5} value={notes} required minLength={MISSION_NOTES_MIN_LENGTH} maxLength={10000} onChange={(event) => setNotes(event.target.value)} aria-invalid={Boolean(fields.notes)} aria-describedby={`mr-notes-hint${fields.notes ? ' mr-notes-error' : ''}`} />{fieldError('notes')}</div>
+        <div className="rm-field"><label htmlFor="mr-notes">Your work <span className="required-mark" aria-hidden="true" /></label><p id="mr-notes-hint">At least {MISSION_NOTES_MIN_LENGTH} characters. Describe your work and findings.</p><textarea ref={notesRef} id="mr-notes" rows={1} value={notes} required minLength={MISSION_NOTES_MIN_LENGTH} maxLength={10000} onChange={(event) => setNotes(event.target.value)} aria-invalid={Boolean(fields.notes)} aria-describedby={`mr-notes-hint${fields.notes ? ' mr-notes-error' : ''}`} />{fieldError('notes')}</div>
         <fieldset className="rm-artifact"><legend>Supporting evidence</legend><p id="mr-artifact-hint">Add an evidence link or a file. The existing file limit is 5 MB.</p>{fieldError('artifact')}<div className="rm-field"><label htmlFor="mr-url">Evidence link</label><input id="mr-url" type="url" value={url} maxLength={2000} onChange={(event) => setUrl(event.target.value)} placeholder="https://…" aria-invalid={Boolean(fields.url || fields.artifact)} aria-describedby={`mr-artifact-hint${fields.url ? ' mr-url-error' : ''}${fields.artifact ? ' mr-artifact-error' : ''}`} />{fieldError('url')}</div><div className="rm-field"><label htmlFor="mr-file">Evidence file</label><input id="mr-file" type="file" onChange={chooseFile} aria-invalid={Boolean(fields.file || fields.artifact)} aria-describedby={`mr-file-hint${fields.file ? ' mr-file-error' : ''}${fields.artifact ? ' mr-artifact-error' : ''}`} /><small id="mr-file-hint">Only filename, size, and type are saved in this preview; file contents are not uploaded.</small>{fieldError('file')}{file && <div className="rm-attached-file"><Paperclip size={14} /><span>{file.name} · {formatBytes(file.size)}</span><button type="button" onClick={() => { setFile(null); const input = dialogRef.current?.querySelector('#mr-file'); if (input) input.value = ''; }}>Remove</button></div>}</div></fieldset>
         <label className="mr-check"><input type="checkbox" checked={failSubmission} onChange={(event) => setFailSubmission(event.target.checked)} />Preview: simulate a recoverable failure on the next submission</label>
         <div className="mr-actions"><button type="button" className="rm-button" disabled={Boolean(saving)} onClick={() => perform('Saving draft…', () => roadmapStore.saveMissionDraft(...args, submittedPayload(), userId), 'Draft saved in this browser.')}>Save draft</button><button type="submit" className="rm-button rm-button-primary" disabled={Boolean(saving)}><Send size={15} />{work.latestVersion ? 'Resubmit to Founder' : 'Submit to Founder'}</button></div>
@@ -125,5 +146,5 @@ export function MemberMissionDialog({ project, ownerId, userId, mission, roadmap
       <p className="mr-announcement" aria-live="polite" role="status">{saving || notice}</p>
       <div className="rm-demo-note"><FlaskConical size={17} /><p>Local preview. Submissions, founder decisions, and evaluation states are stored in this browser. No real invitations, uploads, or AI evaluations occur. File contents are never read. Existing roadmap progression applies only after a simulated meets-requirements result; no LabX points are awarded.</p></div>
     </div>
-  </dialog>;
+  </dialog>, document.body);
 }

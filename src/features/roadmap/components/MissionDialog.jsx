@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, FileCheck2, FlaskConical, LockKeyhole, Paperclip, RotateCcw, Sparkles, X } from 'lucide-react';
 import { roadmapStore } from '../services/roadmap_store.js';
+import { openRoadmapDialog } from '../services/roadmap_dialog.js';
 import { MAX_EVIDENCE_BYTES, MISSION_NOTES_MIN_LENGTH } from '../services/roadmap_workflow.js';
 import { getCompanionUrl } from '../../companion/services/companion_navigation.js';
 import { MemberMissionDialog } from './MemberMissionDialog.jsx';
@@ -9,14 +11,15 @@ import { MemberMissionDialog } from './MemberMissionDialog.jsx';
 const Required = () => <span className="required-mark" aria-hidden="true" />;
 const formatBytes = (size) => size >= 1024 * 1024 ? `${(size / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(size / 1024))} KB`;
 
-export function MissionDialog({ project, ownerId, userId, mission, roadmap, onClose, onChange, onNext, isOwner, canContinue }) {
+export function MissionDialog({ project, ownerId, userId, mission, roadmap, onClose, onChange, isOwner }) {
   if (!isOwner || roadmap.missionWorkflowsById?.[mission.id]) return <MemberMissionDialog {...{ project, ownerId, userId, mission, roadmap, onClose, onChange, isOwner }} />;
-  return <OwnerMissionDialog {...{ project, ownerId, userId, mission, roadmap, onClose, onChange, onNext, isOwner, canContinue }} />;
+  return <OwnerMissionDialog {...{ project, ownerId, userId, mission, roadmap, onClose, onChange, isOwner }} />;
 }
 
-function OwnerMissionDialog({ project, ownerId, userId, mission, roadmap, onClose, onChange, onNext, isOwner, canContinue }) {
+function OwnerMissionDialog({ project, ownerId, userId, mission, roadmap, onClose, onChange, isOwner }) {
   const location = useLocation();
   const dialogRef = useRef(null);
+  const notesRef = useRef(null);
   const previous = roadmap.submissionsByMilestone[mission.id];
   const [notes, setNotes] = useState(previous?.notes || '');
   const [url, setUrl] = useState(previous?.url || '');
@@ -40,13 +43,15 @@ function OwnerMissionDialog({ project, ownerId, userId, mission, roadmap, onClos
 
   useEffect(() => {
     const dialog = dialogRef.current;
-    const trigger = document.activeElement;
-    dialog.showModal();
-    return () => {
-      dialog.close();
-      queueMicrotask(() => { if (trigger?.isConnected) trigger.focus(); });
-    };
+    return openRoadmapDialog(dialog);
   }, []);
+
+  useEffect(() => {
+    const textarea = notesRef.current;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [notes]);
 
   function chooseFile(event) {
     const selected = event.target.files?.[0];
@@ -81,9 +86,8 @@ function OwnerMissionDialog({ project, ownerId, userId, mission, roadmap, onClos
   }
 
   const updateProof = (id, field, value) => setProofs((current) => ({ ...current, [id]: { ...current[id], [field]: value } }));
-  return <dialog ref={dialogRef} className="rm-dialog" aria-labelledby="mission-dialog-title"
-    onCancel={(event) => { event.preventDefault(); onClose(); }}
-    onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+  return createPortal(<dialog ref={dialogRef} className="rm-dialog" aria-labelledby="mission-dialog-title"
+    onCancel={(event) => event.preventDefault()}>
     <div className="rm-dialog-head">
       <div><span className="rm-eyebrow">{mission.stageName} / Level {mission.level} / Mission {mission.order}</span><h2 id="mission-dialog-title">{mission.name}</h2></div>
       <button className="rm-icon-button" type="button" onClick={onClose} aria-label="Close mission"><X size={20} /></button>
@@ -107,7 +111,7 @@ function OwnerMissionDialog({ project, ownerId, userId, mission, roadmap, onClos
         <div className="rm-field">
           <label htmlFor="mission-notes">Your work<Required /></label>
           <p id="mission-notes-hint">What did you create, what did you learn, and what will you do next? At least {MISSION_NOTES_MIN_LENGTH} characters.</p>
-          <textarea id="mission-notes" rows={5} required minLength={MISSION_NOTES_MIN_LENGTH} maxLength={10000} value={notes} onChange={(event) => setNotes(event.target.value)}
+          <textarea ref={notesRef} id="mission-notes" rows={1} required minLength={MISSION_NOTES_MIN_LENGTH} maxLength={10000} value={notes} onChange={(event) => setNotes(event.target.value)}
             placeholder="Explain your work and the evidence that supports it…" aria-describedby="mission-notes-hint" />
           <small className="rm-character-count">{notes.trim().length} characters</small>
         </div>
@@ -141,8 +145,7 @@ function OwnerMissionDialog({ project, ownerId, userId, mission, roadmap, onClos
       </form> : <>
         {previous && <div className="rm-submitted-work"><h3>Submitted work</h3><p>{previous.notes}</p>{previous.url && <p><a href={previous.url} target="_blank" rel="noopener noreferrer">Open evidence link ↗</a></p>}{previous.file && <p><Paperclip size={14} />{previous.file.name} · {formatBytes(previous.file.size)} · metadata saved</p>}</div>}
         <div className="rm-demo-note"><FlaskConical size={17} /><p>This was a simulated evaluation. No AI review or LabX points were awarded.</p></div>
-        <div className="rm-dialog-footer"><button type="button" className="rm-button" onClick={onClose}>Back to roadmap</button>{roadmap.currentMilestoneId && canContinue && <button className="rm-button rm-button-primary" type="button" onClick={onNext}>Next mission<ArrowRight size={16} /></button>}</div>
       </>}
     </div>
-  </dialog>;
+  </dialog>, document.body);
 }

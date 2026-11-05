@@ -56,13 +56,13 @@ try {
   await button('Submit Assessment').click()
   await button('Enter My Roadmap').click()
   await page.getByRole('heading', { name: 'Roadmap', level: 1, exact: true }).waitFor()
-  await page.getByRole('heading', { name: 'Header layout project Roadmap', level: 2, exact: true }).waitFor()
+  await page.getByRole('heading', { name: 'Header layout project', level: 2, exact: true }).waitFor()
 
   const routes = [
     { path: '/dashboard', title: 'Dashboard', header: '.db-header' },
     { path: '/chats', title: 'Chats' },
     { path: '/roadmap', title: 'Roadmap', header: '.projects-collection-bar' },
-    { path: '/roadmap/new', title: 'New Project', header: '.labx-navbar-title' },
+    { path: '/roadmap/new', title: 'Roadmap', header: '.labx-navbar-title' },
     { path: projectPath, title: 'Roadmap', header: '.rm-project-bar' },
     { path: '/leaderboard', title: 'LabX Leaderboard', header: '.lb-header' },
     { path: '/events', title: 'Events & Opportunities' },

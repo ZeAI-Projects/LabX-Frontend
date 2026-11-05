@@ -3,6 +3,7 @@
 .roadmap-team-button--primary { background: #65d5e7; color: #08242e; border-color: #65d5e7; }
 .roadmap-team-button--primary:hover { background: #97e5ef; color: #08242e; }
 .roadmap-team-dialog { position: fixed; inset: 0; margin: auto; width: min(680px, calc(100vw - 28px)); max-height: calc(100dvh - 36px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; -ms-overflow-style: none; padding: clamp(18px,3vw,25px); border: 1px solid #315368; border-radius: 16px; background: radial-gradient(ellipse at 0 0,#1b718321,transparent 42%),linear-gradient(155deg,#122034,#0c1727); color: #d9e5f4; box-shadow: 0 16px 54px #0009; }
+.roadmap-team-dialog[open] { z-index: 2001; }
 .roadmap-team-dialog::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .roadmap-team-dialog::backdrop { background: #020713c7; }
 .roadmap-team-dialog *, .roadmap-collaboration-list * { box-sizing: border-box; }

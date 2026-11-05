@@ -1,23 +1,87 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, ChevronRight, Filter, FolderPlus, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import { useAuth } from '../../../hooks/use_auth.js';
 import { useProjects } from '../hooks/use_projects.js';
 import { formatRoadmapDate, projectDetails, projectDomains, PROJECT_SORTS, PROJECT_STATUSES, selectAllProjects, selectProjects, UNSET_DOMAIN } from '../services/project_list.js';
 import { ROADMAP_VISUAL_JOINED_DATA, ROADMAP_VISUAL_MOCK_DATA, ROADMAP_VISUAL_MY_DATA } from '../services/roadmap_visual_mock_data.js';
+import { readMockAssessment } from '../services/mock_assessment_store.js';
 import { ProjectFilterSelect, ProjectsPagination, SortHeading } from '../components/ProjectsCollectionControls.jsx';
 import { JoinedRoadmaps } from '../../roadmap/pages/JoinedRoadmaps.jsx';
 import { JoinRoadmapTrigger } from '../../roadmap/components/JoinRoadmapTrigger.jsx';
 import '../components/Projects.css';
 
 
-function ProjectRow({ project, onEdit, onDelete, onOpenRoadmap }) {
+function ProjectProgress({ project, details }) {
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [position, setPosition] = useState(null);
+  const triggerRef = useRef(null);
+  const tooltipId = useId();
+  const progress = details.progressPercent;
+  const snapshot = project.roadmap_snapshot;
+  const isRoadmap = project.visualDemo || project.assessment_completed;
+  const levelCount = snapshot
+    ? snapshot.stages.flatMap((stage) => stage.levels).filter((level) =>
+      level.milestones.every((mission) => ['completed', 'credited', 'skipped'].includes(mission.state))).length
+    : project.visualDemo
+      ? Math.max(0, ['Discover', 'Validate', 'Build', 'Launch', 'Grow'].indexOf(details.stage) * 5 + (details.level || 1) - 1)
+      : 0;
+  const missionCount = snapshot
+    ? (snapshot.completedCount || 0) + (snapshot.creditedCount || 0) + (snapshot.skippedCount || 0)
+    : project.visualDemo && progress !== null && progress !== undefined
+      ? Math.round(progress * 75 / 100)
+      : 0;
+  const focus = snapshot?.isComplete
+    ? 'Roadmap complete'
+    : isRoadmap && details.stage
+      ? `${details.stage} · Level ${details.level || 1}`
+      : 'Assessment';
+
+  useEffect(() => {
+    if (!hovered && !focused) return undefined;
+    const updatePosition = () => {
+      const bounds = triggerRef.current?.getBoundingClientRect();
+      if (!bounds) return;
+      const width = Math.min(300, window.innerWidth - 24);
+      const right = Math.min(Math.max(12, window.innerWidth - bounds.right), window.innerWidth - width - 12);
+      const below = bounds.bottom + 104 <= window.innerHeight;
+      setPosition({ top: below ? bounds.bottom + 8 : Math.max(12, bounds.top - 96), right, width });
+    };
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [hovered, focused]);
+
+  return <div className="project-progress">
+    <button ref={triggerRef} type="button" className="project-progress__trigger"
+      aria-label={`${progress === null || progress === undefined ? 'Unknown' : `${progress}%`} progress details for ${project.name}`}
+      aria-describedby={(hovered || focused) && position ? tooltipId : undefined} onPointerEnter={() => setHovered(true)} onPointerLeave={() => setHovered(false)}
+      onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}>
+      {progress === null || progress === undefined ? '—' : `${progress}%`}
+    </button>
+    {(hovered || focused) && position && createPortal(
+      <div id={tooltipId} className="project-progress__tooltip" role="tooltip" style={position}>
+        <span><strong>{focus}</strong><small>Current focus</small></span>
+        <span><strong>{isRoadmap ? `${levelCount}/25` : `${details.answeredCount}/8`}</strong><small>{isRoadmap ? 'Levels' : 'Answers'}</small></span>
+        <span><strong>{isRoadmap ? `${missionCount}/75` : 'Not started'}</strong><small>Missions</small></span>
+      </div>,
+      document.body,
+    )}
+  </div>;
+}
+
+function ProjectRow({ project, onEdit, onDelete }) {
   const details = projectDetails(project);
   const completed = details.status === 'completed';
   const statusLabel = project.visualDemo && details.status === 'in-progress'
     ? 'In progress'
     : PROJECT_STATUSES.find(([value]) => value === details.status)?.[1] || 'Roadmap ready';
-  const progressPercent = details.progressPercent;
 
   return (
     <tr className={`project-row${completed ? ' project-row--ready' : ''}`} aria-labelledby={`project-title-${project.id}`}>
@@ -26,7 +90,7 @@ function ProjectRow({ project, onEdit, onDelete, onOpenRoadmap }) {
           <div>
             <h2 id={`project-title-${project.id}`} title={project.name}>
               {project.visualDemo
-                  ? <button type="button" className="project-row__title-link" onClick={() => onOpenRoadmap(project)}>{project.name}</button>
+                  ? <Link className="project-row__title-link" to={`/roadmap/demo/${encodeURIComponent(project.id)}${project.status === 'pending' && !project.assessment_completed ? '/assessment' : ''}`}>{project.name}</Link>
                   : <Link className="project-row__title-link" to={`/roadmap/${project.id}${project.assessment_completed ? '' : '/assessment'}`}>{project.name}</Link>}
             </h2>
           </div>
@@ -36,9 +100,7 @@ function ProjectRow({ project, onEdit, onDelete, onOpenRoadmap }) {
         <span className="project-row__domain" title={details.domain || 'Domain not set yet'}>{details.domain || 'Domain not set yet'}</span>
       </td>
       <td data-label="Progress">
-        <div className="project-progress">
-          <strong>{progressPercent === null || progressPercent === undefined ? '—' : `${progressPercent}%`}</strong>
-        </div>
+        <ProjectProgress project={project} details={details} />
       </td>
       <td data-label="Created at" className="project-row__date">{formatRoadmapDate(project.created_at)}</td>
       <td data-label="Status">
@@ -142,12 +204,20 @@ function ProjectDialog({ project, mode, onClose, onSave, focusAfterClose }) {
 
 export function ProjectsPage() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const { projects, renameProject, deleteProject } = useProjects();
   const [searchParams, setSearchParams] = useSearchParams();
   const view = searchParams.get('view') === 'joined' ? 'joined' : 'my';
   const [dialog, setDialog] = useState(null);
-  const [demoProjects, setDemoProjects] = useState(() => import.meta.env.DEV ? ROADMAP_VISUAL_MY_DATA.map((project) => ({ ...project, owner_id: user.id, created_by: user.full_name })) : []);
+  const [demoProjects, setDemoProjects] = useState(() => import.meta.env.DEV ? ROADMAP_VISUAL_MY_DATA.map((project) => {
+    const assessment = readMockAssessment(project.id);
+    return {
+      ...project,
+      owner_id: user.id,
+      created_by: user.full_name,
+      assessment_completed: assessment.completed,
+      ...(assessment.completed ? { status: 'ready', assessment_result: assessment.result } : {}),
+    };
+  }) : []);
   const [demoJoinedProjects] = useState(() => import.meta.env.DEV ? ROADMAP_VISUAL_JOINED_DATA.map((project) => ({ ...project })) : []);
   const [notice, setNotice] = useState('');
   const [domainFilterOpen, setDomainFilterOpen] = useState(false);
@@ -216,11 +286,6 @@ export function ProjectsPage() {
     }, { replace: true });
   };
   const openDialog = (project, mode) => { setNotice(''); setDialog({ project, mode }); };
-  const openMockRoadmap = (project) => {
-    if (project.visualDemo) {
-      navigate(`/roadmap/demo/${encodeURIComponent(project.id)}`);
-    }
-  };
   const saveChange = async (id, name) => {
     if (dialog.project.visualDemo && dialog.mode === 'edit') {
       setDemoProjects((items) => items.map((item) => item.id === id ? { ...item, name } : item));
@@ -240,7 +305,7 @@ export function ProjectsPage() {
     <div className={`projects-page projects-page--${view}`}>
       <div className="projects-collection-bar">
         <nav className="projects-view-tabs" aria-label="Roadmap collection">
-          {[['my', 'My Roadmaps'], ['joined', 'Joined as Member']].map(([value, label]) => <button type="button" key={value} aria-pressed={view === value} onClick={() => { setSearchParams(value === 'my' ? {} : { view: value }); }}>{label}{value === 'my' && <span>{roadmapProjects.length}</span>}</button>)}
+          {[['my', 'My Roadmaps'], ['joined', 'Joined as Member']].map(([value, label]) => <button type="button" key={value} aria-pressed={view === value} onClick={() => { setSearchParams(value === 'my' ? {} : { view: value }); }}>{label}</button>)}
         </nav>
         <div className="roadmap-collection-actions"><JoinRoadmapTrigger className="projects-button">Join roadmap<ArrowRight size={16} aria-hidden="true" /></JoinRoadmapTrigger><Link to="/roadmap/new" className="projects-button projects-button--primary"><Plus size={18} aria-hidden="true" />New project</Link></div>
       </div>
@@ -262,11 +327,10 @@ export function ProjectsPage() {
             {domainFilterOpen && <div className="projects-filter-panel">
               <ProjectFilterSelect label="Status" value={status} options={[['', 'All statuses'], ...PROJECT_STATUSES]} onChange={(value) => updateControl('status', value)} />
               <ProjectFilterSelect label="Domain" value={domain} options={[['', 'All domains'], ...[...new Set([...domains, ...(domain ? [domain] : [])])].map((value) => [value, value === UNSET_DOMAIN ? 'Domain not set yet' : value])]} onChange={(value) => updateControl('domain', value)} />
-              {domain && <button type="button" onClick={() => updateControl('domain', '')}>Clear domain</button>}
+              {hasFilters && <button type="button" className="projects-filter-clear" onClick={clearFilters}>Clear filters</button>}
             </div>}
           </div>
         </div>
-        <div className="projects-results-summary"><p role="status" aria-live="polite">{hasFilters ? `${results.total} of ${roadmapProjects.length} roadmaps match` : `${results.total} roadmaps`}</p>{hasFilters && <button type="button" onClick={clearFilters}><X size={14} aria-hidden="true" />Clear filters</button>}</div>
         {results.total ? <div className="projects-list" role="region" aria-label="Project list" tabIndex={0}>
           <table className="projects-table projects-table--owned">
             <caption className="projects-sr-only">My roadmaps by project, domain, progress, creation date, and status</caption>
@@ -279,7 +343,7 @@ export function ProjectsPage() {
               <th scope="col" aria-sort={sort === 'status-asc' ? 'ascending' : sort === 'status-desc' ? 'descending' : 'none'}><SortHeading label="Status" ascending="status-asc" descending="status-desc" sort={sort} onSort={sortBy} /></th>
               <th scope="col">Actions</th>
             </tr></thead>
-            <tbody>{visibleProjects.map((project) =>             <ProjectRow key={project.id} project={project} onEdit={(item) => openDialog(item, 'edit')} onDelete={(item) => openDialog(item, 'delete')} onOpenRoadmap={openMockRoadmap} />)}</tbody>
+            <tbody>{visibleProjects.map((project) =>             <ProjectRow key={project.id} project={project} onEdit={(item) => openDialog(item, 'edit')} onDelete={(item) => openDialog(item, 'delete')} />)}</tbody>
           </table>
         </div> : <section className="projects-no-results" aria-labelledby="projects-no-results-title"><Search size={28} aria-hidden="true" /><h3 id="projects-no-results-title">No projects match your search</h3><p>Try another name, status, or domain.</p><button type="button" className="projects-button" onClick={clearFilters}>Clear search and filters</button></section>}
         {results.total > 0 && <ProjectsPagination total={page.total} from={page.from} to={page.to} page={page.page} pages={page.pages} onPageChange={updatePage} />}

@@ -26,7 +26,7 @@ const OPTION_ICONS = [
   [Target, Microscope, Wrench, UserCheck, Landmark, UsersRound, CircleDollarSign, Globe2, Rocket, Scale, FileCheck2, CheckCircle2, CircleHelp],
 ];
 
-export const AssessmentWizard = ({ project }) => {
+export const AssessmentWizard = ({ project, onSaveDraft, resultPath }) => {
   const { saveDraft } = useProjects();
   const { step, answers, questionsUpdated } = project.draft;
   const question = ASSESSMENT_QUESTIONS[step - 1];
@@ -40,7 +40,9 @@ export const AssessmentWizard = ({ project }) => {
 
   function setDraft(update) {
     try {
-      saveDraft(project.id, update(project.draft));
+      const nextDraft = update(project.draft);
+      if (onSaveDraft) onSaveDraft(nextDraft);
+      else saveDraft(project.id, nextDraft);
     } catch (err) {
       setError(err.message || 'Unable to save your answers. Please try again.');
     }
@@ -63,7 +65,7 @@ export const AssessmentWizard = ({ project }) => {
     setSubmitting(true);
     setError('');
     try {
-      navigate(`/roadmap/${project.id}/result`, { replace: true });
+      navigate(resultPath || `/roadmap/${project.id}/result`, { replace: true });
     } catch (err) {
       setError(err.message || 'Unable to complete your assessment. Please try again.');
     } finally {
@@ -127,7 +129,7 @@ export const AssessmentWizard = ({ project }) => {
               Back
             </button>
           ) : <div />}
-          {reviewing && <button type="button" className="assessment-return" onClick={() => navigate(`/roadmap/${project.id}/result`)}>Return to summary</button>}
+          {reviewing && <button type="button" className="assessment-return" onClick={() => navigate(resultPath || `/roadmap/${project.id}/result`)}>Return to summary</button>}
           <button type="button" className="btn btn-primary" onClick={handleNext}
             disabled={submitting}>
             {submitting ? 'Saving assessment...' : step === ASSESSMENT_QUESTION_COUNT ? 'Review Answers' : 'Next Step'}

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowLeft, ArrowRight, BarChart3, Check, FlaskConical, Layers,
+  ArrowLeft, BarChart3, Check, Coins, FlaskConical, Layers,
   Leaf, LockKeyhole, Play, Rocket,
 } from 'lucide-react';
 import './RoadmapJourney.css';
@@ -120,16 +120,18 @@ function MountainArtwork() {
     </svg>
 }
 
-function LevelMissionsPage({ level, stage, status, canOpen, onOpenMission, onBack, lockedFeedbackId, onLockedMission }) {
+function LevelMissionsPage({ level, stage, status, canOpen, onOpenMission, onBack, lockedFeedbackId, onLockedMission, lockedMessage }) {
   const hasScrollableMissions = level.milestones.length > 3;
   return <section className="rmj-mission-page" aria-labelledby="rmj-level-page-title">
     <div className="rmj-mission-page-heading">
       <button type="button" className="rmj-back-button" onClick={onBack}><ArrowLeft size={16} />Back to journey</button>
       <span className="rmj-eyebrow">STAGE {stage.index + 1} · {stage.name} · LEVEL {level.number}</span>
       <h2 id="rmj-level-page-title">{level.name}</h2>
-      <p>{status === 'locked'
-        ? 'This level unlocks after you complete the missions before it. Preview the work ahead.'
-        : 'Complete each mission in order to keep moving through this level.'}</p>
+      <p>{lockedMessage
+        ? 'Only the mission assigned to you is available. Other missions and levels remain locked.'
+        : status === 'locked'
+          ? 'This level unlocks after you complete the missions before it. Preview the work ahead.'
+          : 'Complete each mission in order to keep moving through this level.'}</p>
     </div>
     <ol className={`rmj-mission-page-list${hasScrollableMissions ? ' is-scrollable' : ''}`}>
       {level.milestones.map((mission, index) => {
@@ -141,29 +143,29 @@ function LevelMissionsPage({ level, stage, status, canOpen, onOpenMission, onBac
           : mission.state === 'credited' ? 'Covered by placement'
             : mission.state === 'skipped' ? 'Optional · skipped'
               : mission.state === 'optional' ? 'Optional · available'
+                : mission.state === 'submitted' ? 'Submitted for review'
                 : mission.state === 'active' ? accessible ? 'Ready to begin' : 'Awaiting founder' : 'Locked';
-        return <li key={mission.id} className={`rmj-mission-tile is-${mission.state}${isActionLocked ? ' is-action-locked' : ''}${lockedFeedbackId === mission.id ? ' is-rejected' : ''}`}
-          data-locked-hint={isLocked || isActionLocked ? `Complete Mission ${previousMission?.order || mission.order - 1} to unlock` : undefined}
-          role={isLocked || isActionLocked ? 'button' : undefined} tabIndex={isLocked || isActionLocked ? 0 : undefined}
-          aria-label={isLocked || isActionLocked ? `Mission ${mission.order} locked. Complete Mission ${previousMission?.order || mission.order - 1} to unlock.` : undefined}
-          onClick={isLocked || isActionLocked ? () => onLockedMission(mission.id) : undefined}
-          onKeyDown={isLocked || isActionLocked ? (event) => {
+        const canActivate = accessible || isLocked || isActionLocked;
+        const activate = () => accessible ? onOpenMission(mission) : onLockedMission(mission.id);
+        return <li key={mission.id} className={`rmj-mission-tile is-${mission.state}${isActionLocked ? ' is-action-locked' : ''}${accessible ? ' is-clickable' : ''}${lockedFeedbackId === mission.id ? ' is-rejected' : ''}`}
+          data-locked-hint={isLocked || isActionLocked ? lockedMessage || `Complete Mission ${previousMission?.order || mission.order - 1} to unlock` : undefined}
+          role={canActivate ? 'button' : undefined} tabIndex={canActivate ? 0 : undefined}
+          aria-label={isLocked || isActionLocked ? `Mission ${mission.order} locked. ${lockedMessage || `Complete Mission ${previousMission?.order || mission.order - 1} to unlock.`}` : undefined}
+          onClick={canActivate ? activate : undefined}
+          onKeyDown={canActivate ? (event) => {
             if (event.key === 'Enter' || event.key === ' ') {
               event.preventDefault();
-              onLockedMission(mission.id);
+              activate();
             }
           } : undefined}>
           <div className="rmj-mission-tile-top">
-            <span className="rmj-mission-number" aria-hidden="true">{isCovered(mission) ? <Check size={17} /> : mission.order}</span>
+            <span className="rmj-mission-points"><Coins size={13} aria-hidden="true" />+{mission.labxPoints || 100} LabX points</span>
             {mission.isOptional && <span className="rmj-mission-optional">Optional</span>}
             <span className="rmj-mission-state">{isLocked || isActionLocked ? <><LockKeyhole size={13} />Locked</> : label}</span>
           </div>
           {isLocked || isActionLocked
             ? <div className="rmj-mission-locked-indicator" aria-hidden="true"><LockKeyhole size={24} /></div>
             : <div className="rmj-mission-copy"><strong>{mission.name}</strong><p>{mission.description}</p></div>}
-          {accessible
-            ? <button type="button" className="rmj-mission-open" onClick={() => onOpenMission(mission)}>{mission.state === 'skipped' ? 'Complete optional mission' : isCovered(mission) ? 'Review mission' : 'Open mission'}<ArrowRight size={15} /></button>
-            : !isLocked && !isActionLocked && <span className="rmj-mission-unavailable">{label === 'Locked' ? <LockKeyhole size={14} /> : null}{label}</span>}
         </li>;
       })}
     </ol>
@@ -172,7 +174,7 @@ function LevelMissionsPage({ level, stage, status, canOpen, onOpenMission, onBac
 
 export function RoadmapJourney({
   project, roadmap, currentMission, selectedLevelId, onSelectLevel, canOpen,
-  onOpenMission, headerBar, operations, showOperations = false,
+  onOpenMission, headerBar, operations, showOperations = false, lockedMessage,
 }) {
   const currentStage = roadmap.stages.find((stage) => stage.isCurrent) || roadmap.stages[roadmap.currentStageIndex] || roadmap.stages[0];
   const [selectedStageId, setSelectedStageId] = useState(currentStage.id);
@@ -186,7 +188,6 @@ export function RoadmapJourney({
   const geometry = useMemo(() => buildStageGeometry(selectedStage, compact), [selectedStage, compact]);
   const activeLevelId = currentMission ? `${currentMission.stageName.toLowerCase()}-level-${currentMission.level}` : null;
   const pageEntry = selectedStage.levels.find((level) => level.id === levelPageId);
-  const completedLevels = roadmap.stages.flatMap((stage) => stage.levels).filter((level) => level.milestones.every(isCovered)).length;
   const coveredMissionCount = roadmap.completedCount + (roadmap.creditedCount || 0);
   const resolvedMissionCount = project.visualDemo ? roadmap.resolvedCount ?? coveredMissionCount : coveredMissionCount;
   const isFreshRoadmap = resolvedMissionCount === 0 && roadmap.completedCount === 0
@@ -205,8 +206,6 @@ export function RoadmapJourney({
     return distance + (geometry.segmentLengths[index] || 0) * (total ? covered / total : 0);
   }, 0);
   const roadProgressUnits = geometry.totalLength ? Math.round(roadProgressDistance / geometry.totalLength * 1000) : 0;
-  const currentLevelLabel = currentMission ? `${currentStage.name} · Level ${currentMission.level}` : 'Roadmap complete';
-
   useEffect(() => {
     const media = window.matchMedia('(max-width: 520px)');
     const updateCompact = () => setCompact(media.matches);
@@ -258,27 +257,15 @@ export function RoadmapJourney({
     if (status !== 'locked') setLevelPageId(level.id);
   };
 
-  return <section className="rmj-shell" aria-label={`${project.name} roadmap journey`} style={{ '--stage-color': selectedStage.tier.color }}>
+  return <section className={`rmj-shell${project.memberView ? ' is-member-view' : ''}`} aria-label={`${project.name} roadmap journey`} style={{ '--stage-color': selectedStage.tier.color }}>
     <header className="rmj-header">
       {headerBar && !pageEntry && <div className="rmj-breadcrumb">{headerBar}</div>}
       <div className="rmj-title-row">
         <div className="rmj-project-title">
-          <span className="rmj-eyebrow">{roadmap.domain} · FOUNDER ROADMAP</span>
-          <h2>{project.name} Roadmap</h2>
-        </div>
-        <div className="rmj-progress-summary">
-          <div className="rmj-progress-label">
-            <span>Roadmap progress</span>
-            <button type="button" className="rmj-progress-details-trigger" aria-label={`${roadmap.progressPercent}% roadmap progress; focus or hover for details`} aria-describedby="rmj-progress-stats">
-              {roadmap.progressPercent}%
-            </button>
-          </div>
-          <div className="rmj-progress-track" role="progressbar" aria-label="Roadmap progress" aria-valuemin={0} aria-valuemax={75} aria-valuenow={resolvedMissionCount} aria-valuetext={`${roadmap.completedCount} completed, ${roadmap.skippedCount || 0} optional missions skipped, ${roadmap.creditedCount || 0} placement credits, 75 total missions`}><span style={{ width: `${roadmap.progressPercent}%` }} /></div>
-          <div className="rmj-progress-stats" id="rmj-progress-stats" role="tooltip" aria-label="Roadmap summary">
-            <span><strong>{currentLevelLabel}</strong><small>Current focus</small></span>
-            <span><strong>{completedLevels}/25</strong><small>Levels</small></span>
-            <span><strong>{resolvedMissionCount}/75</strong><small>Missions</small></span>
-          </div>
+          <span className="rmj-eyebrow">{project.memberView
+            ? `${project.founderName || project.created_by || 'Founder'} Roadmap`
+            : roadmap.domain}</span>
+          <h2>{project.name}</h2>
         </div>
       </div>
       <nav className="rmj-stage-track" aria-label="Stage progression">
@@ -294,7 +281,7 @@ export function RoadmapJourney({
             <span className="rmj-stage-icon">{status === 'complete' ? <Check size={17} /> : <StageIcon size={18} />}</span>
             <span className="rmj-stage-copy"><span className="rmj-stage-name">{stage.name}</span><small>Stage {index + 1} · {count}/5</small></span>
             {status === 'locked' && <LockKeyhole className="rmj-stage-lock" size={14} aria-hidden="true" />}
-            {!unlocked && <span className="rmj-stage-lock-hint">Complete {previousStage?.name || 'the previous stage'} to unlock</span>}
+            {!unlocked && <span className="rmj-stage-lock-hint">{lockedMessage || `Complete ${previousStage?.name || 'the previous stage'} to unlock`}</span>}
           </button>;
         })}
       </nav>
@@ -305,7 +292,7 @@ export function RoadmapJourney({
       ? <div className="rmj-viewport rmj-viewport--missions" role="region" aria-label={`${selectedStage.name} level ${pageEntry.number} missions`}>
         <LevelMissionsPage level={pageEntry} stage={selectedStage} status={levelStatus(pageEntry, activeLevelId)}
           canOpen={canOpen} onOpenMission={openMission} onBack={() => setLevelPageId(null)}
-          lockedFeedbackId={lockedFeedbackId} onLockedMission={showLockedFeedback} />
+          lockedFeedbackId={lockedFeedbackId} onLockedMission={showLockedFeedback} lockedMessage={lockedMessage} />
       </div>
       : <div className="rmj-mountain-viewport" role="region" aria-label={`${selectedStage.name} stage mountain roadmap`}>
         <div className={`rmj-mountain-canvas${selectedStage.id === 'grow' ? ' is-premium' : ''}`}>
@@ -342,9 +329,9 @@ export function RoadmapJourney({
             const isSelected = selectedLevel.id === level.id;
             const cardPosition = point.y < 42 ? 'below' : 'above';
             const previousStage = roadmap.stages.find((stage) => stage.index === selectedStage.index - 1);
-            const lockedReason = level.number > 1
+            const lockedReason = lockedMessage || (level.number > 1
               ? `Complete Level ${level.number - 1} to unlock this level.`
-              : `Complete all levels in ${previousStage?.name || 'the previous stage'} to unlock this stage.`;
+              : `Complete all levels in ${previousStage?.name || 'the previous stage'} to unlock this stage.`);
             const isJourneyLevel = level.id === activeLevelId
               || (!currentMission && isFreshRoadmap && selectedStage.isCurrent && level.number === 1);
             const completedMissions = level.milestones.filter(isCovered).length;

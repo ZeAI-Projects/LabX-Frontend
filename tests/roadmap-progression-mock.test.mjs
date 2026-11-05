@@ -16,7 +16,10 @@ function memoryStorage() {
 }
 
 const project = { id: 'happora', domain: 'Retail & Commerce', status: 'ready', stage: 'Discover', level: 1 };
-const submission = { notes: 'We interviewed local customers about the problem, compared their existing workarounds, and documented the evidence for our next product decision.', url: 'https://example.com/evidence' };
+const submission = {
+  notes: 'We interviewed local customers about the problem, compared their existing workarounds, and documented the evidence for our next product decision.',
+  attachments: [{ id: 'evidence-1', name: 'interview-notes.pdf', type: 'application/pdf', size: 1024 }],
+};
 
 test('prototype begins at Happora Discover Level 1 Mission 1 and exposes 25 levels', () => {
   const store = createRoadmapProgressionMockStore(memoryStorage());
@@ -29,6 +32,7 @@ test('prototype begins at Happora Discover Level 1 Mission 1 and exposes 25 leve
   assert.equal(roadmap.currentMilestoneId, 'discover-l1-m1');
   assert.equal(ROADMAP_OPTIONAL_MISSION_IDS.length, 25);
   assert.deepEqual(levels[0].milestones.map(({ name }) => name), ['Problem Identification', 'Problem Research', 'Problem Validation']);
+  assert.ok(missions.every(({ labxPoints, objective, deploymentInstructions, expectedDeliverable }) => labxPoints === 100 && objective && deploymentInstructions && expectedDeliverable));
   assert.deepEqual(levels[0].milestones.map(({ state }) => state), ['active', 'locked', 'locked']);
   assert.equal(levels[0].milestones.every(({ isOptional }) => !isOptional), true);
 });
@@ -47,6 +51,45 @@ test('prototype progress is sequential, persists, and unlocks levels and stages'
   assert.equal(roadmap.completedCount, 15);
   assert.equal(store.read(project, 'founder-1').progressPercent, 20);
   assert.equal(store.read(project, 'founder-2').completedCount, 0);
+});
+
+test('completed visual roadmaps include saved mock deliverables and a 100-point award', () => {
+  const store = createRoadmapProgressionMockStore(memoryStorage());
+  const sample = { ...project, id: 'sample-complete', visualDemo: true, status: 'completed' };
+  const roadmap = store.read(sample, 'founder-1');
+  const completedMission = roadmap.stages.flatMap((stage) => stage.levels.flatMap((level) => level.milestones))
+    .find((mission) => mission.state === 'completed');
+  const submission = roadmap.submissionsByMissionId[completedMission.id];
+  assert.equal(roadmap.completedCount, 75);
+  assert.equal(submission.labxPointsAwarded, 100);
+  assert.equal(submission.attachments.length, 2);
+  assert.ok(submission.attachments.some(({ mockContent, type }) => mockContent && type.startsWith('image/')));
+});
+
+test('joined prototype members submit mock work for founder review without completing the mission', () => {
+  const store = createRoadmapProgressionMockStore(memoryStorage());
+  const joined = {
+    ...project,
+    id: 'joined-sample',
+    visualDemo: true,
+    visualCollection: 'joined',
+    assignmentWorkStatus: 'in_progress',
+    stage: 'Validate',
+    level: 2,
+    currentMission: 'Interview guide',
+    assignedMissionId: 'validate-l2-m1',
+  };
+  const roadmap = store.read(joined, 'founder-1');
+  const mission = roadmap.stages.flatMap((stage) => stage.levels.flatMap((level) => level.milestones))
+    .find(({ name }) => name === joined.currentMission);
+  const submittedRoadmap = store.submitMission(joined, 'founder-1', mission.id, submission);
+  const submittedMission = submittedRoadmap.stages.flatMap((stage) => stage.levels.flatMap((level) => level.milestones))
+    .find(({ id }) => id === mission.id);
+  assert.equal(submittedMission.state, 'submitted');
+  assert.equal(submittedRoadmap.completedCount, roadmap.completedCount);
+  assert.equal(submittedRoadmap.submissionsByMissionId[mission.id].status, 'submitted');
+  assert.equal(submittedRoadmap.submissionsByMissionId[mission.id].labxPointsAwarded, undefined);
+  assert.throws(() => store.completeMission(joined, 'founder-1', mission.id, submission), /only the founder can complete/i);
 });
 
 test('prototype unlocks all three missions in order before advancing to the next level', () => {

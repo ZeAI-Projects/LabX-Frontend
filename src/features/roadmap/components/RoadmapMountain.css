@@ -33,7 +33,6 @@
 .rmj-progress-details-trigger:hover,
 .rmj-progress-details-trigger:focus-visible { color: #c1fbff; text-shadow: 0 0 13px #47d9ec9c; }
 .rmj-progress-details-trigger:focus-visible { outline: 2px solid #8ceaf4; outline-offset: 4px; border-radius: 3px; }
-.rmj-progress-summary .rmj-progress-track { height: 10px; margin-top: 8px; }
 .rmj-progress-stats {
   position: absolute;
   top: calc(100% + 8px);

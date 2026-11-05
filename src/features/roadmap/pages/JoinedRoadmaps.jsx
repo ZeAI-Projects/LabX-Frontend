@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowRight, Check, Filter, LogOut, Search, X } from 'lucide-react';
 import { useAuth } from '../../../hooks/use_auth.js';
@@ -8,13 +9,20 @@ import { collaborationStore } from '../services/roadmap_collaboration.js';
 import { CollaborationBadge, CollaborationFeedback } from '../components/CollaborationPortal.jsx';
 import { collaborationDate, useCollaborationAction, useCollaborationRefresh, useCollaborationVersion } from '../components/collaboration_ui.js';
 import { createMockRoadmap } from '../services/mock_roadmap.js';
+import { readDemoMissionExit, requestDemoMissionExit } from '../services/roadmap_member_actions.js';
+import { openRoadmapDialog } from '../services/roadmap_dialog.js';
+import { roadmapStore } from '../services/roadmap_store.js';
 import { RoadmapPage } from './RoadmapPage.jsx';
 import '../components/RoadmapTeam.css';
 
 const roleLabel = (role) => role === 'co-founder' ? 'Co-founder' : 'Member';
-const assignmentStatuses = [['assigned', 'Assigned'], ['exit-requested', 'Exit requested']];
+const assignmentStatuses = [['assigned', 'Assigned'], ['yet-to-complete', 'Yet to Complete'], ['completed', 'Completed'], ['exit-requested', 'Exit requested']];
 const assignmentSorts = ['project-asc', 'project-desc', 'founder-asc', 'founder-desc', 'domain-asc', 'domain-desc', 'mission-asc', 'mission-desc', 'joined-asc', 'joined-desc', 'expires-asc', 'expires-desc', 'status-asc', 'status-desc'];
-const assignmentStatus = (assignment) => assignment.leaveRequest ? 'exit-requested' : 'assigned';
+const assignmentStatus = (assignment) => assignment.leaveRequest
+  ? 'exit-requested'
+  : assignment.workStatus === 'completed' ? 'completed'
+    : assignment.workStatus === 'assigned' ? 'assigned' : 'yet-to-complete';
+const assignmentStatusLabel = (status) => assignmentStatuses.find(([value]) => value === status)?.[1] || 'Yet to Complete';
 
 function demoAssignmentsFrom(projects, leaveRequests) {
   return projects.map((project) => {
@@ -31,7 +39,7 @@ function demoAssignmentsFrom(projects, leaveRequests) {
       assignedAt: project.updated_at || '',
       joinedAt: project.joinedAt || null,
       expiresAt: project.expiresAt || null,
-      status: 'assigned',
+      workStatus: project.assignmentWorkStatus || 'assigned',
       leaveRequest: leaveRequests.has(project.id) ? { status: 'pending', visualDemo: true } : null,
       project: { ...project, owner_id: '' },
       mission,
@@ -74,35 +82,40 @@ function selectAssignmentRows(rows, { query, status, domain, sort }) {
 function AssignmentExitAction({ assignment, userId, onChange, onDemoRequest }) {
   const action = useCollaborationAction();
   const dialogRef = useRef(null);
+  const [confirming, setConfirming] = useState(false);
   const disabled = action.busy || Boolean(assignment.leaveRequest);
   const label = assignment.leaveRequest
       ? `Exit request pending for ${assignment.mission.name}`
       : `Request to leave ${assignment.mission.name}`;
   const requestExit = () => action.run(
       () => assignment.visualDemo
-        ? onDemoRequest(assignment.projectId)
+        ? onDemoRequest(assignment.projectId, assignment.missionId)
         : collaborationStore.requestAssignmentExit(assignment.projectId, assignment.ownerId, assignment.missionId, userId),
       assignment.visualDemo
         ? 'Exit request saved for this sample mission. It remains assigned until founder approval.'
         : 'Exit request sent to the roadmap founder. Your assignment stays active until it is approved.',
-      () => { dialogRef.current?.close(); onChange(); },
+      () => { setConfirming(false); onChange(); },
     );
+  useEffect(() => {
+    if (!confirming || !dialogRef.current) return undefined;
+    return openRoadmapDialog(dialogRef.current);
+  }, [confirming]);
   return <div className="projects-assignment-exit">
-    <button type="button" className="project-row__action project-row__action--danger" aria-label={label} title={label} disabled={disabled || action.busy} onClick={() => dialogRef.current?.showModal()}>
+    <button type="button" className="project-row__action project-row__action--danger" aria-label={label} title={label} disabled={disabled || action.busy} onClick={() => setConfirming(true)}>
       <LogOut size={16} aria-hidden="true" />
     </button>
-    {!assignment.leaveRequest && <dialog ref={dialogRef} className="roadmap-team-dialog roadmap-exit-dialog" aria-labelledby={`exit-request-title-${assignment.id}`}>
+    {!assignment.leaveRequest && createPortal(<dialog ref={dialogRef} className="roadmap-team-dialog roadmap-exit-dialog" aria-labelledby={`exit-request-title-${assignment.id}`} onCancel={(event) => event.preventDefault()}>
       <div className="roadmap-team-heading">
         <div><span className="roadmap-team-kicker">Mission exit request</span><h2 id={`exit-request-title-${assignment.id}`}>Request to leave this mission?</h2></div>
-        <button type="button" className="roadmap-team-close" aria-label="Close exit request confirmation" onClick={() => dialogRef.current?.close()}><X size={18} aria-hidden="true" /></button>
+        <button type="button" className="roadmap-team-close" aria-label="Close exit request confirmation" onClick={() => setConfirming(false)}><X size={18} aria-hidden="true" /></button>
       </div>
       <p className="roadmap-team-note">This sends a request to the founder for <strong>{assignment.mission.name}</strong> in <strong>{assignment.project.name}</strong>. You remain assigned until the founder approves it.</p>
       <CollaborationFeedback action={action} />
       <div className="roadmap-team-toolbar">
-        <button type="button" className="roadmap-team-button" disabled={action.busy} onClick={() => dialogRef.current?.close()}>Cancel</button>
+        <button type="button" className="roadmap-team-button" disabled={action.busy} onClick={() => setConfirming(false)}>Cancel</button>
         <button type="button" className="roadmap-team-button roadmap-team-button--primary" disabled={action.busy} onClick={requestExit}>{action.busy ? 'Sending…' : 'Send exit request'}</button>
       </div>
-    </dialog>}
+    </dialog>, document.body)}
     <CollaborationFeedback action={action} />
   </div>;
 }
@@ -113,13 +126,25 @@ export function JoinedRoadmaps({ demoProjects = [], compact = false }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [domainFilterOpen, setDomainFilterOpen] = useState(false);
   const [searchDraftState, setSearchDraftState] = useState({ query: '', value: '' });
-  const [demoLeaveRequests, setDemoLeaveRequests] = useState(() => new Set());
+  const [demoLeaveRequests, setDemoLeaveRequests] = useState(() => new Set(
+    demoAssignmentsFrom(demoProjects, new Set())
+      .filter((assignment) => readDemoMissionExit(user.id, assignment.projectId, assignment.missionId))
+      .map((assignment) => assignment.projectId),
+  ));
   const domainFilterRef = useRef(null);
   const collaborationRevision = useCollaborationVersion();
   const joinedSnapshot = useMemo(() => {
     try {
       return user?.role === 'founder'
-        ? { joined: collaborationStore.listJoinedProjects(user.id), assignments: collaborationStore.listMyAssignments(user.id), error: '', revision: collaborationRevision }
+        ? {
+          joined: collaborationStore.listJoinedProjects(user.id),
+          assignments: collaborationStore.listMyAssignments(user.id).map((assignment) => ({
+            ...assignment,
+            workStatus: roadmapStore.read(assignment.projectId, assignment.ownerId, user.id).missionWorkflowsById?.[assignment.missionId]?.status || 'assigned',
+          })),
+          error: '',
+          revision: collaborationRevision,
+        }
         : { joined: [], assignments: [], error: '', revision: collaborationRevision };
     } catch (err) { return { joined: [], assignments: [], error: err.message, revision: collaborationRevision }; }
   }, [user, collaborationRevision]);
@@ -189,7 +214,10 @@ export function JoinedRoadmaps({ demoProjects = [], compact = false }) {
     }, { replace: true });
   };
   const refresh = useCollaborationRefresh();
-  const requestDemoExit = (projectId) => setDemoLeaveRequests((previous) => new Set(previous).add(projectId));
+  const requestDemoExit = (projectId, missionId) => {
+    requestDemoMissionExit(user.id, projectId, missionId);
+    setDemoLeaveRequests((previous) => new Set(previous).add(projectId));
+  };
 
   if (!user || user.role !== 'founder') return null;
   if (compact) return <section className="projects-listing projects-listing--joined" aria-label="Joined as Member assignments">
@@ -208,11 +236,10 @@ export function JoinedRoadmaps({ demoProjects = [], compact = false }) {
         {domainFilterOpen && <div className="projects-filter-panel">
           <ProjectFilterSelect label="Status" value={status} options={[['', 'All statuses'], ...assignmentStatuses]} onChange={(value) => updateControl('status', value)} />
           <ProjectFilterSelect label="Domain" value={domain} options={[['', 'All domains'], ...domains.map((value) => [value, value === UNSET_DOMAIN ? 'Domain not set yet' : value])]} onChange={(value) => updateControl('domain', value)} />
-          {(domain || status) && <button type="button" onClick={clearFilters}>Clear filters</button>}
+          {hasFilters && <button type="button" onClick={clearFilters}>Clear filters</button>}
         </div>}
       </div>
     </div>
-    <div className="projects-results-summary"><p role="status" aria-live="polite">{hasFilters ? `${filteredAssignments.length} of ${assignmentRows.length} missions match` : `${assignmentRows.length} assigned missions`}</p>{hasFilters && <button type="button" onClick={clearFilters}><X size={14} aria-hidden="true" />Clear filters</button>}</div>
     {filteredAssignments.length ? <>
       <div className="projects-list" role="region" aria-label="Assigned missions table" tabIndex={0}>
         <table className="projects-table projects-table--assignments">
@@ -240,13 +267,13 @@ export function JoinedRoadmaps({ demoProjects = [], compact = false }) {
               <td data-label="Founder"><span className="project-row__creator">{assignment.project.created_by || 'Founder'}</span></td>
               <td data-label="Joined at" className="project-row__date">{formatRoadmapDate(assignment.joinedAt)}</td>
               <td data-label="Expire Date" className="project-row__date" title={assignment.expiresAt ? undefined : 'No expiry date is set'}>{formatRoadmapDate(assignment.expiresAt)}</td>
-              <td data-label="Status"><span className={`project-status project-status--${statusValue}`}>{statusValue === 'exit-requested' ? 'Exit requested' : 'Assigned'}</span></td>
+              <td data-label="Status"><span className={`project-status project-status--${statusValue}`}>{assignmentStatusLabel(statusValue)}</span></td>
               <td className="project-row__actions-cell" data-label="Action"><div className="project-row__actions"><AssignmentExitAction assignment={assignment} userId={user.id} onChange={refresh} onDemoRequest={requestDemoExit} /></div></td>
             </tr>;
           })}</tbody>
         </table>
       </div>
-      <ProjectsPagination total={filteredAssignments.length} from={from} to={to} page={page} pages={pages} onPageChange={updatePage} itemLabel="missions" />
+      <ProjectsPagination total={filteredAssignments.length} from={from} to={to} page={page} pages={pages} onPageChange={updatePage} />
     </> : hasFilters ? <section className="projects-no-results" aria-labelledby="joined-missions-no-results-title"><Search size={28} aria-hidden="true" /><h3 id="joined-missions-no-results-title">No missions match your filters</h3><p>Try another mission, roadmap, founder, status, or domain.</p><button type="button" className="projects-button" onClick={clearFilters}>Clear search and filters</button></section> : !error && <div className="roadmap-collaboration-empty">No missions have been assigned to you yet. Accepted roadmap assignments will appear here.</div>}
   </section>;
   return <section className="roadmap-collaboration-list" aria-labelledby={titleId}>
@@ -302,5 +329,9 @@ export function JoinedRoadmapRoute() {
   if (!access) return <section className="roadmap-collaboration-list"><h1>Roadmap unavailable</h1><p>This project is no longer available or you have not joined its team.</p><Link className="roadmap-team-button" to="/roadmap?join=1">Back to Join Roadmap</Link></section>;
   if (access.role === 'owner') return <Navigate to={`/roadmap/${encodeURIComponent(projectId)}`} replace />;
   if (!access.project.assessment_completed) return <section className="roadmap-collaboration-list"><h1>{access.project.name}</h1><p>The owner needs to complete this project’s assessment before its roadmap is ready.</p><Link className="roadmap-team-button" to="/roadmap?join=1&joinView=activity">Back to joined roadmaps</Link></section>;
-  return <RoadmapPage key={`${ownerId}:${projectId}`} project={access.project} ownerId={ownerId} />;
+  return <RoadmapPage key={`${ownerId}:${projectId}`} project={{
+    ...access.project,
+    founderName: access.project.created_by || access.project.owner_name || 'Founder',
+    memberView: true,
+  }} ownerId={ownerId} />;
 }

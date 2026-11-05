@@ -45,14 +45,14 @@
 .project-row__identity > div { min-width: 0; }
 .project-row__icon { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; border: 1px solid #33435d; border-radius: 9px; color: #afbbd9; background: #19253e; }
 .project-row--ready .project-row__icon { border-color: #13546a; background: #103447; color: #67e8f9; }
-.project-row h2 { margin: 0; font-size:14px; font-weight: 700; line-height: 1.5; }
+.project-row h2 { margin: 0; font-size:12px; font-weight: 600; line-height: 1.5; }
 .project-row h2, .project-row__domain, .project-row__creator { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .project-row__title-link { display:block;max-width:100%;overflow:hidden;padding:0;border:0;background:transparent;color:inherit;font:inherit;text-align:left;text-overflow:ellipsis;white-space:nowrap;text-decoration:none;cursor:pointer; }
-.project-row__title-link:hover { color:#9cebf5;text-decoration:underline;text-underline-offset:3px; }
+.project-row__title-link:hover { color:#9cebf5;text-decoration:none; }
 .project-row__domain { margin: 3px 0 0; color: #8fa7c2; font-size:12px; line-height: 1.5; }
 .project-row__creator { display: block; color: #b5c6dc; font-size:14px; }
-.project-row__date { color: #9eb2cc; font-size:14px; white-space: nowrap; }
-.project-status { display: inline-flex; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid #57452b; border-radius: 6px; background: #372c1e66; color: #edc585; font-size:12px; font-weight: 650; line-height: 1.4; }
+.project-row__date { color: #9eb2cc; font-size:12px; white-space: nowrap; }
+.project-status { display: inline-flex; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid #57452b; border-radius: 6px; background: #372c1e66; color: #edc585; font-size:11px; font-weight: 600; line-height: 1.4; }
 .project-status__dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
 .project-status--ready { border-color: #205342; background: #123b3166; color: #7ce1b6; }
 .project-row__placement { display: flex; flex-direction: column; gap: 4px; font-size:14px; }
@@ -64,10 +64,12 @@
 .project-draft__track span { display: block; height: 100%; background: #67b9d5; border-radius: inherit; }
 .project-row__actions { display: flex; align-items: center; gap: 6px; }
 .projects-table--assignments { min-width: 1080px; }
-.projects-assignment-mission { display: grid; gap: 4px; color: #bdebf2; font-size: 13px; font-weight: 650; text-decoration: none; }
-.projects-assignment-mission:hover { color: #e2fbff; text-decoration: underline; }
+.projects-assignment-mission { display: grid; gap: 4px; color: #bdebf2; font-size: 12px; font-weight: 600; text-decoration: none; }
+.projects-assignment-mission:hover { color: #e2fbff; text-decoration: none; }
 .projects-assignment-mission small { color: #8fa7c2; font-size: 11px; font-weight: 450; }
 .project-status--assigned { border-color: #205342; background: #123b3166; color: #7ce1b6; }
+.project-status--yet-to-complete { border-color:#265878;background:#13324999;color:#8bdcf2; }
+.project-status--completed { border-color:#205342;background:#123b3166;color:#7ce1b6; }
 .project-status--exit-requested { border-color: #665534; background: #42371f99; color: #f0d99c; }
 .projects-assignment-exit { position: relative; }
 .projects-button--exit { min-height: 36px; padding: 8px 10px; border-color: #684051; background: #321f31; color: #e9b5c3; font-size: 11px; white-space: nowrap; }
@@ -253,21 +255,24 @@
 .projects-compact-search > button { display:grid;place-items:center;flex:0 0 28px;height:26px;padding:0;border:0;border-radius:5px;background:#1e3248;color:#c5e4f2;cursor:pointer;transition:background-color 160ms ease,color 160ms ease,transform 160ms ease; }
 .projects-compact-search > button:hover { transform:translateY(-1px);background:#34617a;color:#e3f8ff; }
 .projects-filter-anchor { position:relative;flex:0 0 auto; }
-.projects-filter-button { position:relative;display:grid;place-items:center;width:36px;height:36px;padding:0;border:1px solid #ffffff16;border-radius:8px;background:#0b1422;color:#a8bdd3;cursor:pointer;transition:color 160ms ease,border-color 160ms ease,background-color 160ms ease; }
-.projects-filter-button:hover,.projects-filter-button.is-active { border-color:#58bfd28c;background:#123340;color:#a5eff8; }
+.projects-filter-button { position:relative;display:grid;place-items:center;width:34px;height:34px;padding:0;border:1px solid #ffffff16;border-radius:8px;background:#0b1422;color:#a8bdd3;cursor:pointer;transition:color 160ms ease,border-color 160ms ease,background-color 160ms ease,transform 160ms ease,box-shadow 160ms ease; }
+.projects-filter-button:hover,.projects-filter-button.is-active { transform:translateY(-1px);border-color:#58bfd28c;background:#123340;color:#a5eff8;box-shadow:0 5px 15px #37c5dc20; }
 .projects-filter-count { position:absolute;top:-6px;right:-6px;display:grid;place-items:center;min-width:17px;height:17px;padding:0 4px;border-radius:999px;background:#45aebf;color:#06131b;font-size:10px;font-weight:750; }
-.projects-filter-panel { position:absolute;top:calc(100% + 7px);left:0;z-index:10;display:grid;gap:9px;width:min(300px,calc(100vw - 56px));padding:13px;border:1px solid #ffffff1a;border-radius:10px;background:#111c2b;box-shadow:0 14px 32px #0008; }
-.projects-filter-label { color:#9dacc3;font-size:12px;font-weight:600; }
-.projects-filter-select { position:relative;display:grid;gap:7px;min-width:0; }
+.projects-filter-panel { position:absolute;top:calc(100% + 8px);left:0;z-index:10;display:grid;gap:10px;width:min(260px,calc(100vw - 56px));padding:13px;border:1px solid #ffffff1a;border-radius:10px;background:#111c2b;box-shadow:0 14px 32px #0008;animation:projects-filter-enter 160ms ease-out both; }
+.projects-filter-label { color:#9dacc3;font-size:12px;font-weight:400; }
+.projects-filter-select { position:relative;display:grid;gap:6px;min-width:0;color:#9dacc3;font-size:12px; }
 .projects-filter-select__trigger { display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:43px;padding:9px 10px;border:1px solid #2a364b;border-radius:8px;background:#0b1220;color:#d1dded;font:inherit;font-size:13px;text-align:left;cursor:pointer; }
 .projects-filter-select__trigger:hover,.projects-filter-select__trigger[aria-expanded=true] { border-color:#54738d;background:#101d2d; }
-.projects-filter-select__trigger svg { color:#92a9c2; }
-.projects-filter-select__options { position:absolute;top:calc(100% + 5px);left:0;right:auto;z-index:12;display:grid;width:max-content;min-width:100%;max-width:min(340px,calc(100vw - 56px));max-height:min(280px,45vh);overflow-y:auto;overscroll-behavior:contain;padding:5px;border:1px solid #ffffff1a;border-radius:9px;background:#111c2b;box-shadow:0 14px 32px #0009;scrollbar-width:none;-ms-overflow-style:none; }
+.projects-filter-select__trigger:focus-visible { border-color:#64c8df;outline:2px solid #87dbed;outline-offset:2px; }
+.projects-filter-select__chevron { flex:0 0 9px;width:9px;height:9px;margin:0 3px 4px 0;border-right:1.5px solid #92a9c2;border-bottom:1.5px solid #92a9c2;transform:rotate(45deg); }
+.projects-filter-select__trigger[aria-expanded=true] .projects-filter-select__chevron { margin-top:6px;margin-bottom:0;transform:rotate(225deg); }
+.projects-filter-select__options { position:absolute;top:calc(100% + 5px);left:0;z-index:12;display:grid;gap:3px;width:max-content;min-width:100%;max-width:min(340px,calc(100vw - 56px));max-height:min(280px,45vh);overflow-y:auto;overscroll-behavior:contain;padding:5px;border:1px solid #ffffff1a;border-radius:9px;background:#111c2b;box-shadow:0 14px 32px #0009;scrollbar-width:none;-ms-overflow-style:none; }
 .projects-filter-select__options::-webkit-scrollbar { display:none;width:0;height:0; }
 .projects-filter-select__options [role=option] { min-height:34px;padding:7px 9px;border:0;border-radius:6px;background:transparent;color:#a8bdd3;font:inherit;font-size:12px;line-height:1.4;text-align:left;overflow-wrap:anywhere;cursor:pointer; }
 .projects-filter-select__options [role=option]:hover,.projects-filter-select__options [role=option]:focus-visible,.projects-filter-select__options [role=option][aria-selected=true] { outline:0;background:#1c3345;color:#a5eaf5; }
-.projects-filter-panel button { justify-self:start;padding:5px 0;border:0;background:transparent;color:#8de4f2;font:inherit;font-size:12px;cursor:pointer; }
-.projects-filter-panel button:hover { color:#d0faff; }
+.projects-filter-clear { justify-self:start;min-height:34px;padding:6px 10px;border:1px solid #ffffff18;border-radius:8px;background:#172233;color:#b7c7dc;font:inherit;font-size:13px;cursor:pointer; }
+.projects-filter-clear:hover { border-color:#6e9db64f;background:#1d3045;color:#e0f6ff; }
+@keyframes projects-filter-enter { from { opacity:0;transform:translateY(6px); } to { opacity:1;transform:translateY(0); } }
 .projects-results-summary { display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;min-height:50px;padding:12px 2px;color:#9eb2cc;font-size:14px; }
 .projects-results-summary p { margin:0; }
 .projects-results-summary button { display:inline-flex;align-items:center;gap:6px;border:0;border-radius:5px;background:transparent;color:#8de4f2;font:inherit;cursor:pointer;padding:4px; }
@@ -308,13 +313,14 @@
 }
 .app-shell .founder-world--roadmap:has(.projects-page:is(.projects-page--my, .projects-page--joined)) > .app-shell__page { flex: 1 1 auto; min-height: 0; overflow: hidden; }
 .app-shell .founder-world--roadmap:has(.projects-page:is(.projects-page--my, .projects-page--joined)) > .labx-footer { flex: 0 0 auto; }
-.app-shell .founder-world--roadmap .projects-page:is(.projects-page--my, .projects-page--joined) { display:flex; width:100%;max-width:none;height:100%;min-height:0;flex-direction:column;margin:0;padding:0 0 20px; }
+.app-shell .founder-world--roadmap .projects-page:is(.projects-page--my, .projects-page--joined) { display:flex; width:100%;max-width:none;height:100%;min-height:0;flex-direction:column;margin:0;padding:0; }
 .app-shell .founder-world--roadmap .projects-collection-bar { flex:0 0 auto;gap:16px;margin-bottom:12px; }
 .app-shell .founder-world--roadmap .projects-view-tabs { flex:1 1 auto;gap:5px;margin:0;padding:0; }
 .app-shell .founder-world--roadmap .projects-view-tabs button { min-height:38px;padding:8px 13px;font-size:13px; }
 .app-shell .founder-world--roadmap .roadmap-collection-actions { gap:8px; }
 .app-shell .founder-world--roadmap .roadmap-collection-actions .projects-button { min-height:38px;padding:8px 12px;font-size:12px; }
 .app-shell .founder-world--roadmap .roadmap-collection-actions .projects-button--primary:hover { background:#8be4f3;color:#071b27;border-color:#a5f3fc;box-shadow:0 4px 20px #38bcd530; }
+.app-shell .founder-world--roadmap .projects-collection-content { overflow:hidden; }
 .app-shell .founder-world--roadmap .projects-listing {
   display:flex;
   min-height:0;
@@ -329,7 +335,7 @@
 .app-shell .founder-world--roadmap .projects-controls {
   flex:0 0 auto;
   gap:7px;
-  padding:10px 13px;
+  padding:7px 13px;
   border: 0;
   border-bottom: 1px solid #ffffff0d;
   border-radius: 13px 13px 0 0;
@@ -338,7 +344,7 @@
 .app-shell .founder-world--roadmap .projects-compact-search { width:min(300px,calc(100% - 42px));height:34px;flex:0 1 300px; }
 .app-shell .founder-world--roadmap .projects-compact-search input { min-height:0;padding:0;border:0;background:transparent;font-size:13px; }
 .app-shell .founder-world--roadmap .projects-filter-button { width:34px;height:34px; }
-.app-shell .founder-world--roadmap .projects-filter-panel .projects-filter-select__trigger { min-height:38px;font-size:12px; }
+.app-shell .founder-world--roadmap .projects-filter-panel .projects-filter-select__trigger { min-height:43px;font-size:13px; }
 .app-shell .founder-world--roadmap .projects-results-summary {
   flex:0 0 auto;
   min-height: 30px;
@@ -363,10 +369,10 @@
 .app-shell .founder-world--roadmap .projects-table--owned .projects-table__status { width: 16%; }
 .app-shell .founder-world--roadmap .projects-table--owned .projects-table__actions { width: 12%; }
 .app-shell .founder-world--roadmap .projects-table--assignments .projects-table__mission { width: 22%; }
-.app-shell .founder-world--roadmap .projects-table--assignments .projects-table__project { width: 21%; }
+.app-shell .founder-world--roadmap .projects-table--assignments .projects-table__project { width: 20%; }
 .app-shell .founder-world--roadmap .projects-table--assignments .projects-table__creator { width: 13%; }
-.app-shell .founder-world--roadmap .projects-table--assignments .projects-table__date { width: 12%; }
-.app-shell .founder-world--roadmap .projects-table--assignments .projects-table__status { width: 12%; }
+.app-shell .founder-world--roadmap .projects-table--assignments .projects-table__date { width: 11.5%; }
+.app-shell .founder-world--roadmap .projects-table--assignments .projects-table__status { width: 14%; }
 .app-shell .founder-world--roadmap .projects-table--assignments .projects-table__actions { width: 8%; }
 .app-shell .founder-world--roadmap .projects-controls { justify-content:flex-end; }
 .app-shell .founder-world--roadmap .projects-filter-panel { right:0;left:auto;width:min(260px,calc(100vw - 56px)); }
@@ -428,7 +434,7 @@
 }
 .app-shell .founder-world--roadmap .project-row__domain,
 .app-shell .founder-world--roadmap .project-row__creator { display: block; color: #afc0d5; font-size: 12px; line-height: 1.45; }
-.app-shell .founder-world--roadmap .project-status { padding: 5px 7px; font-size: 11px; line-height: 1.25; white-space: normal; }
+.app-shell .founder-world--roadmap .project-status { padding: 5px 7px; font-size: 11px; line-height: 1.25; white-space: nowrap; }
 .app-shell .founder-world--roadmap .project-status--ready,
 .app-shell .founder-world--roadmap .project-status--completed { border-color: #205342; background: #123b3166; color: #7ce1b6; }
 .app-shell .founder-world--roadmap .project-status--in-progress { border-color: #265878; background: #13324999; color: #8bdcf2; }
@@ -509,22 +515,22 @@
   max-height: min(380px, calc(100dvh - 300px));
   min-height: 220px;
   flex:0 1 520px;
+  margin:12px 12px 0;
   overflow-x: auto;
   overflow-y: auto;
   border: 1px solid #2e4058;
   border-radius: 12px;
   background: #121e2d;
   overscroll-behavior: contain;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width:none;
+  -ms-overflow-style:none;
   touch-action: pan-y;
 }
-.app-shell .founder-world--roadmap .projects-list::-webkit-scrollbar { display: none; width: 0; height: 0; }
-.app-shell .founder-world--roadmap .projects-list:not(:has(.projects-list__more)) { height:auto;max-height:none;min-height:0;flex:0 0 auto;overflow-y:hidden; }
-.app-shell .founder-world--roadmap .projects-listing--joined { display:flex;min-height:0;flex-direction:column;overflow:visible;border:1px solid #2b3d54;border-radius:13px;background:linear-gradient(145deg,#111b2b,#0f1827);box-shadow:0 12px 30px #00000018; }
+.app-shell .founder-world--roadmap .projects-list::-webkit-scrollbar { display:none;width:0;height:0; }
+.app-shell .founder-world--roadmap .projects-listing--joined { display:flex;min-height:0;flex:1 1 0;flex-direction:column;overflow:visible;border:1px solid #2b3d54;border-radius:13px;background:linear-gradient(145deg,#111b2b,#0f1827);box-shadow:0 12px 30px #00000018; }
 .app-shell .founder-world--roadmap .projects-listing--joined .projects-controls { flex:0 0 auto;border:0;border-bottom:1px solid #ffffff0d;border-radius:13px 13px 0 0;background:#101a2a; }
-.app-shell .founder-world--roadmap .projects-listing--joined .projects-results-summary { min-height:42px;padding:8px 13px; }
-.app-shell .founder-world--roadmap .projects-listing--joined .projects-list { height:auto;max-height:none;min-height:0;flex:0 0 auto;border:0;border-radius:0; }
+.app-shell .founder-world--roadmap .projects-listing--joined { min-height:0; }
+.app-shell .founder-world--roadmap .projects-listing--joined .projects-list { height:min(380px,calc(100dvh - 300px));max-height:min(380px,calc(100dvh - 300px));min-height:220px;flex:0 1 520px; }
 .app-shell .founder-world--roadmap .projects-listing--joined .projects-table thead th { height:46px; }
 .app-shell .founder-world--roadmap .projects-listing--joined .project-row { height:78px; }
 .app-shell .founder-world--roadmap .projects-list__more { display:grid;min-height:160px;place-items:center;padding:14px;color:#7f95b0;font-size:11px;text-align:center; }
@@ -561,16 +567,36 @@
 .app-shell .founder-world--roadmap .projects-listing--joined .project-row { height:auto; }
 .app-shell .founder-world--roadmap .project-row__identity { gap:0; }
 .app-shell .founder-world--roadmap .project-row__actions { justify-content:flex-start;gap:7px; }
-.app-shell .founder-world--roadmap .project-row__action { width:32px;height:32px;min-width:32px;min-height:32px;border:1px solid #31445d;border-radius:8px;background:#172436; }
+.app-shell .founder-world--roadmap .project-row__action { width:30px;height:30px;min-width:30px;min-height:30px;border:1px solid #31445d;border-radius:8px;background:#172436; }
 .app-shell .founder-world--roadmap .project-row__action:hover { border-color:#6eaec0;background:#20384a; }
 .app-shell .founder-world--roadmap .project-row__action--danger { color:#d58d91; }
 .app-shell .founder-world--roadmap .project-row__action--danger:hover { border-color:#834c58;background:#512f3a;color:#ffb7b7; }
 .app-shell .founder-world--roadmap .project-row__action:disabled { opacity:.45;cursor:not-allowed; }
 .app-shell .founder-world--roadmap .project-row__title-link { color:#d1e0f0; }
-.app-shell .founder-world--roadmap .project-row__title-link:hover { color:#d4f4fa; }
-.app-shell .founder-world--roadmap .project-progress { display:grid;gap:4px; }
-.app-shell .founder-world--roadmap .project-progress > strong { color:#d8f6fb;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums; }
+.app-shell .founder-world--roadmap .project-row__title-link:hover { color:#d4f4fa;text-decoration:none; }
+.app-shell .founder-world--roadmap .project-progress { position:relative;display:grid;gap:4px; }
+.app-shell .founder-world--roadmap .project-progress__trigger { justify-self:start;padding:0;border:0;background:transparent;color:#d8f6fb;font:inherit;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;cursor:help; }
+.app-shell .founder-world--roadmap .project-progress__trigger:hover,.app-shell .founder-world--roadmap .project-progress__trigger:focus-visible { color:#a5f3fc;text-shadow:0 0 12px #47d9ec80; }
+.app-shell .founder-world--roadmap .project-progress__trigger:focus-visible { outline:2px solid #8ceaf4;outline-offset:4px;border-radius:3px; }
+.project-progress__tooltip { position:fixed;z-index:2100;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;padding:7px;border:1px solid #28465d;border-radius:11px;background:linear-gradient(145deg,#102338f5,#0b1728f7);box-shadow:0 12px 30px #020914a8,0 0 22px #27b4d21c;pointer-events:none; }
+.project-progress__tooltip > span { display:flex;min-width:0;min-height:43px;flex-direction:column;justify-content:center;gap:2px;padding:5px 7px;border-radius:7px;background:#101d2dcc; }
+.project-progress__tooltip strong { overflow:hidden;color:#d7edff;font-size:11px;font-weight:750;text-overflow:ellipsis;white-space:nowrap; }
+.project-progress__tooltip small { color:#8ca9c4;font-size:10px;white-space:nowrap; }
 .app-shell .founder-world--roadmap .projects-table--assignments .projects-table__actions { width:8%; }
+.app-shell .founder-world--roadmap .projects-listing { gap:0; }
+.app-shell .founder-world--roadmap .projects-table thead th { padding-top:12px;padding-bottom:12px;font-size:10px; }
+.app-shell .founder-world--roadmap .project-row > :is(th,td) { padding-top:12px;padding-bottom:12px; }
+.app-shell .founder-world--roadmap .project-row h2 { font-size:14px;line-height:1.4; }
+.app-shell .founder-world--roadmap .project-row__domain,
+.app-shell .founder-world--roadmap .project-row__creator,
+.app-shell .founder-world--roadmap .project-row__date { font-size:12px;line-height:1.45; }
+.app-shell .founder-world--roadmap .projects-assignment-mission { gap:4px;font-size:12px; }
+.app-shell .founder-world--roadmap .projects-assignment-mission small { font-size:11px; }
+.app-shell .founder-world--roadmap .project-status { font-size:11px; }
+.app-shell .founder-world--roadmap .projects-list { height:min(380px,calc(100dvh - 300px));max-height:min(380px,calc(100dvh - 300px));min-height:220px;flex:0 1 520px; }
+.app-shell .founder-world--roadmap .projects-grid-pagination { flex:0 0 auto;justify-content:space-between;gap:14px;padding:5px 13px;margin-top:12px;border-top:1px solid #ffffff0d; }
+.app-shell .founder-world--roadmap .projects-grid-pagination > p { width:auto;margin:0;text-align:left; }
+.app-shell .founder-world--roadmap .projects-grid-pagination nav { justify-content:flex-end;margin-left:auto; }
 .app-shell .founder-world--roadmap .roadmap-exit-dialog { width:min(520px,calc(100vw - 28px)); }
 .app-shell .founder-world--roadmap .roadmap-exit-dialog .roadmap-team-toolbar { justify-content:flex-end;margin-top:20px; }
 .app-shell .founder-world--roadmap .project-preview-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 20px 0; }
@@ -586,7 +612,7 @@
 .app-shell .founder-world--roadmap .project-preview-missions li:first-child small { color: #89d9be; }
 
 @media (max-width: 1050px) {
-  .app-shell .founder-world--roadmap .projects-list { height:auto;max-height:none;min-height:0; }
+  .app-shell .founder-world--roadmap .projects-list { height:min(380px,calc(100dvh - 300px));max-height:min(380px,calc(100dvh - 300px));min-height:220px;flex:0 1 520px; }
 }
 @media (min-width: 1200px) {
   .app-shell .founder-world--roadmap .projects-page:is(.projects-page--my, .projects-page--joined) { padding-top:8px; }
@@ -594,8 +620,9 @@
 }
 @container (max-width: 960px) {
   .app-shell .founder-world--roadmap .projects-page:is(.projects-page--my, .projects-page--joined) { padding:10px 0 14px; }
-  .app-shell .founder-world--roadmap .projects-listing--joined { flex:0 0 auto; }
-  .app-shell .founder-world--roadmap .projects-listing--joined .projects-list { height:auto;max-height:none;min-height:0;flex:0 0 auto; }
+  .app-shell .founder-world--roadmap .projects-listing--joined { flex:1 1 0; }
+  .app-shell .founder-world--roadmap .projects-listing--joined { min-height:0; }
+  .app-shell .founder-world--roadmap .projects-listing--joined .projects-list { height:min(380px,calc(100dvh - 300px));max-height:min(380px,calc(100dvh - 300px));min-height:220px;flex:0 1 520px; }
   .app-shell .founder-world--roadmap .projects-listing--joined .project-row { height:auto; }
   .app-shell .founder-world--roadmap .projects-collection-bar { flex-wrap:wrap;gap:8px;margin-bottom:12px; }
   .app-shell .founder-world--roadmap .projects-view-tabs { flex:1 1 100%; }
@@ -604,7 +631,7 @@
   .app-shell .founder-world--roadmap .projects-controls { padding:9px; }
   .app-shell .founder-world--roadmap .projects-compact-search { width:calc(100% - 41px);flex:1 1 auto; }
   .app-shell .founder-world--roadmap .projects-results-summary { padding-inline: 11px; }
-  .app-shell .founder-world--roadmap .projects-list { height:auto;max-height:none;min-height:0; }
+  .app-shell .founder-world--roadmap .projects-list { height:min(380px,calc(100dvh - 300px));max-height:min(380px,calc(100dvh - 300px));min-height:220px;flex:0 1 520px; }
   .app-shell .founder-world--roadmap .projects-table {
     display: block;
     width: 100%;
@@ -613,9 +640,9 @@
     border-spacing: 0;
   }
   .app-shell .founder-world--roadmap .projects-table > colgroup { display: none; }
-  .app-shell .founder-world--roadmap .projects-grid-pagination { justify-content:center; }
-  .app-shell .founder-world--roadmap .projects-grid-pagination > p { width:100%;text-align:center; }
-  .app-shell .founder-world--roadmap .projects-grid-pagination nav { justify-content:center;gap:2px; }
+  .app-shell .founder-world--roadmap .projects-grid-pagination { justify-content:space-between;gap:8px;padding-inline:8px; }
+  .app-shell .founder-world--roadmap .projects-grid-pagination > p { width:auto;text-align:left; }
+  .app-shell .founder-world--roadmap .projects-grid-pagination nav { justify-content:flex-end;gap:2px; }
   .app-shell .founder-world--roadmap .projects-page-button { min-width:29px;height:31px;padding:0 3px; }
   .app-shell .founder-world--roadmap .projects-table thead {
     position: absolute;

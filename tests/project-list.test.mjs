@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { formatRoadmapDate, paginationItems, projectDetails, projectDomains, PROJECTS_PER_PAGE, selectProjects, UNSET_DOMAIN } from '../src/features/projects/services/project_list.js';
 import { ROADMAP_VISUAL_INVITATION_DATA, ROADMAP_VISUAL_JOINED_DATA, ROADMAP_VISUAL_MOCK_DATA, ROADMAP_VISUAL_MY_DATA } from '../src/features/projects/services/roadmap_visual_mock_data.js';
+import { createMockRoadmap } from '../src/features/roadmap/services/mock_roadmap.js';
 
 const project = (id, overrides = {}) => ({ id: String(id), name: `Project ${id}`, created_by: 'Sam', created_at: `2026-10-${String(id).padStart(2, '0')}T12:00:00Z`, updated_at: `2026-10-${String(id).padStart(2, '0')}T12:00:00Z`, ...overrides });
 const ready = project(1, { name: 'Health Bridge', assessment_completed: true, assessment_result: { domain: 'Healthcare & MedTech' } });
@@ -85,15 +86,25 @@ test('roadmap visual fixtures populate realistic statuses, domains, creators and
 });
 
 test('roadmap visual fixtures separate owned, joined and invitation collections', () => {
-  assert.equal(ROADMAP_VISUAL_MY_DATA.length, 5);
+  assert.equal(ROADMAP_VISUAL_MY_DATA.length, 15);
   assert.ok(ROADMAP_VISUAL_MY_DATA.every(({ visualCollection, owner_id }) => visualCollection === 'my' && owner_id === 'demo-founder'));
-  assert.equal(ROADMAP_VISUAL_JOINED_DATA.length, 8);
+  assert.equal(ROADMAP_VISUAL_JOINED_DATA.length, 15);
   assert.ok(ROADMAP_VISUAL_JOINED_DATA.every(({ visualCollection, owner_id }) => visualCollection === 'joined' && !owner_id));
+  assert.ok(ROADMAP_VISUAL_JOINED_DATA.every(({ expiresAt, assignmentWorkStatus }) => Number.isFinite(Date.parse(expiresAt)) && ['assigned', 'in_progress', 'completed'].includes(assignmentWorkStatus)));
   assert.ok(ROADMAP_VISUAL_JOINED_DATA.some(({ stage, stageNumber, progressPercent, level, currentMission }) => stage === 'Launch' && stageNumber === 4 && progressPercent > 0 && level && currentMission));
   assert.ok(ROADMAP_VISUAL_JOINED_DATA.some(({ stage, stageNumber, progressPercent, level, currentMission }) => stage === 'Launch' && stageNumber === 4 && progressPercent === 0 && level && currentMission));
   assert.equal(ROADMAP_VISUAL_INVITATION_DATA.length, 2);
   assert.ok(ROADMAP_VISUAL_INVITATION_DATA.every(({ status, visualDemo, project, inviter }) => status === 'pending' && visualDemo && project.description && project.stage && project.level && inviter.full_name));
   assert.equal(projectDomains(ROADMAP_VISUAL_MOCK_DATA).length, 12, 'Domain filters can offer every roadmap prototype domain');
+});
+
+test('every owned roadmap and joined mission links to a complete roadmap journey', () => {
+  for (const project of [...ROADMAP_VISUAL_MY_DATA, ...ROADMAP_VISUAL_JOINED_DATA]) {
+    const roadmap = createMockRoadmap({ domain: project.domain, stage: project.stage, level: project.level, prototype: true });
+    assert.equal(roadmap.stages.length, 5, `${project.name} has all roadmap stages`);
+    assert.equal(roadmap.stages.flatMap(({ levels }) => levels).length, 25, `${project.name} has all roadmap levels`);
+    assert.equal(roadmap.stages.flatMap(({ levels }) => levels.flatMap(({ milestones }) => milestones)).length, 75, `${project.name} has all roadmap missions`);
+  }
 });
 
 test('joined roadmap fixtures support the shared search, status, domain and creator sort controls', () => {
